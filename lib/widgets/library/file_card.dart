@@ -32,16 +32,16 @@ class FileCardWidget extends StatelessWidget {
 
     if (item.type == 'image') {
       iconData = Icons.photo_outlined;
-      iconColor = Colors.pinkAccent;
+      iconColor = AppColors.accent;
     } else if (item.type == 'video') {
       iconData = Icons.videocam_outlined;
-      iconColor = Colors.deepPurpleAccent;
+      iconColor = AppColors.accent;
     } else if (item.type == 'document') {
       iconData = Icons.description_outlined;
-      iconColor = AppColors.accentBlue;
+      iconColor = textSecondary;
     } else if (item.type == 'zip') {
       iconData = Icons.folder_zip_outlined;
-      iconColor = Colors.amber;
+      iconColor = textSecondary;
     }
 
     return InkWell(
