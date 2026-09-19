@@ -79,9 +79,9 @@ class ProfileScreen extends StatelessWidget {
                   showChevron: false,
                 ),
                 MiraloListTile(
-                  icon: Icons.badge_outlined,
-                  title: 'Member Tier',
-                  subtitle: 'MIRALO AI Plus (Active)',
+                  icon: Icons.verified_user_outlined,
+                  title: 'Account Status',
+                  subtitle: 'Active',
                   showChevron: false,
                 ),
               ],

@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/routes/app_routes.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_spacing.dart';
-import '../../core/theme/app_typography.dart';
+import '../../core/theme/miralo_tokens.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/vault_provider.dart';
@@ -12,10 +10,15 @@ import '../../widgets/common/miralo_avatar.dart';
 import '../../widgets/common/miralo_list_tile.dart';
 
 /// MIRALO AI Settings Screen
-/// Key spec compliance:
-/// - "PRIVATE WORKSPACE" section label removed → renamed to "PRIVACY"
-/// - No amber/yellow avatar — uses MiraloAvatar
-/// - Consistent AppTypography and AppColors tokens throughout
+/// Strictly reduced, minimal, and useful categories matching Section 18:
+/// - Account (Profile, Account)
+/// - AI (Model, AI preferences)
+/// - Privacy & Security (Private Access, Library Vault, Privacy, Auto-lock)
+/// - Appearance (Appearance toggle)
+/// - Notifications (Notifications)
+/// - Storage (Data & Storage)
+/// - Support (Help, About)
+/// - Sign out
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
@@ -26,18 +29,9 @@ class SettingsScreen extends StatelessWidget {
     final theme = Provider.of<ThemeProvider>(context);
     final vault = Provider.of<VaultProvider>(context);
 
-    final bg = isDark ? AppColors.darkBackground : AppColors.lightBackground;
-    final surface =
-        isDark ? AppColors.darkSurfacePrimary : AppColors.lightSurfacePrimary;
-    final surface2 =
-        isDark ? AppColors.darkSurfaceSecondary : AppColors.lightSurfaceSecondary;
-    final textPrimary =
-        isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
-    final textSecondary =
-        isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
-    final textMuted =
-        isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted;
-    final borderColor = isDark ? AppColors.darkBorder : AppColors.lightBorder;
+    final bg = MiraloColors.bg(isDark);
+    final textPrimary = MiraloColors.textPrimary(isDark);
+    final textSecondary = MiraloColors.textSecondary(isDark);
 
     final user = auth.currentUser;
 
@@ -46,7 +40,6 @@ class SettingsScreen extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            // ── Bespoke MiraloAppBar ─────────────────────────────
             MiraloAppBar(
               leading: MiraloCircularIconButton(
                 icon: Icons.arrow_back_ios_new_rounded,
@@ -55,78 +48,135 @@ class SettingsScreen extends StatelessWidget {
               ),
               title: 'Settings',
             ),
-
-            // ── Scrollable Content ─────────────────────────────
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                padding: const EdgeInsets.symmetric(vertical: MiraloSpacing.md),
                 children: [
-                  // ── Profile header ───────────────────────────
+                  // ── Profile Header ───────────────────────────
                   GestureDetector(
                     onTap: () => Navigator.pushNamed(
                         context, AppRoutes.settingsProfile),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenH),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: MiraloSpacing.lg),
                       child: Column(
                         children: [
-                          Stack(
-                            alignment: Alignment.bottomRight,
-                            children: [
-                              MiraloAvatar(
-                                  name: user?.displayName ?? 'User', size: 76),
-                              Container(
-                                width: 26,
-                                height: 26,
-                                decoration: BoxDecoration(
-                                  color: surface,
-                                  shape: BoxShape.circle,
-                                  border:
-                                      Border.all(color: borderColor, width: 1.5),
-                                ),
-                                child: Icon(Icons.edit_outlined,
-                                    size: 13, color: textSecondary),
-                              ),
-                            ],
+                          MiraloAvatar(
+                            name: user?.displayName ?? 'User',
+                            size: 72,
                           ),
-                          const SizedBox(height: AppSpacing.sm),
-                          Text(user?.displayName ?? 'User',
-                              style: AppTypography.heading2(color: textPrimary)),
+                          const SizedBox(height: MiraloSpacing.sm),
+                          Text(
+                            user?.displayName ?? 'User',
+                            style: MiraloTypography.titleLarge(
+                                color: textPrimary),
+                          ),
                           const SizedBox(height: 2),
-                          Text(user?.email ?? '',
-                              style: AppTypography.body(color: textSecondary)),
+                          Text(
+                            user?.email ?? '',
+                            style: MiraloTypography.bodySmall(
+                                color: textSecondary),
+                          ),
                         ],
                       ),
                     ),
                   ),
 
-                  const SizedBox(height: AppSpacing.xl),
+                  const SizedBox(height: MiraloSpacing.xl),
 
-                  // ── MY MIRALO AI ─────────────────────────────
-                  MiraloSectionHeader('MY MIRALO AI'),
+                  // ── ACCOUNT ──────────────────────────────────
+                  const MiraloSectionHeader('ACCOUNT'),
                   MiraloSettingsGroup(
                     children: [
                       MiraloListTile(
-                        icon: Icons.person_pin_outlined,
+                        icon: Icons.person_outline_rounded,
                         title: 'Profile',
-                        subtitle: 'Name, email & account details',
+                        subtitle: 'Name, email and user details',
                         onTap: () => Navigator.pushNamed(
                             context, AppRoutes.settingsProfile),
                         showDivider: true,
                       ),
                       MiraloListTile(
-                        icon: Icons.psychology_outlined,
-                        title: 'Memory',
-                        subtitle: 'What MIRALO AI remembers about you',
-                        onTap: () {},
+                        icon: Icons.manage_accounts_outlined,
+                        title: 'Account',
+                        subtitle: 'Security & login information',
+                        onTap: () => Navigator.pushNamed(
+                            context, AppRoutes.settingsProfile),
                         showDivider: false,
                       ),
                     ],
                   ),
 
-                  const SizedBox(height: AppSpacing.lg),
+                  const SizedBox(height: MiraloSpacing.lg),
 
-                  // ── APP PREFERENCES ──────────────────────────
-                  MiraloSectionHeader('PREFERENCES'),
+                  // ── AI ───────────────────────────────────────
+                  const MiraloSectionHeader('AI'),
+                  MiraloSettingsGroup(
+                    children: [
+                      MiraloListTile(
+                        icon: Icons.smart_toy_outlined,
+                        title: 'Model',
+                        subtitle: 'Cloud AI endpoints and configuration',
+                        onTap: () =>
+                            Navigator.pushNamed(context, AppRoutes.settingsAi),
+                        showDivider: true,
+                      ),
+                      MiraloListTile(
+                        icon: Icons.tune_rounded,
+                        title: 'AI Preferences',
+                        subtitle: 'API keys & custom system prompts',
+                        onTap: () =>
+                            Navigator.pushNamed(context, AppRoutes.settingsAi),
+                        showDivider: false,
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: MiraloSpacing.lg),
+
+                  // ── PRIVACY & SECURITY ───────────────────────
+                  const MiraloSectionHeader('PRIVACY & SECURITY'),
+                  MiraloSettingsGroup(
+                    children: [
+                      MiraloListTile(
+                        icon: Icons.lock_outline_rounded,
+                        title: 'Private Access',
+                        subtitle: 'Stealth composer passcode & contacts',
+                        onTap: () => Navigator.pushNamed(
+                            context, AppRoutes.settingsPrivacy),
+                        showDivider: true,
+                      ),
+                      MiraloListTile(
+                        icon: Icons.shield_outlined,
+                        title: 'Library Vault',
+                        subtitle: 'Independent PIN protection for media',
+                        onTap: () => Navigator.pushNamed(
+                            context, AppRoutes.libraryLocked),
+                        showDivider: true,
+                      ),
+                      MiraloListTile(
+                        icon: Icons.privacy_tip_outlined,
+                        title: 'Privacy',
+                        subtitle: 'Zero data tracking & local security',
+                        onTap: () => Navigator.pushNamed(
+                            context, AppRoutes.settingsPrivacy),
+                        showDivider: true,
+                      ),
+                      MiraloListTile(
+                        icon: Icons.timer_outlined,
+                        title: 'Auto-lock',
+                        subtitle: 'Immediate session timeout on exit',
+                        onTap: () => Navigator.pushNamed(
+                            context, AppRoutes.settingsPrivacy),
+                        showDivider: false,
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: MiraloSpacing.lg),
+
+                  // ── APPEARANCE ───────────────────────────────
+                  const MiraloSectionHeader('APPEARANCE'),
                   MiraloSettingsGroup(
                     children: [
                       MiraloListTile(
@@ -134,25 +184,28 @@ class SettingsScreen extends StatelessWidget {
                             ? Icons.dark_mode_outlined
                             : Icons.light_mode_outlined,
                         title: 'Appearance',
-                        subtitle: isDark ? 'Dark Mode' : 'Light Mode',
+                        subtitle: isDark ? 'Charcoal Black' : 'Pure Light',
                         onTap: () => theme.toggleTheme(),
                         trailing: Switch(
                           value: isDark,
+                          activeThumbColor: MiraloColors.accent,
                           onChanged: (_) => theme.toggleTheme(),
                         ),
-                        showDivider: true,
+                        showDivider: false,
                       ),
-                      MiraloListTile(
-                        icon: Icons.smart_toy_outlined,
-                        title: 'AI Model & Settings',
-                        subtitle: 'GPT-4o, Claude, custom system prompts',
-                        onTap: () => Navigator.pushNamed(
-                            context, AppRoutes.settingsAi),
-                        showDivider: true,
-                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: MiraloSpacing.lg),
+
+                  // ── NOTIFICATIONS ────────────────────────────
+                  const MiraloSectionHeader('NOTIFICATIONS'),
+                  MiraloSettingsGroup(
+                    children: [
                       MiraloListTile(
                         icon: Icons.notifications_none_outlined,
                         title: 'Notifications',
+                        subtitle: 'Direct message and AI alerts',
                         onTap: () => Navigator.pushNamed(
                             context, AppRoutes.settingsNotifications),
                         showDivider: false,
@@ -160,168 +213,100 @@ class SettingsScreen extends StatelessWidget {
                     ],
                   ),
 
-                  const SizedBox(height: AppSpacing.lg),
+                  const SizedBox(height: MiraloSpacing.lg),
 
-                  // ── PRIVACY & SECURITY ───────────────────────
-                  // NOTE: Spec says NO "PRIVATE WORKSPACE" label.
-                  MiraloSectionHeader('PRIVACY & SECURITY'),
+                  // ── STORAGE ──────────────────────────────────
+                  const MiraloSectionHeader('STORAGE'),
                   MiraloSettingsGroup(
                     children: [
                       MiraloListTile(
-                        icon: Icons.shield_outlined,
-                        title: 'Privacy & Security',
-                        subtitle: 'Credentials, locks & session protection',
-                        onTap: () => Navigator.pushNamed(
-                            context, AppRoutes.settingsPrivacy),
-                        showDivider: true,
-                      ),
-                      MiraloListTile(
-                        icon: Icons.pie_chart_outline_rounded,
-                        title: 'Data Controls',
-                        subtitle: 'Storage, cached media & export',
+                        icon: Icons.data_usage_outlined,
+                        title: 'Data & Storage',
+                        subtitle: 'Local cache, export and database sync',
                         onTap: () => Navigator.pushNamed(
                             context, AppRoutes.settingsData),
-                        showDivider: true,
-                      ),
-                      // Hide Mode (no "PRIVATE WORKSPACE" label)
-                      MiraloListTile(
-                        icon: Icons.visibility_off_outlined,
-                        title: 'Hide Mode',
-                        subtitle: 'Mask names, previews & sensitive info',
-                        onTap: () =>
-                            Navigator.pushNamed(context, AppRoutes.hideMode),
-                        trailing: _HideModeChip(
-                            isEnabled: vault.hideMode.isEnabled,
-                            surface: surface2,
-                            textMuted: textMuted),
-                        showDivider: true,
-                      ),
-                      MiraloListTile(
-                        icon: Icons.warning_amber_rounded,
-                        title: 'Emergency Controls',
-                        subtitle: 'Immediate panic lock & data wipe',
-                        iconColor: AppColors.danger,
-                        onTap: () =>
-                            Navigator.pushNamed(context, AppRoutes.emergency),
                         showDivider: false,
                       ),
                     ],
                   ),
 
-                  const SizedBox(height: AppSpacing.lg),
+                  const SizedBox(height: MiraloSpacing.lg),
 
                   // ── SUPPORT ──────────────────────────────────
-                  MiraloSectionHeader('SUPPORT'),
+                  const MiraloSectionHeader('SUPPORT'),
                   MiraloSettingsGroup(
                     children: [
                       MiraloListTile(
                         icon: Icons.help_outline_rounded,
-                        title: 'Help & FAQ',
-                        onTap: () {},
+                        title: 'Help',
+                        subtitle: 'Guides & FAQ',
+                        onTap: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Support guides: help@miralo.ai'),
+                            ),
+                          );
+                        },
                         showDivider: true,
                       ),
                       MiraloListTile(
                         icon: Icons.info_outline_rounded,
-                        title: 'About MIRALO AI',
-                        subtitle: 'v1.0.0',
-                        onTap: () {},
-                        showDivider: true,
-                      ),
-                      MiraloListTile(
-                        icon: Icons.article_outlined,
-                        title: 'Terms of Service',
-                        onTap: () {},
-                        showDivider: true,
-                      ),
-                      MiraloListTile(
-                        icon: Icons.privacy_tip_outlined,
-                        title: 'Privacy Policy',
-                        onTap: () {},
+                        title: 'About',
+                        subtitle: 'MIRALO AI v1.0.0',
+                        onTap: () {
+                          showAboutDialog(
+                            context: context,
+                            applicationName: 'MIRALO AI',
+                            applicationVersion: '1.0.0',
+                            applicationLegalese:
+                                '© 2026 MIRALO AI. All rights reserved.',
+                          );
+                        },
                         showDivider: false,
                       ),
                     ],
                   ),
 
-                  const SizedBox(height: AppSpacing.lg),
+                  const SizedBox(height: MiraloSpacing.xl),
 
                   // ── Sign out ──────────────────────────────────
                   MiraloSettingsGroup(
                     children: [
                       InkWell(
                         onTap: () {
+                          vault.lockAll();
                           auth.logout();
                           Navigator.pushNamedAndRemoveUntil(
-                              context, AppRoutes.login, (r) => false);
+                            context,
+                            AppRoutes.onboarding,
+                            (route) => false,
+                          );
                         },
-                        borderRadius:
-                            BorderRadius.circular(AppSpacing.radiusMd),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.md, vertical: 14),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.logout,
-                                  color: AppColors.danger, size: 20),
-                              const SizedBox(width: AppSpacing.md),
-                              Text('Sign Out',
-                                  style: AppTypography.bodyMedium(
-                                          color: AppColors.danger)
-                                      .copyWith(
-                                          fontWeight: FontWeight.w600)),
-                            ],
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: MiraloSpacing.md,
+                            vertical: 14,
+                          ),
+                          child: Center(
+                            child: Text(
+                              'Sign out',
+                              style: TextStyle(
+                                color: MiraloColors.danger,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 15,
+                              ),
+                            ),
                           ),
                         ),
                       ),
                     ],
                   ),
 
-                  const SizedBox(height: AppSpacing.xl),
-
-                  Center(
-                    child: Text(
-                      'MIRALO AI  ·  Smart. Private. Yours.',
-                      style: AppTypography.caption(color: textMuted),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
+                  const SizedBox(height: MiraloSpacing.xxl),
                 ],
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Hide mode chip ────────────────────────────────────────────────────────────
-
-class _HideModeChip extends StatelessWidget {
-  final bool isEnabled;
-  final Color surface;
-  final Color textMuted;
-
-  const _HideModeChip(
-      {required this.isEnabled,
-      required this.surface,
-      required this.textMuted});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: isEnabled
-            ? AppColors.success.withValues(alpha: 0.15)
-            : surface,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Text(
-        isEnabled ? 'ON' : 'OFF',
-        style: TextStyle(
-          color: isEnabled ? AppColors.success : textMuted,
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
         ),
       ),
     );

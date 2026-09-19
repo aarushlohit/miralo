@@ -1,0 +1,25 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "miralo-app",
+          "appId": "1:550282978216:android:53ee9651fac071c4e6f39d",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "miralo-app",
+          "configurations": {
+            "android": "1:550282978216:android:53ee9651fac071c4e6f39d",
+            "web": "1:550282978216:web:5a0f7c46129ba3e5e6f39d"
+          }
+        }
+      }
+    }
+  },
+  "database": {
+    "rules": "database.rules.json"
+  }
+}

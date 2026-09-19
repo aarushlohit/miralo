@@ -61,8 +61,11 @@ class VaultProvider extends ChangeNotifier {
   HideModeSettings get hideMode => _hideMode;
 
   // Private Chat unlock/lock
+  bool verifyPasscode(String inputSecret) =>
+      inputSecret.trim() == _privateChatSecret;
+
   bool unlockPrivate(String inputSecret) {
-    if (inputSecret.trim() == _privateChatSecret) {
+    if (verifyPasscode(inputSecret)) {
       _isPrivateUnlocked = true;
       notifyListeners();
       return true;

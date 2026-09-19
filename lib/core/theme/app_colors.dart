@@ -16,26 +16,32 @@ class AppColors {
   // Canonical alias
   static const Color accentBlue = accent;
 
-  // ─── DARK THEME (Charcoal Black & Neutral Slate) ─────────────
-  /// Primary background: very dark charcoal/black
+  // ─── DARK THEME (Charcoal Black & Refined Dark Blue Accent) ───
+  /// Primary background: #0B0D0F
   static const Color darkBackground = Color(0xFF0B0D0F);
-  static const Color darkSurfacePrimary = Color(0xFF101214);
-  static const Color darkSurfaceSecondary = Color(0xFF171A1F);
-  static const Color darkSurfaceElevated = Color(0xFF1C2025);
-  static const Color darkSurfaceTertiary = Color(0xFF20242A);
-  static const Color darkSurfaceInput = Color(0xFF171A1F);
+  /// Surface: #121417
+  static const Color darkSurfacePrimary = Color(0xFF121417);
+  /// Secondary surface: #181B20
+  static const Color darkSurfaceSecondary = Color(0xFF181B20);
+  /// Elevated surface: #1D2127
+  static const Color darkSurfaceElevated = Color(0xFF1D2127);
+  static const Color darkSurfaceTertiary = Color(0xFF22262E);
+  static const Color darkSurfaceInput = Color(0xFF181B20);
 
-  /// White with subtle 6–10% opacity
-  static const Color darkBorder = Color(0x14FFFFFF); // ~8% opacity
-  static const Color darkBorderHighlight = Color(0x24FFFFFF); // ~14% opacity
+  /// Border: white 6–10% opacity
+  static const Color darkBorder = Color(0x14FFFFFF); // 8% opacity
+  static const Color darkBorderHighlight = Color(0x1FFFFFFF); // 12% opacity
 
+  /// Primary text: #F5F7FA
   static const Color darkTextPrimary = Color(0xFFF5F7FA);
-  static const Color darkTextSecondary = Color(0xFF969DA8);
-  static const Color darkTextMuted = Color(0xFF68717C);
+  /// Secondary text: #A3A9B3
+  static const Color darkTextSecondary = Color(0xFFA3A9B3);
+  /// Muted: #707782
+  static const Color darkTextMuted = Color(0xFF707782);
 
-  // Message surfaces — neutral, not colorful
-  static const Color darkMsgUser = Color(0xFF1C2025);
-  static const Color darkMsgAi = Color(0xFF101214);
+  // Message surfaces — neutral, identical to AI chat
+  static const Color darkMsgUser = Color(0xFF1D2127);
+  static const Color darkMsgAi = Color(0xFF121417);
 
   // ─── LIGHT THEME ──────────────────────────────────────────────
   static const Color lightBackground = Color(0xFFF7F8FA);

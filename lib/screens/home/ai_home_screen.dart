@@ -6,7 +6,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../providers/ai_chat_provider.dart';
 import '../../services/ai_service.dart';
-import '../../widgets/chat/ai_composer.dart';
+import '../../widgets/chat/composer.dart';
 import '../../widgets/common/app_sidebar_drawer.dart';
 import '../../widgets/common/miralo_app_bar.dart';
 import '../../widgets/common/miralo_logo.dart';
@@ -349,9 +349,10 @@ class _AiHomeScreenState extends State<AiHomeScreen> {
           ),
 
           // ── Floating AI Composer with silent secret interception ──
-          AiComposer(
-            placeholder: 'Ask MIRALO AI...',
-            onSend: (prompt) => _sendPrompt(context, prompt),
+          Composer(
+            isPrivate: false,
+            hintText: 'Ask anything...',
+            onSubmitted: (prompt) => _sendPrompt(context, prompt),
           ),
         ],
       ),

@@ -8,12 +8,25 @@ class AiChatProvider extends ChangeNotifier {
   String? _activeChatId;
   String _selectedModel = AiModels.gpt56;
   bool _isStreaming = false;
+  String? _prefilledPrompt;
 
   List<AiChatModel> get conversations => _conversations;
   String? get activeChatId => _activeChatId;
   String get selectedModel => _selectedModel;
   bool get isStreaming => _isStreaming;
   List<String> get availableModels => AiModels.all;
+  String? get prefilledPrompt => _prefilledPrompt;
+
+  void prefillPrompt(String prompt) {
+    _prefilledPrompt = prompt;
+    notifyListeners();
+  }
+
+  String? consumePrefilledPrompt() {
+    final val = _prefilledPrompt;
+    _prefilledPrompt = null;
+    return val;
+  }
 
   AiChatModel? get activeChat {
     if (_activeChatId == null) return null;

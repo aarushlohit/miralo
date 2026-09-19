@@ -1,279 +1,173 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/routes/app_routes.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_spacing.dart';
-import '../../core/theme/app_typography.dart';
+import '../../core/theme/miralo_tokens.dart';
 import '../../models/private_contact_model.dart';
+import '../../models/private_message_model.dart';
 import '../../providers/ai_chat_provider.dart';
+import '../../providers/library_provider.dart';
 import '../../providers/private_chat_provider.dart';
 import '../../providers/vault_provider.dart';
-import '../../widgets/chat/private_composer.dart';
-import '../../widgets/chat/private_message_bubble.dart';
-import '../../widgets/common/miralo_app_bar.dart';
-import '../../widgets/common/miralo_avatar.dart';
-import '../../widgets/common/miralo_empty_state.dart';
+import '../../widgets/chat/chat_header.dart';
+import '../../widgets/chat/chat_scaffold.dart';
+import '../../widgets/chat/composer.dart';
+import '../../widgets/chat/message_actions.dart';
+import '../../widgets/chat/message_list.dart';
+import '../../widgets/chat/message_renderer.dart';
+import '../../widgets/chat/reaction_sheet.dart';
 
+/// Private Chat Screen
+/// Uses the exact same Chat UI components as AI Chat:
+/// - ChatScaffold
+/// - ChatHeader (Back, Editable display name e.g. 'Mira', More menu with 'Return to Chat')
+/// - MessageList
+/// - MessageRenderer (neutral surfaces, zero romantic/messaging styling)
+/// - Composer (images only converted to Base64, /urgent and /clear interception)
+/// - ReactionSheet & MessageActionsSheet
 class PrivateChatDetailScreen extends StatelessWidget {
   const PrivateChatDetailScreen({super.key});
 
-  void _showChatMenu(BuildContext context, PrivateChatProvider chat,
-      VaultProvider vault) {
-    final contact = chat.activeContact;
+  void _quickExit(BuildContext context) {
+    final vault = Provider.of<VaultProvider>(context, listen: false);
+    final ai = Provider.of<AiChatProvider>(context, listen: false);
+
+    // Lock private access & clear private state
+    vault.lockAll();
+
+    // Return to last AI conversation, or prefill 'What is an API?' if no active chat
+    if (ai.activeChat == null) {
+      ai.prefillPrompt('What is an API?');
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        AppRoutes.home,
+        (route) => false,
+      );
+    } else {
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        AppRoutes.aiChat,
+        (route) => false,
+      );
+    }
+  }
+
+  void _showMoreMenu(
+    BuildContext context,
+    PrivateChatProvider chat,
+    PrivateContactModel? contact,
+  ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg =
-        isDark ? AppColors.darkSurfacePrimary : AppColors.lightSurfacePrimary;
-    final textPrimary =
-        isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
-    final border = isDark ? AppColors.darkBorder : AppColors.lightBorder;
+    final bg = isDark
+        ? MiraloColors.darkSurfacePrimary
+        : MiraloColors.lightSurfacePrimary;
+    final textPrimary = isDark
+        ? MiraloColors.darkTextPrimary
+        : MiraloColors.lightTextPrimary;
+    final border = isDark
+        ? MiraloColors.darkBorder
+        : MiraloColors.lightBorder;
 
     showModalBottomSheet(
       context: context,
       backgroundColor: bg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
-            top: Radius.circular(AppSpacing.radiusSheet)),
+          top: Radius.circular(MiraloRadius.bottomSheet),
+        ),
       ),
       builder: (ctx) => SafeArea(
         top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Drag handle
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                margin: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-                decoration: BoxDecoration(
-                  color: border,
-                  borderRadius: BorderRadius.circular(2),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: MiraloSpacing.lg,
+            vertical: MiraloSpacing.md,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: MiraloSpacing.md),
+                  decoration: BoxDecoration(
+                    color: border,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
-            ),
 
-            // View contact
-            _SheetTile(
-              icon: Icons.info_outline_rounded,
-              label: 'Contact details',
-              textColor: textPrimary,
-              onTap: () {
-                Navigator.pop(ctx);
-                _showContactInfo(context, chat);
-              },
-            ),
-
-            // Edit display name
-            if (contact != null)
-              _SheetTile(
-                icon: Icons.edit_outlined,
-                label: 'Edit display name',
-                textColor: textPrimary,
+              // Preferred label: Return to Chat
+              ListTile(
+                leading: const Icon(Icons.arrow_back_rounded,
+                    color: MiraloColors.accent, size: 22),
+                title: Text(
+                  'Return to Chat',
+                  style: MiraloTypography.bodyMedium(color: MiraloColors.accent)
+                      .copyWith(fontWeight: FontWeight.w600),
+                ),
+                dense: true,
                 onTap: () {
                   Navigator.pop(ctx);
-                  _showEditDisplayNameDialog(context, chat, contact);
+                  _quickExit(context);
                 },
               ),
 
-            // Media
-            _SheetTile(
-              icon: Icons.perm_media_outlined,
-              label: 'Shared media',
-              textColor: textPrimary,
-              onTap: () {
-                Navigator.pop(ctx);
-                Navigator.pushNamed(context, AppRoutes.images);
-              },
-            ),
-
-            // Mute
-            _SheetTile(
-              icon: Icons.notifications_off_outlined,
-              label: 'Mute notifications',
-              textColor: textPrimary,
-              onTap: () {
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text('Notifications muted for 8 hours.')),
-                );
-              },
-            ),
-
-            Divider(height: 0.6, thickness: 0.6, color: border),
-
-            // Return to Chat (Emergency Exit)
-            _SheetTile(
-              icon: Icons.arrow_back_rounded,
-              label: 'Return to Chat',
-              textColor: textPrimary,
-              onTap: () {
-                Navigator.pop(ctx);
-                vault.lockPrivate();
-                final ai = Provider.of<AiChatProvider>(context, listen: false);
-                ai.createNewChat();
-                Navigator.of(context).pushNamedAndRemoveUntil(
-                  AppRoutes.home,
-                  (r) => false,
-                  arguments: {'prefill': 'What is an API?'},
-                );
-              },
-            ),
-
-            // Lock private
-            _SheetTile(
-              icon: Icons.lock_outline,
-              label: 'Lock private workspace',
-              textColor: textPrimary,
-              onTap: () {
-                Navigator.pop(ctx);
-                vault.lockPrivate();
-                Navigator.pop(context);
-              },
-            ),
-
-            // Delete (destructive)
-            _SheetTile(
-              icon: Icons.delete_outline,
-              label: 'Clear conversation',
-              textColor: AppColors.danger,
-              onTap: () {
-                Navigator.pop(ctx);
-                _confirmDeleteChat(context, chat);
-              },
-            ),
-
-            const SizedBox(height: AppSpacing.md),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showContactInfo(BuildContext context, PrivateChatProvider chat) {
-    final contact = chat.activeContact;
-    if (contact == null) return;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg =
-        isDark ? AppColors.darkSurfacePrimary : AppColors.lightSurfacePrimary;
-    final textPrimary =
-        isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
-    final textMuted =
-        isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted;
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: bg,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-            top: Radius.circular(AppSpacing.radiusSheet)),
-      ),
-      builder: (ctx) => SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(AppSpacing.screenH, AppSpacing.lg,
-              AppSpacing.screenH, AppSpacing.xxl),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              MiraloAvatar(name: contact.displayName, size: 64,
-                  isOnline: contact.isOnline),
-              const SizedBox(height: AppSpacing.md),
-              Text(contact.displayName,
-                  style: AppTypography.heading2(color: textPrimary)),
-              const SizedBox(height: 4),
-              Text('@${contact.username}',
-                  style: AppTypography.body(color: textMuted)),
-              const SizedBox(height: 4),
-              Text(
-                contact.isOnline ? 'Online now' : contact.lastSeenText,
-                style: AppTypography.caption(
-                    color: contact.isOnline
-                        ? AppColors.onlineGreen
-                        : textMuted),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              Text(
-                'End-to-end local security active.\nMessages are stored privately on this device.',
-                style: AppTypography.caption(color: textMuted),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: AppSpacing.md),
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: Text('Done',
-                    style: AppTypography.bodyMedium(color: AppColors.accent)),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _confirmDeleteChat(BuildContext context, PrivateChatProvider chat) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg =
-        isDark ? AppColors.darkSurfacePrimary : AppColors.lightSurfacePrimary;
-    final textPrimary =
-        isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
-    final textSub =
-        isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: bg,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-            top: Radius.circular(AppSpacing.radiusSheet)),
-      ),
-      builder: (ctx) => SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(AppSpacing.screenH, AppSpacing.md,
-              AppSpacing.screenH, AppSpacing.xxl),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Delete chat?',
-                  style: AppTypography.heading3(color: textPrimary)),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                'All messages will be permanently removed. This cannot be undone.',
-                style: AppTypography.body(color: textSub),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.danger.withValues(alpha: 0.1),
-                    foregroundColor: AppColors.danger,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppSpacing.buttonRadius)),
+              // Edit display name
+              if (contact != null)
+                ListTile(
+                  leading: Icon(Icons.edit_outlined,
+                      color: textPrimary, size: 22),
+                  title: Text(
+                    'Edit display name',
+                    style: MiraloTypography.bodyMedium(color: textPrimary),
                   ),
-                  onPressed: () {
-                    chat.deleteCurrentChat();
+                  dense: true,
+                  onTap: () {
                     Navigator.pop(ctx);
-                    Navigator.pop(context);
+                    _showEditDisplayNameDialog(context, chat, contact);
                   },
-                  child: Text('Delete all messages',
-                      style: AppTypography.button(color: AppColors.danger)),
                 ),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              SizedBox(
-                width: double.infinity,
-                child: TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: Text('Cancel',
-                      style: AppTypography.button(color: textSub)),
+
+              // Clear conversation
+              ListTile(
+                leading: Icon(Icons.clear_all_rounded,
+                    color: textPrimary, size: 22),
+                title: Text(
+                  'Clear conversation',
+                  style: MiraloTypography.bodyMedium(color: textPrimary),
                 ),
+                dense: true,
+                onTap: () {
+                  Navigator.pop(ctx);
+                  chat.clearActiveChat();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Conversation cleared.'),
+                      duration: Duration(seconds: 1),
+                    ),
+                  );
+                },
               ),
+
+              // Delete contact
+              ListTile(
+                leading: const Icon(Icons.delete_outline_rounded,
+                    color: MiraloColors.danger, size: 22),
+                title: Text(
+                  'Delete conversation',
+                  style: MiraloTypography.bodyMedium(
+                      color: MiraloColors.danger),
+                ),
+                dense: true,
+                onTap: () {
+                  Navigator.pop(ctx);
+                  chat.deleteCurrentChat();
+                  Navigator.pop(context);
+                },
+              ),
+
+              const SizedBox(height: MiraloSpacing.sm),
             ],
           ),
         ),
@@ -282,57 +176,70 @@ class PrivateChatDetailScreen extends StatelessWidget {
   }
 
   void _showEditDisplayNameDialog(
-      BuildContext context, PrivateChatProvider chat, PrivateContactModel contact) {
+    BuildContext context,
+    PrivateChatProvider chat,
+    PrivateContactModel contact,
+  ) {
     final controller = TextEditingController(text: contact.displayName);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg =
-        isDark ? AppColors.darkSurfacePrimary : AppColors.lightSurfacePrimary;
-    final textPrimary =
-        isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
-    final border = isDark ? AppColors.darkBorder : AppColors.lightBorder;
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: bg,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppSpacing.radiusLg)),
-        title: Text('Edit Display Name',
-            style: AppTypography.heading3(color: textPrimary)),
+        backgroundColor: isDark
+            ? MiraloColors.darkSurfacePrimary
+            : MiraloColors.lightSurfacePrimary,
+        shape: RoundedRectangleBorder(borderRadius: MiraloRadius.r20),
+        title: Text(
+          'Edit display name',
+          style: MiraloTypography.titleMedium(
+            color: isDark
+                ? MiraloColors.darkTextPrimary
+                : MiraloColors.lightTextPrimary,
+          ),
+        ),
         content: TextField(
           controller: controller,
           autofocus: true,
-          style: AppTypography.body(color: textPrimary),
+          style: MiraloTypography.bodyMedium(
+            color: isDark
+                ? MiraloColors.darkTextPrimary
+                : MiraloColors.lightTextPrimary,
+          ),
           decoration: InputDecoration(
-            hintText: 'Enter contact name',
-            hintStyle: AppTypography.body(
-                color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-              borderSide: BorderSide(color: border),
+            hintText: 'Display name',
+            hintStyle: MiraloTypography.bodyMedium(
+              color: isDark
+                  ? MiraloColors.darkTextMuted
+                  : MiraloColors.lightTextMuted,
             ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-              borderSide: const BorderSide(color: AppColors.accent),
+            filled: true,
+            fillColor: isDark
+                ? MiraloColors.darkSurfaceSecondary
+                : MiraloColors.lightSurfaceSecondary,
+            border: OutlineInputBorder(
+              borderRadius: MiraloRadius.r12,
+              borderSide: BorderSide(
+                color: isDark
+                    ? MiraloColors.darkBorder
+                    : MiraloColors.lightBorder,
+              ),
             ),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Cancel',
-                style: AppTypography.bodyMedium(
-                    color: isDark
-                        ? AppColors.darkTextSecondary
-                        : AppColors.lightTextSecondary)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.accent,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm)),
+            child: Text(
+              'Cancel',
+              style: MiraloTypography.labelMedium(
+                color: isDark
+                    ? MiraloColors.darkTextMuted
+                    : MiraloColors.lightTextMuted,
+              ),
             ),
+          ),
+          TextButton(
             onPressed: () {
               final newName = controller.text.trim();
               if (newName.isNotEmpty) {
@@ -340,326 +247,97 @@ class PrivateChatDetailScreen extends StatelessWidget {
               }
               Navigator.pop(ctx);
             },
-            child: Text('Save',
-                style: AppTypography.button(color: Colors.white)),
+            child: Text(
+              'Save',
+              style: MiraloTypography.labelMedium(color: MiraloColors.accent),
+            ),
           ),
         ],
       ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final chat = Provider.of<PrivateChatProvider>(context);
-    final vault = Provider.of<VaultProvider>(context);
-    final contact = chat.activeContact;
-
-    final bg = isDark ? AppColors.darkBackground : AppColors.lightBackground;
-    final textPrimary =
-        isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
-    final textSecondary =
-        isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
-    final iconBg =
-        isDark ? AppColors.darkSurfaceSecondary : AppColors.lightSurfaceSecondary;
-
-    if (contact == null) {
-      return Scaffold(
-        backgroundColor: bg,
-        appBar: AppBar(backgroundColor: bg),
-        body: const MiraloEmptyState(
-          icon: Icons.person_outline,
-          title: 'No chat selected',
-          subtitle: 'Go back and select a contact.',
-        ),
-      );
-    }
-
-    final isHiddenName =
-        vault.hideMode.isEnabled && vault.hideMode.hidePrivateChatNames;
-    final displayName = isHiddenName ? 'Contact' : contact.displayName;
-    final isHiddenPic =
-        vault.hideMode.isEnabled && vault.hideMode.hideProfilePicture;
-    final messages = chat.activeMessages;
-
-    return Scaffold(
-      backgroundColor: bg,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // ── Bespoke MiraloAppBar ─────────────────────────────
-            MiraloAppBar(
-              leading: MiraloCircularIconButton(
-                icon: Icons.arrow_back_ios_new_rounded,
-                iconSize: 16,
-                onPressed: () => Navigator.pop(context),
-              ),
-              titleWidget: GestureDetector(
-                onTap: () => _showContactInfo(context, chat),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    isHiddenPic
-                        ? Container(
-                            width: 30,
-                            height: 30,
-                            decoration: BoxDecoration(
-                                color: iconBg, shape: BoxShape.circle),
-                            child: const Icon(Icons.shield_outlined,
-                                size: 15, color: AppColors.accent),
-                          )
-                        : MiraloAvatar(
-                            name: contact.displayName,
-                            size: 30,
-                            isOnline: contact.isOnline,
-                          ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          displayName,
-                          style: MiraloTypography.heading3(color: textPrimary),
-                        ),
-                        Text(
-                          contact.isOnline ? 'Online' : contact.lastSeenText,
-                          style: MiraloTypography.caption(
-                            color: contact.isOnline
-                                ? AppColors.onlineGreen
-                                : textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                MiraloCircularIconButton(
-                  icon: Icons.more_horiz_rounded,
-                  onPressed: () => _showChatMenu(context, chat, vault),
-                ),
-              ],
-            ),
-
-            // ── Messages ────────────────────────────────────────
-            Expanded(
-              child: messages.isEmpty
-                  ? MiraloEmptyState(
-                      icon: Icons.chat_bubble_outline_rounded,
-                      title: displayName,
-                      subtitle: 'Say hi to start a private conversation.',
-                      action: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.md,
-                            vertical: AppSpacing.sm),
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? AppColors.darkSurfaceSecondary
-                              : AppColors.lightSurfaceSecondary,
-                          borderRadius:
-                              BorderRadius.circular(AppSpacing.radiusSm),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.lock_outline,
-                                size: 12, color: AppColors.accent),
-                            const SizedBox(width: 6),
-                            Text('End-to-end private',
-                                style: AppTypography.caption(
-                                    color: AppColors.accent)),
-                          ],
-                        ),
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.symmetric(
-                          vertical: AppSpacing.sm),
-                      itemCount: messages.length,
-                      itemBuilder: (_, i) {
-                        final msg = messages[i];
-                        return PrivateMessageBubble(
-                          message: msg,
-                          isMe: msg.isMe,
-                          onReact: (emoji) =>
-                              chat.toggleReaction(msg.id, emoji),
-                          onDelete: () => chat.deleteMessage(msg.id),
-                        );
-                      },
-                    ),
-            ),
-
-            // ── Private Composer with /clear and /urgent ─────────
-            PrivateComposer(
-              onSend: (text) => chat.sendTextMessage(text),
-              onAttach: () => AttachmentSheetHelper.show(context, chat),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Menu tile helper ─────────────────────────────────────────────────────────
-
-class _SheetTile extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color textColor;
-  final VoidCallback onTap;
-
-  const _SheetTile(
-      {required this.icon,
-      required this.label,
-      required this.textColor,
-      required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.screenH, vertical: 14),
-        child: Row(
-          children: [
-            Icon(icon, size: 20, color: textColor),
-            const SizedBox(width: AppSpacing.md),
-            Text(label, style: AppTypography.bodyMedium(color: textColor)),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Attachment helper ────────────────────────────────────────────────────────
-
-class AttachmentSheetHelper {
-  static void show(BuildContext context, PrivateChatProvider chat) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg =
-        isDark ? AppColors.darkSurfacePrimary : AppColors.lightSurfacePrimary;
-    final textColor =
-        isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
-    final subColor =
-        isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
-    final iconBg =
-        isDark ? AppColors.darkSurfaceSecondary : AppColors.lightSurfaceSecondary;
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: bg,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-            top: Radius.circular(AppSpacing.radiusSheet)),
-      ),
-      builder: (ctx) {
-        final actions = [
-          _AttachAction(
-              icon: Icons.camera_alt_outlined,
-              label: 'Camera',
-              onTap: () {
-                Navigator.pop(ctx);
-                chat.sendMediaMessage(
-                    type: 'image', mediaUrl: 'camera_shot', text: 'Photo');
-              }),
-          _AttachAction(
-              icon: Icons.photo_library_outlined,
-              label: 'Photos',
-              onTap: () {
-                Navigator.pop(ctx);
-                chat.sendMediaMessage(
-                    type: 'image',
-                    mediaUrl: 'mock_photo',
-                    text: 'Photo from Gallery');
-              }),
-          _AttachAction(
-              icon: Icons.insert_drive_file_outlined,
-              label: 'Files',
-              onTap: () {
-                Navigator.pop(ctx);
-                chat.sendMediaMessage(
-                    type: 'file',
-                    mediaUrl: '',
-                    fileName: 'Document.pdf',
-                    fileSize: '1.4 MB',
-                    text: 'Document.pdf');
-              }),
-        ];
-
-        return SafeArea(
-          top: false,
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(
-                AppSpacing.screenH,
-                AppSpacing.md,
-                AppSpacing.screenH,
-                AppSpacing.lg +
-                    MediaQuery.of(ctx).viewInsets.bottom),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Center(
-                  child: Container(
-                    width: 36,
-                    height: 4,
-                    margin: const EdgeInsets.only(bottom: AppSpacing.md),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? AppColors.darkBorder
-                          : AppColors.lightBorder,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: actions.map((a) {
-                    return GestureDetector(
-                      onTap: a.onTap,
-                      child: Column(
-                        children: [
-                          Container(
-                            width: 60,
-                            height: 60,
-                            decoration: BoxDecoration(
-                              color: iconBg,
-                              borderRadius: BorderRadius.circular(
-                                  AppSpacing.radiusMd),
-                            ),
-                            child: Icon(a.icon, size: 26, color: textColor),
-                          ),
-                          const SizedBox(height: AppSpacing.sm),
-                          Text(a.label,
-                              style: AppTypography.caption(color: subColor)),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: Text('Cancel',
-                      style: AppTypography.bodyMedium(color: subColor)),
-                ),
-              ],
-            ),
+  void _showMessageOptions(
+    BuildContext context,
+    PrivateMessageModel msg,
+    PrivateChatProvider chat,
+    LibraryProvider library,
+  ) {
+    MessageActionsSheet.show(
+      context,
+      text: msg.text,
+      onReact: () {
+        ReactionSheet.show(
+          context,
+          onSelectEmoji: (emoji) => chat.toggleReaction(msg.id, emoji),
+        );
+      },
+      onSaveToLibrary: () {
+        chat.saveMessageToLibrary(msg, library);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Saved to Library'),
+            duration: Duration(seconds: 1),
           ),
         );
       },
+      onDelete: () => chat.deleteMessage(msg.id),
     );
   }
-}
 
-class _AttachAction {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  const _AttachAction(
-      {required this.icon, required this.label, required this.onTap});
+  @override
+  Widget build(BuildContext context) {
+    final chat = Provider.of<PrivateChatProvider>(context);
+    final library = Provider.of<LibraryProvider>(context, listen: false);
+    final contact = chat.activeContact;
+    final messages = chat.activeMessages;
+
+    final displayName = contact?.displayName ?? 'Mira';
+    final subtitle = contact?.isOnline == true ? 'Active recently' : (contact?.lastSeenText ?? '');
+
+    return ChatScaffold(
+      header: ChatHeader(
+        isPrivate: true,
+        title: displayName,
+        subtitle: subtitle,
+        onBack: () => Navigator.pop(context),
+        onEditDisplayName: contact != null
+            ? () => _showEditDisplayNameDialog(context, chat, contact)
+            : null,
+        onMoreOptions: () => _showMoreMenu(context, chat, contact),
+      ),
+      body: MessageList(
+        itemCount: messages.length,
+        itemBuilder: (context, index) {
+          final msg = messages[index];
+          return MessageRenderer(
+            id: msg.id,
+            text: msg.text,
+            isMe: msg.isMe,
+            senderName: msg.isMe ? null : displayName,
+            createdAt: msg.createdAt,
+            imageBase64: msg.imageBase64,
+            imageUrl: msg.mediaUrl,
+            status: msg.status,
+            reactions: msg.reactions,
+            onReactionTap: (emoji) => chat.toggleReaction(msg.id, emoji),
+            onLongPress: () => _showMessageOptions(context, msg, chat, library),
+          );
+        },
+      ),
+      composer: Composer(
+        isPrivate: true,
+        hintText: 'Message $displayName...',
+        onSubmitted: (text) => chat.sendTextMessage(text),
+        onImageAttached: (base64Image, fileName) {
+          chat.sendMediaMessage(
+            type: 'image',
+            imageBase64: base64Image,
+            fileName: fileName,
+            fileSize: '1.2 MB',
+          );
+        },
+      ),
+    );
+  }
 }

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "550282978216",
+    "project_id": "miralo-app",
+    "storage_bucket": "miralo-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:550282978216:android:53ee9651fac071c4e6f39d",
+        "android_client_info": {
+          "package_name": "com.miralo.ai.miralo"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBr0-7wTr_yAxAVOZfWnLFb1yHFBNuEMqo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

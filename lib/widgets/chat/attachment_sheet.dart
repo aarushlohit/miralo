@@ -1,56 +1,77 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_spacing.dart';
-import '../../core/theme/app_typography.dart';
+import 'package:image_picker/image_picker.dart';
+import '../../core/theme/miralo_tokens.dart';
 
-/// Attachment bottom sheet — clean, minimal, monochrome icons.
-/// Used by both AI composer and private composer.
+/// Attachment sheet strictly allowing images only (Camera & Photos).
+/// Converts selected image directly to Base64 string for realtime transmission.
 class AttachmentSheet extends StatelessWidget {
-  final bool isPrivate;
-  const AttachmentSheet({super.key, this.isPrivate = false});
+  final Function(String base64Image, String fileName)? onImageSelected;
 
-  static Future<void> show(BuildContext context, {bool isPrivate = false}) {
+  const AttachmentSheet({super.key, this.onImageSelected});
+
+  static Future<void> show(
+    BuildContext context, {
+    Function(String base64Image, String fileName)? onImageSelected,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return showModalBottomSheet<void>(
       context: context,
-      builder: (_) => AttachmentSheet(isPrivate: isPrivate),
+      backgroundColor: isDark
+          ? MiraloColors.darkSurfacePrimary
+          : MiraloColors.lightSurfacePrimary,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(MiraloRadius.bottomSheet),
+        ),
+      ),
+      builder: (_) => AttachmentSheet(onImageSelected: onImageSelected),
     );
+  }
+
+  Future<void> _pickImage(BuildContext context, ImageSource source) async {
+    Navigator.pop(context);
+    try {
+      final picker = ImagePicker();
+      final XFile? file = await picker.pickImage(
+        source: source,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 75,
+      );
+      if (file != null) {
+        final bytes = await file.readAsBytes();
+        final base64String = base64Encode(bytes);
+        onImageSelected?.call(base64String, file.name);
+      }
+    } catch (e) {
+      debugPrint('Error picking image: $e');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg =
-        isDark ? AppColors.darkSurfacePrimary : AppColors.lightSurfacePrimary;
-    final textColor =
-        isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
-    final subColor =
-        isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
-    final iconBg =
-        isDark ? AppColors.darkSurfaceSecondary : AppColors.lightSurfaceSecondary;
+    final textColor = isDark
+        ? MiraloColors.darkTextPrimary
+        : MiraloColors.lightTextPrimary;
+    final subColor = isDark
+        ? MiraloColors.darkTextSecondary
+        : MiraloColors.lightTextSecondary;
+    final iconBg = isDark
+        ? MiraloColors.darkSurfaceSecondary
+        : MiraloColors.lightSurfaceSecondary;
+    final border = isDark
+        ? MiraloColors.darkBorder
+        : MiraloColors.lightBorder;
 
-    final actions = [
-      _AttachAction(
-          icon: Icons.camera_alt_outlined, label: 'Camera', color: textColor, bgColor: iconBg),
-      _AttachAction(
-          icon: Icons.photo_library_outlined, label: 'Photos', color: textColor, bgColor: iconBg),
-      _AttachAction(
-          icon: Icons.insert_drive_file_outlined, label: 'Files', color: textColor, bgColor: iconBg),
-      if (isPrivate)
-        _AttachAction(
-            icon: Icons.gif_box_outlined, label: 'GIF', color: textColor, bgColor: iconBg),
-    ];
-
-    return Container(
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(AppSpacing.radiusSheet)),
-      ),
-      padding: EdgeInsets.fromLTRB(AppSpacing.screenH, AppSpacing.md,
-          AppSpacing.screenH,
-          AppSpacing.lg + MediaQuery.of(context).viewInsets.bottom),
-      child: SafeArea(
-        top: false,
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: MiraloSpacing.lg,
+          vertical: MiraloSpacing.md,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -59,23 +80,45 @@ class AttachmentSheet extends StatelessWidget {
               child: Container(
                 width: 36,
                 height: 4,
-                margin: const EdgeInsets.only(bottom: AppSpacing.md),
+                margin: const EdgeInsets.only(bottom: MiraloSpacing.md),
                 decoration: BoxDecoration(
-                  color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                  color: border,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
+            Text(
+              'Share Image',
+              style: MiraloTypography.titleMedium(color: textColor),
+            ),
+            const SizedBox(height: MiraloSpacing.xs),
+            Text(
+              'Select an image to send securely',
+              style: MiraloTypography.bodySmall(color: subColor),
+            ),
+            const SizedBox(height: MiraloSpacing.lg),
 
-            // Icon grid
+            // Strictly Images Only: Camera & Photos
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: actions
-                  .map((a) => _AttachItem(action: a, subColor: subColor))
-                  .toList(),
+              children: [
+                _ImageActionTile(
+                  icon: Icons.camera_alt_outlined,
+                  label: 'Camera',
+                  bgColor: iconBg,
+                  textColor: textColor,
+                  onTap: () => _pickImage(context, ImageSource.camera),
+                ),
+                _ImageActionTile(
+                  icon: Icons.photo_library_outlined,
+                  label: 'Photos',
+                  bgColor: iconBg,
+                  textColor: textColor,
+                  onTap: () => _pickImage(context, ImageSource.gallery),
+                ),
+              ],
             ),
-
-            const SizedBox(height: AppSpacing.md),
+            const SizedBox(height: MiraloSpacing.lg),
 
             // Cancel
             SizedBox(
@@ -83,7 +126,7 @@ class AttachmentSheet extends StatelessWidget {
               child: TextButton(
                 onPressed: () => Navigator.pop(context),
                 child: Text('Cancel',
-                    style: AppTypography.bodyMedium(color: subColor)),
+                    style: MiraloTypography.bodyMedium(color: subColor)),
               ),
             ),
           ],
@@ -93,42 +136,43 @@ class AttachmentSheet extends StatelessWidget {
   }
 }
 
-class _AttachAction {
+class _ImageActionTile extends StatelessWidget {
   final IconData icon;
   final String label;
-  final Color color;
   final Color bgColor;
-  const _AttachAction(
-      {required this.icon,
-      required this.label,
-      required this.color,
-      required this.bgColor});
-}
+  final Color textColor;
+  final VoidCallback onTap;
 
-class _AttachItem extends StatelessWidget {
-  final _AttachAction action;
-  final Color subColor;
-  const _AttachItem({required this.action, required this.subColor});
+  const _ImageActionTile({
+    required this.icon,
+    required this.label,
+    required this.bgColor,
+    required this.textColor,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => Navigator.pop(context),
-      child: Column(
-        children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: action.bgColor,
-              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: MiraloRadius.r16,
+      child: Padding(
+        padding: const EdgeInsets.all(MiraloSpacing.md),
+        child: Column(
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: bgColor,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: MiraloColors.accent, size: 24),
             ),
-            child: Icon(action.icon, size: 26, color: action.color),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(action.label,
-              style: AppTypography.caption(color: subColor)),
-        ],
+            const SizedBox(height: MiraloSpacing.xs),
+            Text(label, style: MiraloTypography.labelMedium(color: textColor)),
+          ],
+        ),
       ),
     );
   }

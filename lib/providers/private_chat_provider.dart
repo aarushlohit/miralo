@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import '../models/private_contact_model.dart';
 import '../models/private_message_model.dart';
@@ -7,6 +9,7 @@ class PrivateChatProvider extends ChangeNotifier {
   final List<PrivateContactModel> _contacts = [];
   final Map<String, List<PrivateMessageModel>> _messages = {};
   String? _activeChatId;
+  StreamSubscription<DatabaseEvent>? _messagesSubscription;
 
   List<PrivateContactModel> get contacts => _contacts;
   String? get activeChatId => _activeChatId;
@@ -148,7 +151,40 @@ class PrivateChatProvider extends ChangeNotifier {
     if (contactIndex != -1) {
       _contacts[contactIndex] = _contacts[contactIndex].copyWith(unreadCount: 0);
     }
+    _listenToFirebaseChat(chatId);
     notifyListeners();
+  }
+
+  void _listenToFirebaseChat(String chatId) {
+    _messagesSubscription?.cancel();
+    _messagesSubscription = null;
+    try {
+      final ref = FirebaseDatabase.instance.ref('chats/$chatId/messages');
+      _messagesSubscription = ref.onChildAdded.listen((event) {
+        if (event.snapshot.value != null && event.snapshot.value is Map) {
+          final raw = Map<String, dynamic>.from(event.snapshot.value as Map);
+          final msg = PrivateMessageModel.fromJson(raw);
+          final list = _messages.putIfAbsent(chatId, () => []);
+          if (!list.any((m) => m.id == msg.id)) {
+            list.add(msg);
+            notifyListeners();
+          }
+        }
+      }, onError: (e) {
+        debugPrint('Firebase RTDB error: $e');
+      });
+    } catch (e) {
+      debugPrint('Firebase RTDB not initialized or offline: $e');
+    }
+  }
+
+  void _syncMessageToFirebase(PrivateMessageModel msg) {
+    try {
+      final ref = FirebaseDatabase.instance.ref('chats/${msg.chatId}/messages/${msg.id}');
+      ref.set(msg.toJson());
+    } catch (e) {
+      debugPrint('Firebase RTDB sync error: $e');
+    }
   }
 
   void sendTextMessage(String text) {
@@ -166,6 +202,7 @@ class PrivateChatProvider extends ChangeNotifier {
 
     _messages.putIfAbsent(_activeChatId!, () => []).add(newMsg);
     notifyListeners();
+    _syncMessageToFirebase(newMsg);
 
     // Auto simulated friendly reply after a short delay
     _simulateContactReply(_activeChatId!);
@@ -173,7 +210,8 @@ class PrivateChatProvider extends ChangeNotifier {
 
   void sendMediaMessage({
     required String type, // 'image', 'gif', 'file'
-    required String mediaUrl,
+    String? mediaUrl,
+    String? imageBase64,
     String text = '',
     String? fileName,
     String? fileSize,
@@ -187,6 +225,7 @@ class PrivateChatProvider extends ChangeNotifier {
       type: type,
       text: text,
       mediaUrl: mediaUrl,
+      imageBase64: imageBase64,
       fileName: fileName,
       fileSize: fileSize,
       createdAt: DateTime.now(),
@@ -195,6 +234,7 @@ class PrivateChatProvider extends ChangeNotifier {
 
     _messages.putIfAbsent(_activeChatId!, () => []).add(newMsg);
     notifyListeners();
+    _syncMessageToFirebase(newMsg);
   }
 
   void toggleReaction(String messageId, String emoji) {
@@ -228,11 +268,17 @@ class PrivateChatProvider extends ChangeNotifier {
     if (list == null) return;
 
     list.removeWhere((m) => m.id == messageId);
+    try {
+      FirebaseDatabase.instance.ref('chats/$_activeChatId/messages/$messageId').remove();
+    } catch (_) {}
     notifyListeners();
   }
 
   void deleteCurrentChat() {
     if (_activeChatId == null) return;
+    try {
+      FirebaseDatabase.instance.ref('chats/$_activeChatId').remove();
+    } catch (_) {}
     _messages.remove(_activeChatId);
     _contacts.removeWhere((c) => c.id == _activeChatId);
     _activeChatId = null;
@@ -242,6 +288,9 @@ class PrivateChatProvider extends ChangeNotifier {
   void clearActiveChat() {
     if (_activeChatId == null) return;
     _messages[_activeChatId]?.clear();
+    try {
+      FirebaseDatabase.instance.ref('chats/$_activeChatId/messages').remove();
+    } catch (_) {}
     notifyListeners();
   }
 
@@ -323,5 +372,11 @@ class PrivateChatProvider extends ChangeNotifier {
     _contacts.clear();
     _activeChatId = null;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _messagesSubscription?.cancel();
+    super.dispose();
   }
 }
