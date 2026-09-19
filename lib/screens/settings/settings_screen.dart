@@ -94,7 +94,6 @@ class SettingsScreen extends StatelessWidget {
                         subtitle: 'Name, email and user details',
                         onTap: () => Navigator.pushNamed(
                             context, AppRoutes.settingsProfile),
-                        showDivider: true,
                       ),
                       MiraloListTile(
                         icon: Icons.manage_accounts_outlined,
@@ -102,7 +101,6 @@ class SettingsScreen extends StatelessWidget {
                         subtitle: 'Security & login information',
                         onTap: () => Navigator.pushNamed(
                             context, AppRoutes.settingsProfile),
-                        showDivider: false,
                       ),
                     ],
                   ),
@@ -119,7 +117,6 @@ class SettingsScreen extends StatelessWidget {
                         subtitle: 'Cloud AI endpoints and configuration',
                         onTap: () =>
                             Navigator.pushNamed(context, AppRoutes.settingsAi),
-                        showDivider: true,
                       ),
                       MiraloListTile(
                         icon: Icons.tune_rounded,
@@ -127,7 +124,6 @@ class SettingsScreen extends StatelessWidget {
                         subtitle: 'API keys & custom system prompts',
                         onTap: () =>
                             Navigator.pushNamed(context, AppRoutes.settingsAi),
-                        showDivider: false,
                       ),
                     ],
                   ),
@@ -144,7 +140,6 @@ class SettingsScreen extends StatelessWidget {
                         subtitle: 'Stealth composer passcode & contacts',
                         onTap: () => Navigator.pushNamed(
                             context, AppRoutes.settingsPrivacy),
-                        showDivider: true,
                       ),
                       MiraloListTile(
                         icon: Icons.shield_outlined,
@@ -152,7 +147,6 @@ class SettingsScreen extends StatelessWidget {
                         subtitle: 'Independent PIN protection for media',
                         onTap: () => Navigator.pushNamed(
                             context, AppRoutes.libraryLocked),
-                        showDivider: true,
                       ),
                       MiraloListTile(
                         icon: Icons.privacy_tip_outlined,
@@ -160,7 +154,6 @@ class SettingsScreen extends StatelessWidget {
                         subtitle: 'Zero data tracking & local security',
                         onTap: () => Navigator.pushNamed(
                             context, AppRoutes.settingsPrivacy),
-                        showDivider: true,
                       ),
                       MiraloListTile(
                         icon: Icons.timer_outlined,
@@ -168,7 +161,6 @@ class SettingsScreen extends StatelessWidget {
                         subtitle: 'Immediate session timeout on exit',
                         onTap: () => Navigator.pushNamed(
                             context, AppRoutes.settingsPrivacy),
-                        showDivider: false,
                       ),
                     ],
                   ),
@@ -247,7 +239,6 @@ class SettingsScreen extends StatelessWidget {
                             ),
                           );
                         },
-                        showDivider: true,
                       ),
                       MiraloListTile(
                         icon: Icons.info_outline_rounded,
@@ -262,7 +253,6 @@ class SettingsScreen extends StatelessWidget {
                                 '© 2026 MIRALO AI. All rights reserved.',
                           );
                         },
-                        showDivider: false,
                       ),
                     ],
                   ),

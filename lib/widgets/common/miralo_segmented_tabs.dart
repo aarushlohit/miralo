@@ -30,11 +30,11 @@ class MiraloSegmentedTabs extends StatelessWidget {
     final unselectedText = isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted;
 
     return Container(
-      height: 36,
+      height: 38,
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
       ),
       child: Row(
         children: List.generate(tabs.length, (i) {
@@ -46,9 +46,9 @@ class MiraloSegmentedTabs extends StatelessWidget {
                 duration: const Duration(milliseconds: 200),
                 decoration: BoxDecoration(
                   color: selected ? selectedBg : Colors.transparent,
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                   border: selected
-                      ? Border.all(color: selectedBorder, width: 0.8)
+                      ? Border.all(color: selectedBorder, width: 0.6)
                       : null,
                 ),
                 child: Center(

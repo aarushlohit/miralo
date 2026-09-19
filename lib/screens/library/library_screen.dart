@@ -255,7 +255,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                       decoration: BoxDecoration(
                         color: iconBg,
                         borderRadius: BorderRadius.circular(MiraloDimensions.composerRadius),
-                        border: Border.all(color: cardBorder, width: 0.8),
+                        border: Border.all(color: cardBorder, width: 0.6),
                       ),
                       padding: const EdgeInsets.symmetric(horizontal: 14),
                       child: Row(
@@ -409,7 +409,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
         decoration: BoxDecoration(
           color: cardBg,
           borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-          border: Border.all(color: cardBorder, width: 0.8),
+          border: Border.all(color: cardBorder, width: 0.6),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -460,7 +460,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
         decoration: BoxDecoration(
           color: cardBg,
           borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-          border: Border.all(color: cardBorder, width: 0.8),
+          border: Border.all(color: cardBorder, width: 0.6),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

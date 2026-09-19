@@ -261,7 +261,7 @@ class _AiHomeScreenState extends State<AiHomeScreen> {
             decoration: BoxDecoration(
               color: pillBg,
               borderRadius: BorderRadius.circular(MiraloDimensions.composerRadius),
-              border: Border.all(color: borderColor, width: 0.8),
+              border: Border.all(color: borderColor, width: 0.6),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -399,11 +399,11 @@ class _SuggestionRow extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(MiraloDimensions.standardRadius),
         child: Container(
-          height: 48,
+          height: 50,
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(MiraloDimensions.standardRadius),
-            border: Border.all(color: border, width: 0.6),
+            border: Border.all(color: border, width: 0.5),
           ),
           child: Row(
             children: [

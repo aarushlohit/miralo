@@ -173,7 +173,10 @@ class _ComposerState extends State<Composer> {
           decoration: BoxDecoration(
             color: bg,
             borderRadius: BorderRadius.circular(MiraloRadius.composer),
-            border: Border.all(color: border, width: 0.8),
+            border: Border.all(
+              color: isDark ? const Color(0x12FFFFFF) : border,
+              width: 0.6,
+            ),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -201,6 +204,10 @@ class _ComposerState extends State<Composer> {
                     hintText: hint,
                     hintStyle: MiraloTypography.bodyMedium(color: textMuted),
                     border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    errorBorder: InputBorder.none,
+                    disabledBorder: InputBorder.none,
                     isDense: true,
                     contentPadding: const EdgeInsets.symmetric(vertical: 14),
                   ),

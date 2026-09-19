@@ -116,7 +116,7 @@ class AppSidebarDrawer extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: isDark ? AppColors.darkSurfaceSecondary : AppColors.lightSurfaceSecondary,
                     borderRadius: BorderRadius.circular(MiraloDimensions.standardRadius),
-                    border: Border.all(color: border, width: 0.8),
+                    border: Border.all(color: border, width: 0.6),
                   ),
                   child: InkWell(
                     onTap: () {
@@ -418,7 +418,7 @@ class _NavItem extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+      borderRadius: BorderRadius.circular(14),
       child: Padding(
         padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.sm, vertical: 10),
@@ -455,7 +455,7 @@ class _ConvItem extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+      borderRadius: BorderRadius.circular(14),
       child: Padding(
         padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.sm, vertical: 8),
@@ -502,7 +502,7 @@ class _ContactItem extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+      borderRadius: BorderRadius.circular(14),
       child: Padding(
         padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.sm, vertical: 8),

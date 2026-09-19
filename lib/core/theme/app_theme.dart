@@ -79,12 +79,12 @@ class AppTheme {
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
-          side: const BorderSide(color: AppColors.darkBorder, width: 1),
+          side: const BorderSide(color: AppColors.darkBorder, width: 0.6),
         ),
       ),
       dividerTheme: const DividerThemeData(
         color: AppColors.darkBorder,
-        thickness: 0.6,
+        thickness: 0.5,
         space: 0,
       ),
       listTileTheme: const ListTileThemeData(
@@ -308,11 +308,11 @@ class AppTheme {
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppSpacing.inputRadius),
-        borderSide: BorderSide(color: border, width: 1),
+        borderSide: BorderSide(color: border, width: 0.8),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppSpacing.inputRadius),
-        borderSide: BorderSide(color: borderFocus, width: 1.5),
+        borderSide: BorderSide(color: borderFocus, width: 1.2),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppSpacing.inputRadius),
@@ -329,7 +329,7 @@ class AppTheme {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-        side: BorderSide(color: border, width: 0.8),
+        side: BorderSide(color: border, width: 0.6),
       ),
     );
   }

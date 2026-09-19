@@ -74,22 +74,23 @@ class MessageRenderer extends StatelessWidget {
               decoration: BoxDecoration(
                 color: bg,
                 borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(MiraloRadius.card),
-                  topRight: const Radius.circular(MiraloRadius.card),
-                  bottomLeft: isMe
-                      ? const Radius.circular(MiraloRadius.card)
-                      : const Radius.circular(MiraloRadius.xs),
-                  bottomRight: isMe
-                      ? const Radius.circular(MiraloRadius.xs)
-                      : const Radius.circular(MiraloRadius.card),
+                  topLeft: const Radius.circular(20),
+                  topRight: const Radius.circular(20),
+                  bottomLeft: Radius.circular(isMe ? 20 : 6),
+                  bottomRight: Radius.circular(isMe ? 6 : 20),
                 ),
-                border: Border.all(color: border, width: 0.8),
+                border: Border.all(
+                  color: isDark
+                      ? (isMe ? const Color(0x12FFFFFF) : const Color(0x0CFFFFFF))
+                      : border,
+                  width: 0.6,
+                ),
               ),
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
                   onLongPress: onLongPress,
-                  borderRadius: BorderRadius.circular(MiraloRadius.card),
+                  borderRadius: BorderRadius.circular(20),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: MiraloSpacing.md,

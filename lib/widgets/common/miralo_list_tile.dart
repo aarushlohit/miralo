@@ -65,7 +65,7 @@ class MiraloListTile extends StatelessWidget {
                   color: isDark
                       ? AppColors.darkSurfaceSecondary
                       : AppColors.lightSurfaceSecondary,
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusXs),
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(_effectiveIcon, size: 17, color: iconCol),
               ),
@@ -160,7 +160,7 @@ class MiraloSettingsGroup extends StatelessWidget {
           decoration: BoxDecoration(
             color: bg,
             borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-            border: Border.all(color: border, width: 0.8),
+            border: Border.all(color: border, width: 0.6),
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
@@ -170,8 +170,8 @@ class MiraloSettingsGroup extends StatelessWidget {
                   children[i],
                   if (i < children.length - 1)
                     Divider(
-                      height: 0.6,
-                      thickness: 0.6,
+                      height: 0.5,
+                      thickness: 0.5,
                       color: border,
                       indent: AppSpacing.screenH + 32 + AppSpacing.md,
                     ),

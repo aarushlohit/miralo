@@ -30,11 +30,11 @@ class MiraloRadius {
   static const double xl = 24.0;
   static const double xxl = 28.0;
 
-  // Specific semantic component radius
+  // Specific semantic component radius — smooth organic curves, no boxy rectangles
   static const double composer = 28.0;
   static const double bottomSheet = 28.0;
-  static const double card = 16.0;
-  static const double button = 20.0;
+  static const double card = 20.0;
+  static const double button = 22.0;
   static const double pill = 24.0;
 
   static BorderRadius get r12 => BorderRadius.circular(sm);

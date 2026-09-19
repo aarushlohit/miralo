@@ -109,7 +109,7 @@ class ChatHeader extends StatelessWidget implements PreferredSizeWidget {
                           ? MiraloColors.darkSurfaceSecondary
                           : MiraloColors.lightSurfaceSecondary,
                       borderRadius: BorderRadius.circular(MiraloRadius.pill),
-                      border: Border.all(color: border),
+                      border: Border.all(color: border, width: 0.6),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,

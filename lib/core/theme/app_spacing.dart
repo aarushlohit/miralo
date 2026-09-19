@@ -27,13 +27,13 @@ class AppSpacing {
   static const double radiusPill = 28; // Composer radius: 28 px
   static const double radiusSheet = 28; // Bottom sheet radius: 28 px
 
-  // Named semantic aliases
-  static const double inputRadius = radiusMd;
-  static const double cardRadius = radiusMd;
-  static const double buttonRadius = radiusMd;
+  // Named semantic aliases — smooth organic curves, no boxy rectangles
+  static const double inputRadius = 18.0;
+  static const double cardRadius = radiusLg; // 22 px
+  static const double buttonRadius = radiusLg; // 22 px
   static const double composerRadius = radiusPill;
   static const double sheetRadius = radiusSheet;
-  static const double chipRadius = radiusMd;
+  static const double chipRadius = radiusLg;
 }
 
 /// Exact component dimensions (Spec section 20)
@@ -52,8 +52,8 @@ class MiraloDimensions {
   static const double avatarXl = 72.0;
 
   // Standard radius
-  static const double standardRadius = 16.0;
-  static const double largeRadius = 22.0;
+  static const double standardRadius = 20.0;
+  static const double largeRadius = 24.0;
   static const double composerRadius = 28.0;
   static const double bottomSheetRadius = 28.0;
 }

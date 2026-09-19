@@ -26,11 +26,11 @@ class AppColors {
   /// Elevated surface: #1D2127
   static const Color darkSurfaceElevated = Color(0xFF1D2127);
   static const Color darkSurfaceTertiary = Color(0xFF22262E);
-  static const Color darkSurfaceInput = Color(0xFF181B20);
+  static const Color darkSurfaceInput = Color(0xFF14171C);
 
-  /// Border: white 6–10% opacity
-  static const Color darkBorder = Color(0x14FFFFFF); // 8% opacity
-  static const Color darkBorderHighlight = Color(0x1FFFFFFF); // 12% opacity
+  /// Border: restrained white 5–9% opacity (subtle, non-boxy)
+  static const Color darkBorder = Color(0x0EFFFFFF); // 5.5% opacity
+  static const Color darkBorderHighlight = Color(0x18FFFFFF); // 9.5% opacity
 
   /// Primary text: #F5F7FA
   static const Color darkTextPrimary = Color(0xFFF5F7FA);
