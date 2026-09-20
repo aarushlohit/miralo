@@ -176,6 +176,76 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
                   onPressed: () => _showAddFriend(context, chat, auth),
                 ),
                 const SizedBox(width: AppSpacing.sm),
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.cloud_upload_outlined, size: 20, color: AppColors.accent),
+                  tooltip: 'Chat Backup & Export',
+                  onSelected: (val) async {
+                    if (val == 'backup') {
+                      final ok = await chat.triggerCloudAutoBackup();
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(ok ? 'Cloud auto-backup updated successfully!' : 'Backup notice: Local state synced.'),
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    } else if (val == 'export') {
+                      final bytes = await chat.exportChatsToZip();
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(bytes != null ? 'Chat exported as ZIP (${(bytes.length / 1024).toStringAsFixed(1)} KB)!' : 'Export failed'),
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    } else if (val == 'import') {
+                      final ok = await chat.importChatsFromZipFile();
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(ok ? 'Chat backup restored from ZIP!' : 'Import cancelled or invalid ZIP'),
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  itemBuilder: (ctx) => [
+                    const PopupMenuItem(
+                      value: 'backup',
+                      child: Row(
+                        children: [
+                          Icon(Icons.cloud_sync_outlined, size: 18, color: AppColors.accent),
+                          SizedBox(width: 8),
+                          Text('Cloud Auto-Backup'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'export',
+                      child: Row(
+                        children: [
+                          Icon(Icons.folder_zip_outlined, size: 18, color: AppColors.accent),
+                          SizedBox(width: 8),
+                          Text('Export Chat (.zip)'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'import',
+                      child: Row(
+                        children: [
+                          Icon(Icons.unarchive_outlined, size: 18, color: AppColors.accent),
+                          SizedBox(width: 8),
+                          Text('Import Chat (.zip)'),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(width: AppSpacing.sm),
                 MiraloCircularIconButton(
                   icon: Icons.lock_outline_rounded,
                   iconSize: 18,

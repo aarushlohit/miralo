@@ -1,9 +1,12 @@
 import 'dart:async';
+import 'dart:typed_data';
+import 'package:file_picker/file_picker.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import '../models/friend_request_model.dart';
 import '../models/private_contact_model.dart';
 import '../models/private_message_model.dart';
+import '../services/chat_backup_service.dart';
 import 'library_provider.dart';
 
 class PrivateChatProvider extends ChangeNotifier {
@@ -12,6 +15,7 @@ class PrivateChatProvider extends ChangeNotifier {
   final Map<String, List<PrivateMessageModel>> _messages = {};
   String? _activeChatId;
   String? _currentUserId;
+  bool _isAutoBackupEnabled = true;
 
   StreamSubscription<DatabaseEvent>? _messagesSubscription;
   StreamSubscription<DatabaseEvent>? _contactsSubscription;
@@ -20,6 +24,7 @@ class PrivateChatProvider extends ChangeNotifier {
   List<PrivateContactModel> get contacts => _contacts;
   List<FriendRequestModel> get pendingFriendRequests => _pendingFriendRequests;
   String? get activeChatId => _activeChatId;
+  bool get isAutoBackupEnabled => _isAutoBackupEnabled;
 
   PrivateContactModel? get activeContact {
     if (_activeChatId == null) return null;
@@ -37,6 +42,82 @@ class PrivateChatProvider extends ChangeNotifier {
 
   PrivateChatProvider() {
     // No mock seed chats or fake friends. Clean & real state!
+  }
+
+  void setAutoBackupEnabled(bool enabled) {
+    _isAutoBackupEnabled = enabled;
+    notifyListeners();
+  }
+
+  /// Triggers Cloud Auto-Backup to Firebase Realtime Database and Cloudinary
+  Future<bool> triggerCloudAutoBackup() async {
+    if (_currentUserId == null) return false;
+    return await ChatBackupService.performCloudAutoBackup(
+      userId: _currentUserId!,
+      contacts: _contacts,
+      messages: _messages,
+    );
+  }
+
+  /// Exports all chats to a ZIP archive
+  Future<Uint8List?> exportChatsToZip() async {
+    final zipBytes = await ChatBackupService.exportChatsToZip(
+      contacts: _contacts,
+      messages: _messages,
+    );
+    if (_isAutoBackupEnabled && _currentUserId != null) {
+      triggerCloudAutoBackup();
+    }
+    return zipBytes;
+  }
+
+  /// Prompts user to select a .zip backup file and restores chats & contacts
+  Future<bool> importChatsFromZipFile() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['zip'],
+        withData: true,
+      );
+
+      if (result != null && result.files.isNotEmpty && result.files.first.bytes != null) {
+        final zipBytes = result.files.first.bytes!;
+        final backupData = await ChatBackupService.importChatsFromZip(zipBytes);
+
+        if (backupData != null) {
+          final importedContacts = backupData['contacts'] as List<PrivateContactModel>? ?? [];
+          final importedMessages = backupData['messages'] as Map<String, List<PrivateMessageModel>>? ?? {};
+
+          // Merge imported contacts
+          for (var c in importedContacts) {
+            if (!_contacts.any((existing) => existing.id == c.id)) {
+              _contacts.add(c);
+            }
+          }
+
+          // Merge imported messages
+          importedMessages.forEach((chatId, list) {
+            final existingList = _messages.putIfAbsent(chatId, () => []);
+            for (var m in list) {
+              if (!existingList.any((existing) => existing.id == m.id)) {
+                existingList.add(m);
+              }
+            }
+            existingList.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+          });
+
+          notifyListeners();
+          if (_currentUserId != null) {
+            triggerCloudAutoBackup();
+          }
+          return true;
+        }
+      }
+      return false;
+    } catch (e) {
+      debugPrint('Error restoring backup from zip file: $e');
+      return false;
+    }
   }
 
   void initUserSession(String userId) {
