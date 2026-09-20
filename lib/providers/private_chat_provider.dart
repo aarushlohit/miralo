@@ -368,15 +368,6 @@ class PrivateChatProvider extends ChangeNotifier {
       debugPrint('Firebase search users error: $e');
     }
 
-    if (results.isEmpty) {
-      // Direct target preview fallback if searching specific username
-      results.add({
-        'id': 'usr_${clean.replaceAll(' ', '_')}',
-        'name': clean,
-        'username': clean,
-        'email': '$clean@miralo.ai',
-      });
-    }
 
     return results;
   }
