@@ -1,17 +1,17 @@
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
     // START: FlutterFire Configuration
     id("com.google.gms.google-services")
     // END: FlutterFire Configuration
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+    // The Flutter Gradle Plugin must be applied after the Android plugin.
+    // Built-in Kotlin is provided by flutter-gradle-plugin; do NOT apply KGP here.
     id("dev.flutter.flutter-gradle-plugin")
 }
 
 
 android {
     namespace = "com.miralo.ai.miralo"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -43,11 +43,6 @@ android {
     }
 }
 
-kotlin {
-    compilerOptions {
-        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
-    }
-}
 
 flutter {
     source = "../.."
