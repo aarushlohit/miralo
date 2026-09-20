@@ -51,6 +51,10 @@ dependencies:
   audioplayers: ^6.1.0
   path_provider: ^2.1.5
 
+dependency_overrides:
+  record_platform_interface: 1.2.0
+
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
