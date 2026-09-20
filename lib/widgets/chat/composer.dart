@@ -272,6 +272,25 @@ class _ComposerState extends State<Composer> {
           );
         }
       },
+      onVoiceNoteRecorded: (audioUrlOrBase64, durationText) {
+        if (widget.isPrivate) {
+          final privateChat = Provider.of<PrivateChatProvider>(context, listen: false);
+          privateChat.sendMediaMessage(
+            type: 'voice',
+            mediaUrl: audioUrlOrBase64.startsWith('http') ? audioUrlOrBase64 : null,
+            imageBase64: audioUrlOrBase64.startsWith('http') ? null : audioUrlOrBase64,
+            fileName: 'Voice Note ($durationText)',
+            fileSize: durationText,
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Recorded Voice Note ($durationText)'),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      },
     );
   }
 

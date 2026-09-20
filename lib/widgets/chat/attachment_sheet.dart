@@ -4,23 +4,27 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../core/theme/miralo_tokens.dart';
 import '../../services/cloudinary_service.dart';
+import 'voice_note_recorder_sheet.dart';
 
-/// Attachment sheet supporting Images (Camera & Photos) and Documents (PDF, DOCX, TXT).
+/// Attachment sheet supporting Images (Camera & Photos), Documents (Any non-executable file), and Voice Notes.
 /// Attempts Cloudinary upload first, falling back directly to Base64 string for offline/free operation.
 class AttachmentSheet extends StatelessWidget {
   final Function(String mediaUrlOrBase64, String fileName)? onImageSelected;
   final Function(String documentUrlOrBase64, String fileName, String fileSize)? onDocumentSelected;
+  final Function(String audioUrlOrBase64, String durationText)? onVoiceNoteRecorded;
 
   const AttachmentSheet({
     super.key,
     this.onImageSelected,
     this.onDocumentSelected,
+    this.onVoiceNoteRecorded,
   });
 
   static Future<void> show(
     BuildContext context, {
     Function(String mediaUrlOrBase64, String fileName)? onImageSelected,
     Function(String documentUrlOrBase64, String fileName, String fileSize)? onDocumentSelected,
+    Function(String audioUrlOrBase64, String durationText)? onVoiceNoteRecorded,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return showModalBottomSheet<void>(
@@ -36,6 +40,7 @@ class AttachmentSheet extends StatelessWidget {
       builder: (_) => AttachmentSheet(
         onImageSelected: onImageSelected,
         onDocumentSelected: onDocumentSelected,
+        onVoiceNoteRecorded: onVoiceNoteRecorded,
       ),
     );
   }
@@ -77,8 +82,7 @@ class AttachmentSheet extends StatelessWidget {
     Navigator.pop(context);
     try {
       final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['pdf', 'doc', 'docx', 'txt', 'zip', 'csv', 'xlsx'],
+        type: FileType.any,
         withData: true,
       );
 
@@ -86,6 +90,27 @@ class AttachmentSheet extends StatelessWidget {
         final pickedFile = result.files.first;
         final fileName = pickedFile.name;
         final bytes = pickedFile.bytes;
+
+        // Block Executables / Potentially Harmful Files
+        const blockedExts = {
+          'exe', 'bat', 'cmd', 'sh', 'vbs', 'scr', 'msi', 'apk', 'com', 'pif', 
+          'application', 'gadget', 'cpl', 'wsf', 'jar', 'ps1', 'reg', 'hta', 'inf', 'sys'
+        };
+
+        final ext = fileName.contains('.') ? fileName.split('.').last.toLowerCase() : '';
+        if (blockedExts.contains(ext)) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Harmful/Executable file format (.$ext) is blocked for security.'),
+                backgroundColor: Colors.redAccent,
+                duration: const Duration(seconds: 3),
+              ),
+            );
+          }
+          return;
+        }
+
         final sizeKb = (pickedFile.size / 1024).toStringAsFixed(1);
         final sizeText = pickedFile.size > 1024 * 1024
             ? '${(pickedFile.size / (1024 * 1024)).toStringAsFixed(1)} MB'
@@ -155,12 +180,12 @@ class AttachmentSheet extends StatelessWidget {
             ),
             const SizedBox(height: MiraloSpacing.xs),
             Text(
-              'Select photos or documents to send',
+              'Select media, files, or record a voice note',
               style: MiraloTypography.bodySmall(color: subColor),
             ),
             const SizedBox(height: MiraloSpacing.lg),
 
-            // Camera, Photos & Document options
+            // Camera, Photos, Document & Voice Note options
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
@@ -180,10 +205,23 @@ class AttachmentSheet extends StatelessWidget {
                 ),
                 _ImageActionTile(
                   icon: Icons.insert_drive_file_outlined,
-                  label: 'Document',
+                  label: 'File',
                   bgColor: iconBg,
                   textColor: textColor,
                   onTap: () => _pickDocument(context),
+                ),
+                _ImageActionTile(
+                  icon: Icons.mic_none_rounded,
+                  label: 'Voice Note',
+                  bgColor: iconBg,
+                  textColor: textColor,
+                  onTap: () {
+                    Navigator.pop(context);
+                    VoiceNoteRecorderSheet.show(
+                      context,
+                      onVoiceNoteRecorded: onVoiceNoteRecorded,
+                    );
+                  },
                 ),
               ],
             ),

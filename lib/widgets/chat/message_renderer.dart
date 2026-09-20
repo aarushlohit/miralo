@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../core/theme/miralo_tokens.dart';
 import 'image_viewer.dart';
+import 'voice_note_player.dart';
 
 /// Unified Message Renderer used by BOTH AI Chat and Private Chat.
 /// Uses neutral surfaces matching ChatGPT/Apple standards.
@@ -14,6 +15,9 @@ class MessageRenderer extends StatelessWidget {
   final DateTime createdAt;
   final String? imageBase64;
   final String? imageUrl;
+  final String? type;
+  final String? fileName;
+  final String? fileSize;
   final String? status;
   final String? replyToText;
   final Map<String, int>? reactions;
@@ -31,6 +35,9 @@ class MessageRenderer extends StatelessWidget {
     required this.createdAt,
     this.imageBase64,
     this.imageUrl,
+    this.type,
+    this.fileName,
+    this.fileSize,
     this.status,
     this.replyToText,
     this.reactions,
@@ -60,6 +67,9 @@ class MessageRenderer extends StatelessWidget {
     final textMuted = isDark
         ? MiraloColors.darkTextMuted
         : MiraloColors.lightTextMuted;
+
+    final isVoiceNote = type == 'voice' || (fileName != null && fileName!.contains('Voice Note'));
+    final isDocument = type == 'document' || (fileName != null && !isVoiceNote);
 
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -134,8 +144,52 @@ class MessageRenderer extends StatelessWidget {
                             ),
                           ),
 
+                        // Render Voice Note if type == 'voice'
+                        if (isVoiceNote && (imageUrl != null || imageBase64 != null))
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: MiraloSpacing.xs),
+                            child: VoiceNotePlayer(
+                              audioUrlOrBase64: imageUrl ?? imageBase64 ?? '',
+                              durationText: fileSize,
+                            ),
+                          )
+                        // Render Document if document file
+                        else if (isDocument)
+                          Container(
+                            margin: const EdgeInsets.only(bottom: MiraloSpacing.xs),
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.04),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.insert_drive_file_rounded, color: MiraloColors.accent, size: 28),
+                                const SizedBox(width: 8),
+                                Flexible(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        fileName ?? 'Attached Document',
+                                        style: MiraloTypography.bodyMedium(color: textPrimary),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      if (fileSize != null)
+                                        Text(
+                                          fileSize!,
+                                          style: MiraloTypography.bodySmall(color: textMuted),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
                         // Render Image if present
-                        if (imageBase64 != null || imageUrl != null)
+                        else if (imageBase64 != null || imageUrl != null)
                           _buildImageAttachment(context),
 
                         // Render text
