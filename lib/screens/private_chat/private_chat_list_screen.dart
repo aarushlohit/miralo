@@ -12,6 +12,8 @@ import '../../widgets/common/miralo_avatar.dart';
 import '../../widgets/common/miralo_empty_state.dart';
 import '../../widgets/common/miralo_logo.dart';
 
+import '../../widgets/private_chat/add_friend_sheet.dart';
+
 /// Private Chat List Screen.
 class PrivateChatListScreen extends StatefulWidget {
   const PrivateChatListScreen({super.key});
@@ -33,105 +35,7 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
   }
 
   void _showAddFriend(BuildContext context, PrivateChatProvider chat, AuthProvider auth) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg =
-        isDark ? AppColors.darkSurfacePrimary : AppColors.lightSurfacePrimary;
-    final border = isDark ? AppColors.darkBorder : AppColors.lightBorder;
-    final ctrl = TextEditingController();
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: bg,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-            top: Radius.circular(AppSpacing.radiusSheet)),
-      ),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(
-            bottom: MediaQuery.of(ctx).viewInsets.bottom),
-        child: SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(AppSpacing.screenH,
-                AppSpacing.md, AppSpacing.screenH, AppSpacing.lg),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Center(
-                  child: Container(
-                    width: 36,
-                    height: 4,
-                    margin: const EdgeInsets.only(bottom: AppSpacing.md),
-                    decoration: BoxDecoration(
-                        color: border,
-                        borderRadius: BorderRadius.circular(2)),
-                  ),
-                ),
-                Text('Add contact & Send Friend Request',
-                    style: AppTypography.heading3(
-                        color: isDark
-                            ? AppColors.darkTextPrimary
-                            : AppColors.lightTextPrimary)),
-                const SizedBox(height: 4),
-                Text(
-                  'Enter username or email to send real Firebase request.',
-                  style: AppTypography.body(
-                      color: isDark
-                          ? AppColors.darkTextSecondary
-                          : AppColors.lightTextSecondary),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                TextField(
-                  controller: ctrl,
-                  autofocus: true,
-                  decoration: const InputDecoration(
-                    hintText: 'e.g. priya_sharma',
-                    prefixIcon:
-                        Icon(Icons.person_add_outlined, size: 18),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextButton(
-                        onPressed: () => Navigator.pop(ctx),
-                        child: Text('Cancel',
-                            style: AppTypography.bodyMedium(
-                                color: isDark
-                                    ? AppColors.darkTextSecondary
-                                    : AppColors.lightTextSecondary)),
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          final input = ctrl.text.trim();
-                          if (input.isNotEmpty) {
-                            final currentUser = auth.currentUser;
-                            chat.sendFriendRequest(
-                              senderId: currentUser?.id ?? 'usr_me_001',
-                              senderName: currentUser?.displayName ?? 'Me',
-                              senderUsername: currentUser?.username ?? 'me',
-                              targetUsernameOrEmail: input,
-                            );
-                            Navigator.pop(ctx);
-                          }
-                        },
-                        child: const Text('Add Friend'),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+    AddFriendSheet.show(context);
   }
 
   @override
