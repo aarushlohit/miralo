@@ -16,19 +16,23 @@ class AiMessageBubble extends StatelessWidget {
   final AiMessageModel message;
   final VoidCallback? onRegenerate;
   final Function(bool liked)? onLike;
+  final Function(String editedText)? onEdit;
 
   const AiMessageBubble({
     super.key,
     required this.message,
     this.onRegenerate,
     this.onLike,
+    this.onEdit,
   });
 
   bool get _isUser => message.role == 'user';
 
   @override
   Widget build(BuildContext context) {
-    return _isUser ? _UserMessage(message: message) : _AiMessage(message: message, onLike: onLike, onRegenerate: onRegenerate);
+    return _isUser
+        ? _UserMessage(message: message, onEdit: onEdit)
+        : _AiMessage(message: message, onLike: onLike, onRegenerate: onRegenerate);
   }
 }
 
@@ -36,13 +40,55 @@ class AiMessageBubble extends StatelessWidget {
 
 class _UserMessage extends StatelessWidget {
   final AiMessageModel message;
-  const _UserMessage({required this.message});
+  final Function(String editedText)? onEdit;
+  const _UserMessage({required this.message, this.onEdit});
+
+  void _showEditDialog(BuildContext context) {
+    final controller = TextEditingController(text: message.text);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? AppColors.darkSurfacePrimary : AppColors.lightSurfacePrimary;
+    final textColor = isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: bg,
+        title: Text('Edit Prompt', style: AppTypography.heading3(color: textColor)),
+        content: TextField(
+          controller: controller,
+          maxLines: 4,
+          style: AppTypography.body(color: textColor),
+          decoration: const InputDecoration(
+            hintText: 'Edit your prompt...',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final newText = controller.text.trim();
+              Navigator.pop(ctx);
+              if (newText.isNotEmpty && newText != message.text) {
+                onEdit?.call(newText);
+              }
+            },
+            child: const Text('Save & Send'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = isDark ? AppColors.darkMsgUser : AppColors.lightMsgUser;
     final textColor = isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
+    final mutedColor = isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -52,35 +98,59 @@ class _UserMessage extends StatelessWidget {
         child: ConstrainedBox(
           constraints: BoxConstraints(
               maxWidth: MediaQuery.of(context).size.width * 0.78),
-          child: Container(
-            padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md, vertical: AppSpacing.sm + 4),
-            decoration: BoxDecoration(
-              color: bg,
-              borderRadius: BorderRadius.circular(MiraloDimensions.standardRadius),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (message.imageBase64 != null) ...[
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxHeight: 220),
-                      child: Image.memory(
-                        base64Decode(message.imageBase64!),
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => const SizedBox(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md, vertical: AppSpacing.sm + 4),
+                decoration: BoxDecoration(
+                  color: bg,
+                  borderRadius: BorderRadius.circular(MiraloDimensions.standardRadius),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (message.imageBase64 != null) ...[
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxHeight: 220),
+                          child: Image.memory(
+                            base64Decode(message.imageBase64!),
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => const SizedBox(),
+                          ),
+                        ),
+                      ),
+                      if (message.text.isNotEmpty) const SizedBox(height: AppSpacing.xs + 4),
+                    ],
+                    if (message.text.isNotEmpty)
+                      Text(message.text, style: AppTypography.body(color: textColor)),
+                  ],
+                ),
+              ),
+              if (onEdit != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 2, right: 4),
+                  child: InkWell(
+                    onTap: () => _showEditDialog(context),
+                    borderRadius: BorderRadius.circular(4),
+                    child: Padding(
+                      padding: const EdgeInsets.all(4.0),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.edit_outlined, size: 13, color: mutedColor),
+                          const SizedBox(width: 3),
+                          Text('Edit', style: AppTypography.caption(color: mutedColor)),
+                        ],
                       ),
                     ),
                   ),
-                  if (message.text.isNotEmpty) const SizedBox(height: AppSpacing.xs + 4),
-                ],
-                if (message.text.isNotEmpty)
-                  Text(message.text, style: AppTypography.body(color: textColor)),
-              ],
-            ),
+                ),
+            ],
           ),
         ),
       ),
@@ -196,7 +266,7 @@ class _StreamingIndicatorState extends State<_StreamingIndicator>
   }
 }
 
-// ─── Message content with code block support ─────────────────────────────────
+// ─── Message content with full Markdown rendering ───────────────────────────
 
 class _MessageContent extends StatelessWidget {
   final String text;
@@ -206,49 +276,10 @@ class _MessageContent extends StatelessWidget {
   const _MessageContent(
       {required this.text, required this.textColor, required this.isDark});
 
-  List<_Segment> _parse(String raw) {
-    final segments = <_Segment>[];
-    final codeBlockReg = RegExp(r'```(\w*)\n?([\s\S]*?)```', multiLine: true);
-    int last = 0;
-
-    for (final match in codeBlockReg.allMatches(raw)) {
-      if (match.start > last) {
-        segments.add(_Segment.text(raw.substring(last, match.start)));
-      }
-      segments.add(_Segment.code(match.group(2) ?? '', match.group(1) ?? ''));
-      last = match.end;
-    }
-    if (last < raw.length) {
-      segments.add(_Segment.text(raw.substring(last)));
-    }
-    return segments;
-  }
-
   @override
   Widget build(BuildContext context) {
-    final segments = _parse(text);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: segments.map((s) {
-        if (s.isCode) {
-          return _CodeBlock(code: s.content, language: s.language, isDark: isDark);
-        }
-        return _FormattedText(text: s.content, textColor: textColor);
-      }).toList(),
-    );
+    return _FormattedText(text: text, textColor: textColor);
   }
-}
-
-class _Segment {
-  final String content;
-  final String language;
-  final bool isCode;
-
-  const _Segment.text(this.content)
-      : isCode = false,
-        language = '';
-  const _Segment.code(this.content, this.language) : isCode = true;
 }
 
 class _FormattedText extends StatelessWidget {
@@ -289,85 +320,6 @@ class _FormattedText extends StatelessWidget {
         horizontalRuleDecoration: BoxDecoration(
           border: Border(top: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.lightBorder, width: 1)),
         ),
-      ),
-    );
-  }
-}
-
-class _CodeBlock extends StatelessWidget {
-  final String code;
-  final String language;
-  final bool isDark;
-
-  const _CodeBlock(
-      {required this.code, required this.language, required this.isDark});
-
-  @override
-  Widget build(BuildContext context) {
-    final bg =
-        isDark ? AppColors.darkSurfaceSecondary : AppColors.lightSurfaceSecondary;
-    final border = isDark ? AppColors.darkBorder : AppColors.lightBorder;
-    final textColor =
-        isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
-    final labelColor = isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted;
-
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-        border: Border.all(color: border, width: 0.6),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Code header
-          Padding(
-            padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-            child: Row(
-              children: [
-                Text(language.isEmpty ? 'code' : language,
-                    style: AppTypography.caption(color: labelColor)
-                        .copyWith(fontWeight: FontWeight.w600)),
-                const Spacer(),
-                GestureDetector(
-                  onTap: () {
-                    Clipboard.setData(ClipboardData(text: code));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Copied',
-                            style: AppTypography.caption(color: Colors.white)),
-                        duration: const Duration(seconds: 1),
-                        behavior: SnackBarBehavior.floating,
-                        backgroundColor: AppColors.accent,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppSpacing.radiusSm)),
-                        margin: const EdgeInsets.all(AppSpacing.screenH),
-                      ),
-                    );
-                  },
-                  child: Row(
-                    children: [
-                      Icon(Icons.copy_outlined, size: 14, color: labelColor),
-                      const SizedBox(width: 4),
-                      Text('Copy',
-                          style: AppTypography.caption(color: labelColor)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Divider(height: 0.6, thickness: 0.6, color: border),
-          // Code body
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.all(AppSpacing.md),
-            child: Text(code.trim(),
-                style: AppTypography.mono(color: textColor)),
-          ),
-        ],
       ),
     );
   }

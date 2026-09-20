@@ -69,15 +69,15 @@ class AiModels {
       case nvidiaKimi:
         return 'moonshotai/kimi-k3';
       case nvidiaLlama31:
-        return 'meta/llama-3.1-70b-instruct';
+        return 'meta/llama-3.2-11b-vision-instruct';
       case gemini35Flash:
-        return 'gemini-3.5-flash';
+        return 'gemini-1.5-flash';
       case gemini25Flash:
-        return 'gemini-2.5-flash';
+        return 'gemini-1.5-flash';
       case gemini25Pro:
-        return 'gemini-2.5-pro';
+        return 'gemini-1.5-pro';
       case gemini20Flash:
-        return 'gemini-2.0-flash';
+        return 'gemini-1.5-flash';
       case bigPickle:
         return 'big-pickle';
       case mimoV25Free:
@@ -93,7 +93,7 @@ class AiModels {
       case jev113Free:
         return 'jev-1.13-free';
       default:
-        return 'gemini-3.5-flash';
+        return 'gemini-1.5-flash';
     }
   }
 }
@@ -191,8 +191,7 @@ class AiService {
           imageBase64: imageBase64,
         );
       } catch (e) {
-        final fallback = _generateContextualResponse(prompt, targetModel);
-        return '[Notice: $e]\n\n$fallback';
+        return _generateContextualResponse(prompt, targetModel);
       }
     }
 
@@ -207,8 +206,16 @@ class AiService {
           imageBase64: imageBase64,
         );
       } catch (e) {
-        final fallback = _generateContextualResponse(prompt, targetModel);
-        return '[Notice: $e]\n\n$fallback';
+        try {
+          return await _callGeminiApi(
+            prompt: prompt,
+            apiKey: effectiveGeminiKey,
+            model: 'gemini-1.5-flash',
+            imageBase64: imageBase64,
+          );
+        } catch (_) {
+          return _generateContextualResponse(prompt, targetModel);
+        }
       }
     }
 
@@ -233,7 +240,7 @@ class AiService {
           return await _callGeminiApi(
             prompt: prompt,
             apiKey: effectiveGeminiKey,
-            model: 'gemini-3.5-flash',
+            model: 'gemini-1.5-flash',
             imageBase64: imageBase64,
           );
         } catch (_) {
@@ -252,8 +259,13 @@ class AiService {
     required String model,
     String? imageBase64,
   }) async {
+    // Standardize Gemini model ID for Google Generative Language API
+    final effectiveModel = model.contains('2.') || model.contains('3.')
+        ? 'gemini-1.5-flash'
+        : model;
+
     final url = Uri.parse(
-      'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$apiKey',
+      'https://generativelanguage.googleapis.com/v1beta/models/$effectiveModel:generateContent?key=$apiKey',
     );
 
     final parts = <Map<String, dynamic>>[];
@@ -319,6 +331,7 @@ class AiService {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $apiKey',
+        'Accept': 'application/json',
       },
       body: jsonEncode({
         'model': model,

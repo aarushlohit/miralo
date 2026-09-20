@@ -227,7 +227,11 @@ class AiChatScreen extends StatelessWidget {
                   message: msg,
                   onLike: (liked) => ai.likeMessage(msg.id, liked),
                   onRegenerate: i == chat.messages.length - 1
-                      ? () => ai.regenerateLast()
+                      ? () => ai.regenerateLast(isSpecialUser: auth.isSpecialUser)
+                      : null,
+                  onEdit: msg.role == 'user'
+                      ? (editedText) => ai.editUserPrompt(msg.id, editedText,
+                          isSpecialUser: auth.isSpecialUser)
                       : null,
                 );
               },

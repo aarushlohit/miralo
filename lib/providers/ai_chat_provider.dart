@@ -341,4 +341,38 @@ class AiChatProvider extends ChangeNotifier {
       isSpecialUser: isSpecialUser,
     );
   }
+
+  /// Edits a previous user prompt.
+  /// Discards the target user message and all subsequent messages in the conversation,
+  /// then resends the edited prompt.
+  Future<void> editUserPrompt(
+    String messageId,
+    String editedText, {
+    bool isSpecialUser = false,
+  }) async {
+    if (_activeChatId == null || editedText.trim().isEmpty) return;
+    final chatIndex = _conversations.indexWhere((c) => c.id == _activeChatId);
+    if (chatIndex == -1) return;
+
+    final currentChat = _conversations[chatIndex];
+    final msgIndex = currentChat.messages.indexWhere((m) => m.id == messageId);
+    if (msgIndex == -1) return;
+
+    final targetMsg = currentChat.messages[msgIndex];
+
+    // Truncate message list up to target user message (removing target and subsequent messages)
+    final truncated = currentChat.messages.sublist(0, msgIndex);
+    _conversations[chatIndex] = currentChat.copyWith(
+      messages: truncated,
+      updatedAt: DateTime.now(),
+    );
+    notifyListeners();
+
+    // Send the edited prompt
+    await sendPrompt(
+      editedText.trim(),
+      imageBase64: targetMsg.imageBase64,
+      isSpecialUser: isSpecialUser,
+    );
+  }
 }
