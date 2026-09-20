@@ -404,18 +404,25 @@ class _ComposerState extends State<Composer> {
                   Padding(
                     padding: const EdgeInsets.only(right: 6),
                     child: widget.isSubmitting
-                        ? const SizedBox(
-                            width: 32,
-                            height: 32,
-                            child: Center(
-                              child: SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: MiraloColors.accent,
-                                ),
+                        ? Container(
+                            width: 36,
+                            height: 36,
+                            decoration: const BoxDecoration(
+                              color: MiraloColors.danger,
+                              shape: BoxShape.circle,
+                            ),
+                            child: IconButton(
+                              padding: EdgeInsets.zero,
+                              icon: const Icon(
+                                Icons.stop_rounded,
+                                size: 20,
+                                color: Colors.white,
                               ),
+                              onPressed: () {
+                                final ai = Provider.of<AiChatProvider>(context, listen: false);
+                                ai.stopStreaming();
+                              },
+                              tooltip: 'Stop response',
                             ),
                           )
                         : Container(

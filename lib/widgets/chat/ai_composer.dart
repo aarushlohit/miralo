@@ -15,6 +15,7 @@ import '../../providers/vault_provider.dart';
 class AiComposer extends StatefulWidget {
   final Function(String prompt) onSend;
   final VoidCallback? onAttach;
+  final VoidCallback? onStop;
   final bool isStreaming;
   final String placeholder;
 
@@ -22,6 +23,7 @@ class AiComposer extends StatefulWidget {
     super.key,
     required this.onSend,
     this.onAttach,
+    this.onStop,
     this.isStreaming = false,
     this.placeholder = 'Ask MIRALO AI...',
   });
@@ -169,7 +171,7 @@ class _AiComposerState extends State<AiComposer> {
               _SendButton(
                 isStreaming: widget.isStreaming,
                 hasText: _hasText,
-                onTap: _handleSend,
+                onTap: widget.isStreaming ? widget.onStop : _handleSend,
               ),
             ],
           ),
@@ -220,7 +222,9 @@ class _SendButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = hasText ? AppColors.accent : AppColors.accent.withValues(alpha: 0.45);
+    final bg = isStreaming
+        ? AppColors.danger
+        : (hasText ? AppColors.accent : AppColors.accent.withValues(alpha: 0.45));
 
     return GestureDetector(
       onTap: onTap,
@@ -233,12 +237,10 @@ class _SendButton extends StatelessWidget {
           shape: BoxShape.circle,
         ),
         child: isStreaming
-            ? const Padding(
-                padding: EdgeInsets.all(10),
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
+            ? const Icon(
+                Icons.stop_rounded,
+                color: Colors.white,
+                size: 20,
               )
             : const Icon(
                 Icons.arrow_forward_rounded,

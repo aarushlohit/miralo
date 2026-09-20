@@ -47,7 +47,6 @@ class AiModels {
     nemotron35Lightning,
     nemotron3Ultra,
     jev113Free,
-    gpt56,
   ];
 
   static bool supportsImage(String model) {

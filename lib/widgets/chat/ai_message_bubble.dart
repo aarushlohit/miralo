@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
@@ -258,45 +259,38 @@ class _FormattedText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Simple markdown: **bold** and `inline code`
-    return Text.rich(
-      _buildSpan(text, textColor),
-      style: AppTypography.body(color: textColor),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return MarkdownBody(
+      data: text,
+      selectable: true,
+      styleSheet: MarkdownStyleSheet(
+        p: AppTypography.body(color: textColor).copyWith(height: 1.45),
+        h1: AppTypography.heading1(color: textColor).copyWith(fontSize: 20, fontWeight: FontWeight.bold),
+        h2: AppTypography.heading2(color: textColor).copyWith(fontSize: 18, fontWeight: FontWeight.bold),
+        h3: AppTypography.heading3(color: textColor).copyWith(fontSize: 16, fontWeight: FontWeight.w600),
+        h4: AppTypography.bodyMedium(color: textColor).copyWith(fontWeight: FontWeight.w600),
+        strong: TextStyle(color: textColor, fontWeight: FontWeight.w700),
+        em: TextStyle(color: textColor, fontStyle: FontStyle.italic),
+        code: TextStyle(
+          fontFamily: 'monospace',
+          fontSize: 13,
+          color: AppColors.accent,
+          backgroundColor: textColor.withValues(alpha: 0.08),
+        ),
+        codeblockDecoration: BoxDecoration(
+          color: isDark ? AppColors.darkSurfaceSecondary : AppColors.lightSurfaceSecondary,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        blockquote: TextStyle(color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
+        blockquoteDecoration: BoxDecoration(
+          border: Border(left: BorderSide(color: AppColors.accent, width: 3)),
+        ),
+        listBullet: TextStyle(color: textColor, fontSize: 14),
+        horizontalRuleDecoration: BoxDecoration(
+          border: Border(top: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.lightBorder, width: 1)),
+        ),
+      ),
     );
-  }
-
-  TextSpan _buildSpan(String raw, Color color) {
-    final spans = <InlineSpan>[];
-    // Combine patterns
-    final combined = RegExp(r'\*\*(.*?)\*\*|`([^`]+)`');
-    int last = 0;
-
-    for (final m in combined.allMatches(raw)) {
-      if (m.start > last) {
-        spans.add(TextSpan(text: raw.substring(last, m.start)));
-      }
-      if (m.group(1) != null) {
-        // bold
-        spans.add(TextSpan(
-            text: m.group(1),
-            style: const TextStyle(fontWeight: FontWeight.w700)));
-      } else if (m.group(2) != null) {
-        // inline code
-        spans.add(TextSpan(
-          text: m.group(2),
-          style: TextStyle(
-            fontFamily: 'monospace',
-            fontSize: 13,
-            backgroundColor: color.withValues(alpha: 0.08),
-          ),
-        ));
-      }
-      last = m.end;
-    }
-    if (last < raw.length) {
-      spans.add(TextSpan(text: raw.substring(last)));
-    }
-    return TextSpan(children: spans);
   }
 }
 

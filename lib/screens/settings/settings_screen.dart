@@ -132,38 +132,63 @@ class SettingsScreen extends StatelessWidget {
 
                   // ── PRIVACY & SECURITY ───────────────────────
                   const MiraloSectionHeader('PRIVACY & SECURITY'),
-                  MiraloSettingsGroup(
-                    children: [
-                      MiraloListTile(
-                        icon: Icons.lock_outline_rounded,
-                        title: 'Private Access',
-                        subtitle: 'Stealth composer passcode & contacts',
-                        onTap: () => Navigator.pushNamed(
-                            context, AppRoutes.settingsPrivacy),
+                  if (vault.isPrivateUnlocked || vault.isLibraryUnlocked)
+                    MiraloSettingsGroup(
+                      children: [
+                        MiraloListTile(
+                          icon: Icons.lock_outline_rounded,
+                          title: 'Private Access',
+                          subtitle: 'Stealth composer passcode & contacts',
+                          onTap: () => Navigator.pushNamed(
+                              context, AppRoutes.settingsPrivacy),
+                        ),
+                        MiraloListTile(
+                          icon: Icons.shield_outlined,
+                          title: 'Library Vault',
+                          subtitle: 'Independent PIN protection for media',
+                          onTap: () => Navigator.pushNamed(
+                              context, AppRoutes.libraryLocked),
+                        ),
+                        MiraloListTile(
+                          icon: Icons.privacy_tip_outlined,
+                          title: 'Privacy',
+                          subtitle: 'Zero data tracking & local security',
+                          onTap: () => Navigator.pushNamed(
+                              context, AppRoutes.settingsPrivacy),
+                        ),
+                        MiraloListTile(
+                          icon: Icons.timer_outlined,
+                          title: 'Auto-lock',
+                          subtitle: 'Immediate session timeout on exit',
+                          onTap: () => Navigator.pushNamed(
+                              context, AppRoutes.settingsPrivacy),
+                        ),
+                      ],
+                    )
+                  else
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: MiraloSpacing.lg),
+                      child: Container(
+                        padding: const EdgeInsets.all(MiraloSpacing.md),
+                        decoration: BoxDecoration(
+                          color: isDark ? MiraloColors.darkSurfaceSecondary : MiraloColors.lightSurfaceSecondary,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: isDark ? MiraloColors.darkBorder : MiraloColors.lightBorder, width: 0.6),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.lock_outline_rounded, color: MiraloColors.accent, size: 20),
+                            const SizedBox(width: MiraloSpacing.sm),
+                            Expanded(
+                              child: Text(
+                                'Sensitive security and vault settings are hidden until secret passcode is entered in AI chat.',
+                                style: MiraloTypography.bodySmall(color: textSecondary),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      MiraloListTile(
-                        icon: Icons.shield_outlined,
-                        title: 'Library Vault',
-                        subtitle: 'Independent PIN protection for media',
-                        onTap: () => Navigator.pushNamed(
-                            context, AppRoutes.libraryLocked),
-                      ),
-                      MiraloListTile(
-                        icon: Icons.privacy_tip_outlined,
-                        title: 'Privacy',
-                        subtitle: 'Zero data tracking & local security',
-                        onTap: () => Navigator.pushNamed(
-                            context, AppRoutes.settingsPrivacy),
-                      ),
-                      MiraloListTile(
-                        icon: Icons.timer_outlined,
-                        title: 'Auto-lock',
-                        subtitle: 'Immediate session timeout on exit',
-                        onTap: () => Navigator.pushNamed(
-                            context, AppRoutes.settingsPrivacy),
-                      ),
-                    ],
-                  ),
+                    ),
 
                   const SizedBox(height: MiraloSpacing.lg),
 
@@ -208,21 +233,22 @@ class SettingsScreen extends StatelessWidget {
                   const SizedBox(height: MiraloSpacing.lg),
 
                   // ── STORAGE ──────────────────────────────────
-                  const MiraloSectionHeader('STORAGE'),
-                  MiraloSettingsGroup(
-                    children: [
-                      MiraloListTile(
-                        icon: Icons.data_usage_outlined,
-                        title: 'Data & Storage',
-                        subtitle: 'Local cache, export and database sync',
-                        onTap: () => Navigator.pushNamed(
-                            context, AppRoutes.settingsData),
-                        showDivider: false,
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: MiraloSpacing.lg),
+                  if (vault.isPrivateUnlocked || vault.isLibraryUnlocked) ...[
+                    const MiraloSectionHeader('STORAGE'),
+                    MiraloSettingsGroup(
+                      children: [
+                        MiraloListTile(
+                          icon: Icons.data_usage_outlined,
+                          title: 'Data & Storage',
+                          subtitle: 'Local cache, export and database sync',
+                          onTap: () => Navigator.pushNamed(
+                              context, AppRoutes.settingsData),
+                          showDivider: false,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: MiraloSpacing.lg),
+                  ],
 
                   // ── SUPPORT ──────────────────────────────────
                   const MiraloSectionHeader('SUPPORT'),

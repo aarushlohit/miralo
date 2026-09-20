@@ -276,6 +276,7 @@ class AiChatProvider extends ChangeNotifier {
     String currentText = '';
 
     for (int i = 0; i < words.length; i++) {
+      if (!_isStreaming) break; // Interrupted by stop indicator!
       await Future.delayed(const Duration(milliseconds: 20));
       currentText += (i == 0 ? '' : ' ') + words[i];
 
@@ -294,6 +295,13 @@ class AiChatProvider extends ChangeNotifier {
     _isStreaming = false;
     _saveConversations();
     notifyListeners();
+  }
+
+  void stopStreaming() {
+    if (_isStreaming) {
+      _isStreaming = false;
+      notifyListeners();
+    }
   }
 
   void likeMessage(String messageId, bool isLiked) {

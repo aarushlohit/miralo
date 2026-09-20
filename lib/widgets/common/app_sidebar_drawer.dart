@@ -10,6 +10,7 @@ import '../../providers/ai_chat_provider.dart';
 import '../../providers/private_chat_provider.dart';
 import '../../providers/vault_provider.dart';
 import '../../providers/theme_provider.dart';
+import '../private_chat/add_friend_sheet.dart';
 import 'miralo_avatar.dart';
 
 /// MIRALO AI Sidebar Drawer — Clean ChatGPT-inspired design.
@@ -352,8 +353,16 @@ class _AppSidebarDrawerState extends State<AppSidebarDrawer> {
                   },
                 ),
 
-                // Library — ONLY visible after secret passcode entered & unlocked
+                // Library & Private Features — ONLY visible after secret passcode entered & unlocked
                 if (vault.isPrivateUnlocked || vault.isLibraryUnlocked) ...[
+                  _NavItem(
+                    icon: Icons.person_add_outlined,
+                    label: 'Add Friend',
+                    onTap: () {
+                      _close(context);
+                      AddFriendSheet.show(context);
+                    },
+                  ),
                   _NavItem(
                     icon: Icons.auto_stories_outlined,
                     label: 'Library',

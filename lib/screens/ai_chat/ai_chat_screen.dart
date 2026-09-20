@@ -31,6 +31,7 @@ class AiChatScreen extends StatelessWidget {
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: bg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
@@ -39,70 +40,74 @@ class AiChatScreen extends StatelessWidget {
       ),
       builder: (ctx) => SafeArea(
         top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                margin: const EdgeInsets.symmetric(vertical: MiraloSpacing.md),
-                decoration: BoxDecoration(
-                  color: border,
-                  borderRadius: BorderRadius.circular(2),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.symmetric(vertical: MiraloSpacing.md),
+                  decoration: BoxDecoration(
+                    color: border,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                MiraloSpacing.lg,
-                0,
-                MiraloSpacing.lg,
-                MiraloSpacing.sm,
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  MiraloSpacing.lg,
+                  0,
+                  MiraloSpacing.lg,
+                  MiraloSpacing.sm,
+                ),
+                child: Text(
+                  'AI Model',
+                  style: MiraloTypography.titleMedium(color: textColor),
+                ),
               ),
-              child: Text(
-                'AI Model',
-                style: MiraloTypography.titleMedium(color: textColor),
-              ),
-            ),
-            Divider(height: 0.6, thickness: 0.6, color: border),
-            ...models.map((m) {
-              final selected = ai.selectedModel == m;
-              return InkWell(
-                onTap: () {
-                  ai.selectModel(m);
-                  Navigator.pop(ctx);
-                },
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: MiraloSpacing.lg,
-                    vertical: 14,
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          m,
-                          style: MiraloTypography.bodyMedium(color: textColor)
-                              .copyWith(
-                            fontWeight:
-                                selected ? FontWeight.w600 : FontWeight.w400,
+              Divider(height: 0.6, thickness: 0.6, color: border),
+              ...models.map((m) {
+                final selected = ai.selectedModel == m;
+                return InkWell(
+                  onTap: () {
+                    ai.selectModel(m);
+                    Navigator.pop(ctx);
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: MiraloSpacing.lg,
+                      vertical: 14,
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            m,
+                            style: MiraloTypography.bodyMedium(color: textColor)
+                                .copyWith(
+                              fontWeight:
+                                  selected ? FontWeight.w600 : FontWeight.w400,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                      ),
-                      if (selected)
-                        const Icon(Icons.check_rounded,
-                            size: 18, color: MiraloColors.accent)
-                      else
-                        Icon(Icons.circle_outlined,
-                            size: 18, color: mutedColor),
-                    ],
+                        if (selected)
+                          const Icon(Icons.check_rounded,
+                              size: 18, color: MiraloColors.accent)
+                        else
+                          Icon(Icons.circle_outlined,
+                              size: 18, color: mutedColor),
+                      ],
+                    ),
                   ),
-                ),
-              );
-            }),
-            const SizedBox(height: MiraloSpacing.md),
-          ],
+                );
+              }),
+              const SizedBox(height: MiraloSpacing.md),
+            ],
+          ),
         ),
       ),
     );

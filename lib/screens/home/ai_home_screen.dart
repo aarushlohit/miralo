@@ -152,105 +152,116 @@ class _AiHomeScreenState extends State<AiHomeScreen> {
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: bg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppSpacing.radiusSheet)),
       ),
       builder: (ctx) => SafeArea(
         top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                margin: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-                decoration: BoxDecoration(
-                  color: border,
-                  borderRadius: BorderRadius.circular(2),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                  decoration: BoxDecoration(
+                    color: border,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.screenH,
-                0,
-                AppSpacing.screenH,
-                AppSpacing.sm,
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.screenH,
+                  0,
+                  AppSpacing.screenH,
+                  AppSpacing.sm,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Select AI Model', style: AppTypography.heading3(color: textColor)),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        Navigator.pushNamed(context, AppRoutes.settingsAi);
+                      },
+                      child: Text(
+                        'API Keys',
+                        style: AppTypography.caption(color: AppColors.accent),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Select AI Model', style: AppTypography.heading3(color: textColor)),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pop(ctx);
-                      Navigator.pushNamed(context, AppRoutes.settingsAi);
-                    },
-                    child: Text(
-                      'API Keys',
-                      style: AppTypography.caption(color: AppColors.accent),
+              Divider(height: 0.6, thickness: 0.6, color: border),
+              ...ai.availableModels.map((m) {
+                final isSelected = ai.selectedModel == m;
+                return InkWell(
+                  onTap: () {
+                    ai.selectModel(m);
+                    Navigator.pop(ctx);
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.screenH,
+                      vertical: 14,
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: isSelected ? AppColors.accent : Colors.transparent,
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                m,
+                                style: AppTypography.bodyMedium(color: textColor).copyWith(
+                                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              if (m == AiModels.gemini25)
+                                Text('Google Gemini API • Text-optimized',
+                                    style: AppTypography.caption(color: textSecondary),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis)
+                              else if (m == AiModels.nvidiaNim)
+                                Text('NVIDIA NIM Cloud • Llama 3.1 70B',
+                                    style: AppTypography.caption(color: textSecondary),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis)
+                              else if (m == AiModels.openCode)
+                                Text('DeepSeek / OpenCode endpoint',
+                                    style: AppTypography.caption(color: textSecondary),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis),
+                            ],
+                          ),
+                        ),
+                        if (isSelected)
+                          const Icon(Icons.check_rounded, size: 18, color: AppColors.accent),
+                      ],
                     ),
                   ),
-                ],
-              ),
-            ),
-            Divider(height: 0.6, thickness: 0.6, color: border),
-            ...ai.availableModels.map((m) {
-              final isSelected = ai.selectedModel == m;
-              return InkWell(
-                onTap: () {
-                  ai.selectModel(m);
-                  Navigator.pop(ctx);
-                },
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.screenH,
-                    vertical: 14,
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: isSelected ? AppColors.accent : Colors.transparent,
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              m,
-                              style: AppTypography.bodyMedium(color: textColor).copyWith(
-                                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                              ),
-                            ),
-                            if (m == AiModels.gemini25)
-                              Text('Google Gemini API • Text-optimized',
-                                  style: AppTypography.caption(color: textSecondary))
-                            else if (m == AiModels.nvidiaNim)
-                              Text('NVIDIA NIM Cloud • Llama 3.1 70B',
-                                  style: AppTypography.caption(color: textSecondary))
-                            else if (m == AiModels.openCode)
-                              Text('DeepSeek / OpenCode endpoint',
-                                  style: AppTypography.caption(color: textSecondary)),
-                          ],
-                        ),
-                      ),
-                      if (isSelected)
-                        const Icon(Icons.check_rounded, size: 18, color: AppColors.accent),
-                    ],
-                  ),
-                ),
-              );
-            }),
-            const SizedBox(height: AppSpacing.md),
-          ],
+                );
+              }),
+              const SizedBox(height: AppSpacing.md),
+            ],
+          ),
         ),
       ),
     );
@@ -339,6 +350,7 @@ class _AiHomeScreenState extends State<AiHomeScreen> {
         titleWidget: GestureDetector(
           onTap: () => _showModelSelector(context, ai),
           child: Container(
+            constraints: const BoxConstraints(maxWidth: 180),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
             decoration: BoxDecoration(
               color: pillBg,
@@ -348,10 +360,14 @@ class _AiHomeScreenState extends State<AiHomeScreen> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  ai.selectedModel,
-                  style: AppTypography.caption(color: textPrimary).copyWith(
-                    fontWeight: FontWeight.w600,
+                Flexible(
+                  child: Text(
+                    ai.selectedModel,
+                    style: AppTypography.caption(color: textPrimary).copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 const SizedBox(width: 4),

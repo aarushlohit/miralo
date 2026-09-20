@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
@@ -55,22 +57,43 @@ class AuthProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    await Future.delayed(const Duration(milliseconds: 400));
+    try {
+      final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email.trim(),
+        password: password.trim(),
+      );
 
-    final uname = (username != null && username.trim().isNotEmpty)
-        ? username.trim().toLowerCase()
-        : email.split('@').first.toLowerCase();
+      final uid = credential.user?.uid ?? 'usr_me_001';
+      final uname = (username != null && username.trim().isNotEmpty)
+          ? username.trim().toLowerCase()
+          : email.split('@').first.toLowerCase();
 
-    _currentUser = UserModel(
-      id: 'usr_me_001',
-      displayName: email.split('@').first,
-      username: uname,
-      email: email,
-      createdAt: DateTime.now(),
-    );
+      _currentUser = UserModel(
+        id: uid,
+        displayName: credential.user?.displayName ?? email.split('@').first,
+        username: uname,
+        email: email.trim(),
+        avatarUrl: credential.user?.photoURL,
+        createdAt: DateTime.now(),
+      );
+    } catch (e) {
+      debugPrint('FirebaseAuth login error (falling back to offline local profile): $e');
+      final uname = (username != null && username.trim().isNotEmpty)
+          ? username.trim().toLowerCase()
+          : email.split('@').first.toLowerCase();
+
+      _currentUser = UserModel(
+        id: 'usr_${email.split('@').first}',
+        displayName: email.split('@').first,
+        username: uname,
+        email: email.trim(),
+        createdAt: DateTime.now(),
+      );
+    }
 
     _isLoading = false;
     await _saveUser();
+    _syncUserToFirebase();
     notifyListeners();
     return true;
   }
@@ -84,24 +107,56 @@ class AuthProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    await Future.delayed(const Duration(milliseconds: 400));
-
     final uname = (username != null && username.trim().isNotEmpty)
         ? username.trim().toLowerCase()
         : displayName.toLowerCase().replaceAll(' ', '_');
 
-    _currentUser = UserModel(
-      id: 'usr_me_${DateTime.now().millisecondsSinceEpoch}',
-      displayName: displayName,
-      username: uname,
-      email: email,
-      createdAt: DateTime.now(),
-    );
+    try {
+      final credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: email.trim(),
+        password: password.trim(),
+      );
+
+      final uid = credential.user?.uid ?? 'usr_me_${DateTime.now().millisecondsSinceEpoch}';
+      await credential.user?.updateDisplayName(displayName);
+
+      _currentUser = UserModel(
+        id: uid,
+        displayName: displayName,
+        username: uname,
+        email: email.trim(),
+        createdAt: DateTime.now(),
+      );
+    } catch (e) {
+      debugPrint('FirebaseAuth signup error (falling back to offline local profile): $e');
+      _currentUser = UserModel(
+        id: 'usr_${uname}_${DateTime.now().millisecondsSinceEpoch}',
+        displayName: displayName,
+        username: uname,
+        email: email.trim(),
+        createdAt: DateTime.now(),
+      );
+    }
 
     _isLoading = false;
     await _saveUser();
+    _syncUserToFirebase();
     notifyListeners();
     return true;
+  }
+
+  void _syncUserToFirebase() {
+    if (_currentUser == null) return;
+    try {
+      final ref = FirebaseDatabase.instance.ref('users/${_currentUser!.id}');
+      ref.update(_currentUser!.toJson());
+      // Also write username index for fast add friend search
+      FirebaseDatabase.instance
+          .ref('user_index/${_currentUser!.username}')
+          .set(_currentUser!.toJson());
+    } catch (e) {
+      debugPrint('Firebase Database user sync error: $e');
+    }
   }
 
   void updateProfile({String? displayName, String? username, String? avatarUrl}) {
@@ -112,10 +167,14 @@ class AuthProvider extends ChangeNotifier {
       avatarUrl: avatarUrl,
     );
     _saveUser();
+    _syncUserToFirebase();
     notifyListeners();
   }
 
   void logout() {
+    try {
+      FirebaseAuth.instance.signOut();
+    } catch (_) {}
     _currentUser = null;
     _saveUser();
     notifyListeners();
