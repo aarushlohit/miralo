@@ -15,6 +15,7 @@ class MessageRenderer extends StatelessWidget {
   final String? imageBase64;
   final String? imageUrl;
   final String? status;
+  final String? replyToText;
   final Map<String, int>? reactions;
   final Function(String emoji)? onReactionTap;
   final VoidCallback? onLongPress;
@@ -31,6 +32,7 @@ class MessageRenderer extends StatelessWidget {
     this.imageBase64,
     this.imageUrl,
     this.status,
+    this.replyToText,
     this.reactions,
     this.onReactionTap,
     this.onLongPress,
@@ -109,6 +111,26 @@ class MessageRenderer extends StatelessWidget {
                               style: MiraloTypography.labelMedium(
                                 color: MiraloColors.accent,
                               ),
+                            ),
+                          ),
+
+                        // Quoted reply box if retagged/replied
+                        if (replyToText != null && replyToText!.isNotEmpty)
+                          Container(
+                            margin: const EdgeInsets.only(bottom: MiraloSpacing.xs),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF222222) : const Color(0xFFE2E6EE),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border(left: BorderSide(color: MiraloColors.accent, width: 3)),
+                            ),
+                            child: Text(
+                              replyToText!,
+                              style: MiraloTypography.bodySmall(
+                                color: isDark ? MiraloColors.darkTextSecondary : MiraloColors.lightTextSecondary,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
 

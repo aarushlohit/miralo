@@ -24,8 +24,15 @@ import '../../widgets/chat/reaction_sheet.dart';
 /// - MessageRenderer (neutral surfaces, zero romantic/messaging styling)
 /// - Composer (images only converted to Base64, /urgent and /clear interception)
 /// - ReactionSheet & MessageActionsSheet
-class PrivateChatDetailScreen extends StatelessWidget {
+class PrivateChatDetailScreen extends StatefulWidget {
   const PrivateChatDetailScreen({super.key});
+
+  @override
+  State<PrivateChatDetailScreen> createState() => _PrivateChatDetailScreenState();
+}
+
+class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
+  String? _replyToText;
 
   void _quickExit(BuildContext context) {
     final vault = Provider.of<VaultProvider>(context, listen: false);
@@ -272,11 +279,27 @@ class PrivateChatDetailScreen extends StatelessWidget {
           onSelectEmoji: (emoji) => chat.toggleReaction(msg.id, emoji),
         );
       },
+      onReply: () {
+        setState(() {
+          _replyToText = msg.text.isNotEmpty
+              ? msg.text
+              : (msg.type == 'image' ? '[Photo Attachment]' : '[Media]');
+        });
+      },
       onSaveToLibrary: () {
         chat.saveMessageToLibrary(msg, library);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Saved to Library'),
+            duration: Duration(seconds: 1),
+          ),
+        );
+      },
+      onMoveToVault: () {
+        chat.moveMessageToPrivateVault(msg, library);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Moved to Private Vault'),
             duration: Duration(seconds: 1),
           ),
         );
@@ -287,6 +310,7 @@ class PrivateChatDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final chat = Provider.of<PrivateChatProvider>(context);
     final library = Provider.of<LibraryProvider>(context, listen: false);
     final contact = chat.activeContact;
@@ -319,24 +343,64 @@ class PrivateChatDetailScreen extends StatelessWidget {
             imageBase64: msg.imageBase64,
             imageUrl: msg.mediaUrl,
             status: msg.status,
+            replyToText: msg.replyToText,
             reactions: msg.reactions,
             onReactionTap: (emoji) => chat.toggleReaction(msg.id, emoji),
             onLongPress: () => _showMessageOptions(context, msg, chat, library),
           );
         },
       ),
-      composer: Composer(
-        isPrivate: true,
-        hintText: 'Message $displayName...',
-        onSubmitted: (text) => chat.sendTextMessage(text),
-        onImageAttached: (base64Image, fileName) {
-          chat.sendMediaMessage(
-            type: 'image',
-            imageBase64: base64Image,
-            fileName: fileName,
-            fileSize: '1.2 MB',
-          );
-        },
+      composer: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Active reply/retag bar banner if selected
+          if (_replyToText != null)
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: MiraloSpacing.md),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF222222) : const Color(0xFFE5E7EB),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                border: Border(left: BorderSide(color: MiraloColors.accent, width: 3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.reply_rounded, color: MiraloColors.accent, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Replying to: "$_replyToText"',
+                      style: MiraloTypography.bodySmall(
+                        color: isDark ? MiraloColors.darkTextPrimary : MiraloColors.lightTextPrimary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => setState(() => _replyToText = null),
+                    child: const Icon(Icons.close_rounded, size: 16),
+                  ),
+                ],
+              ),
+            ),
+          Composer(
+            isPrivate: true,
+            hintText: 'Message $displayName...',
+            onSubmitted: (text) {
+              chat.sendTextMessage(text, replyToText: _replyToText);
+              if (_replyToText != null) setState(() => _replyToText = null);
+            },
+            onImageAttached: (base64Image, fileName) {
+              chat.sendMediaMessage(
+                type: 'image',
+                imageBase64: base64Image,
+                fileName: fileName,
+                fileSize: '1.2 MB',
+              );
+            },
+          ),
+        ],
       ),
     );
   }

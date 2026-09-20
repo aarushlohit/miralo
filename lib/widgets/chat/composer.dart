@@ -207,17 +207,21 @@ class _ComposerState extends State<Composer> {
           );
         }
         return;
-      } else if (lower == '/clear') {
-        // Clear private chat locally & in Firebase RTDB immediately
+      } else if (lower == '/naughty') {
+        // Intercept /naughty command: Send random lovey-dovey Truth or Dare!
         _controller.clear();
         final privateChat = Provider.of<PrivateChatProvider>(context, listen: false);
-        privateChat.clearActiveChat();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Conversation cleared.'),
-            duration: Duration(seconds: 1),
-          ),
-        );
+        final dares = [
+          "Truth 💕: What was your very first impression of me?",
+          "Dare 🔥: Send a cute voice note saying something sweet.",
+          "Truth 💓: What is one secret thing that always makes you smile about me?",
+          "Dare 💋: Hold my gaze for 10 seconds without laughing!",
+          "Truth 💖: What is your favorite memory of us together?",
+          "Dare 💫: Give me a soft compliment right now.",
+        ];
+        dares.shuffle();
+        final picked = dares.first;
+        privateChat.sendTextMessage(picked);
         return;
       }
     }

@@ -142,7 +142,7 @@ class PrivateChatProvider extends ChangeNotifier {
     }
   }
 
-  void sendTextMessage(String text) {
+  void sendTextMessage(String text, {String? replyToText}) {
     if (text.trim().isEmpty || _activeChatId == null) return;
     final senderId = _currentUserId ?? 'me';
 
@@ -152,6 +152,7 @@ class PrivateChatProvider extends ChangeNotifier {
       senderId: senderId,
       type: 'text',
       text: text.trim(),
+      replyToText: replyToText,
       createdAt: DateTime.now(),
       status: 'sent',
     );
@@ -405,6 +406,11 @@ class PrivateChatProvider extends ChangeNotifier {
         folderId: 'folder_docs',
       );
     }
+  }
+
+  void moveMessageToPrivateVault(PrivateMessageModel msg, LibraryProvider library) {
+    saveMessageToLibrary(msg, library);
+    deleteMessage(msg.id);
   }
 
   void updateContactDisplayName(String contactId, String newName) {

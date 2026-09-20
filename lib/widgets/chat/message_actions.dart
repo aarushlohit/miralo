@@ -6,14 +6,18 @@ import '../../core/theme/miralo_tokens.dart';
 class MessageActionsSheet extends StatelessWidget {
   final String text;
   final VoidCallback? onReact;
+  final VoidCallback? onReply;
   final VoidCallback? onSaveToLibrary;
+  final VoidCallback? onMoveToVault;
   final VoidCallback? onDelete;
 
   const MessageActionsSheet({
     super.key,
     required this.text,
     this.onReact,
+    this.onReply,
     this.onSaveToLibrary,
+    this.onMoveToVault,
     this.onDelete,
   });
 
@@ -21,7 +25,9 @@ class MessageActionsSheet extends StatelessWidget {
     BuildContext context, {
     required String text,
     VoidCallback? onReact,
+    VoidCallback? onReply,
     VoidCallback? onSaveToLibrary,
+    VoidCallback? onMoveToVault,
     VoidCallback? onDelete,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -38,7 +44,9 @@ class MessageActionsSheet extends StatelessWidget {
       builder: (_) => MessageActionsSheet(
         text: text,
         onReact: onReact,
+        onReply: onReply,
         onSaveToLibrary: onSaveToLibrary,
+        onMoveToVault: onMoveToVault,
         onDelete: onDelete,
       ),
     );
@@ -85,6 +93,16 @@ class MessageActionsSheet extends StatelessWidget {
                   onReact?.call();
                 },
               ),
+            if (onReply != null)
+              _ActionRow(
+                icon: Icons.reply_rounded,
+                title: 'Reply / Retag Message',
+                textColor: textColor,
+                onTap: () {
+                  Navigator.pop(context);
+                  onReply?.call();
+                },
+              ),
             _ActionRow(
               icon: Icons.copy_rounded,
               title: 'Copy Text',
@@ -108,6 +126,16 @@ class MessageActionsSheet extends StatelessWidget {
                 onTap: () {
                   Navigator.pop(context);
                   onSaveToLibrary?.call();
+                },
+              ),
+            if (onMoveToVault != null)
+              _ActionRow(
+                icon: Icons.lock_outline_rounded,
+                title: 'Move to Private Vault',
+                textColor: textColor,
+                onTap: () {
+                  Navigator.pop(context);
+                  onMoveToVault?.call();
                 },
               ),
             if (onDelete != null)
