@@ -391,10 +391,11 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
               chat.sendTextMessage(text, replyToText: _replyToText);
               if (_replyToText != null) setState(() => _replyToText = null);
             },
-            onImageAttached: (base64Image, fileName) {
+            onImageAttached: (base64OrUrl, fileName) {
               chat.sendMediaMessage(
                 type: 'image',
-                imageBase64: base64Image,
+                mediaUrl: base64OrUrl.startsWith('http') ? base64OrUrl : null,
+                imageBase64: base64OrUrl.startsWith('http') ? null : base64OrUrl,
                 fileName: fileName,
                 fileSize: '1.2 MB',
               );

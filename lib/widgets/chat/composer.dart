@@ -243,14 +243,33 @@ class _ComposerState extends State<Composer> {
   void _showAttachmentSheet() {
     AttachmentSheet.show(
       context,
-      onImageSelected: (base64, name) {
+      onImageSelected: (urlOrBase64, name) {
         if (widget.isPrivate) {
-          widget.onImageAttached?.call(base64, name);
+          widget.onImageAttached?.call(urlOrBase64, name);
         } else {
           setState(() {
-            _attachedImageBase64 = base64;
+            _attachedImageBase64 = urlOrBase64;
             _attachedImageName = name;
           });
+        }
+      },
+      onDocumentSelected: (docUrlOrBase64, name, size) {
+        if (widget.isPrivate) {
+          final privateChat = Provider.of<PrivateChatProvider>(context, listen: false);
+          privateChat.sendMediaMessage(
+            type: 'document',
+            mediaUrl: docUrlOrBase64.startsWith('http') ? docUrlOrBase64 : null,
+            imageBase64: docUrlOrBase64.startsWith('http') ? null : docUrlOrBase64,
+            fileName: name,
+            fileSize: size,
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Attached document: $name ($size)'),
+              duration: const Duration(seconds: 2),
+            ),
+          );
         }
       },
     );

@@ -1,18 +1,26 @@
 import 'dart:convert';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../core/theme/miralo_tokens.dart';
+import '../../services/cloudinary_service.dart';
 
-/// Attachment sheet strictly allowing images only (Camera & Photos).
-/// Converts selected image directly to Base64 string for realtime transmission.
+/// Attachment sheet supporting Images (Camera & Photos) and Documents (PDF, DOCX, TXT).
+/// Attempts Cloudinary upload first, falling back directly to Base64 string for offline/free operation.
 class AttachmentSheet extends StatelessWidget {
-  final Function(String base64Image, String fileName)? onImageSelected;
+  final Function(String mediaUrlOrBase64, String fileName)? onImageSelected;
+  final Function(String documentUrlOrBase64, String fileName, String fileSize)? onDocumentSelected;
 
-  const AttachmentSheet({super.key, this.onImageSelected});
+  const AttachmentSheet({
+    super.key,
+    this.onImageSelected,
+    this.onDocumentSelected,
+  });
 
   static Future<void> show(
     BuildContext context, {
-    Function(String base64Image, String fileName)? onImageSelected,
+    Function(String mediaUrlOrBase64, String fileName)? onImageSelected,
+    Function(String documentUrlOrBase64, String fileName, String fileSize)? onDocumentSelected,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return showModalBottomSheet<void>(
@@ -25,7 +33,10 @@ class AttachmentSheet extends StatelessWidget {
           top: Radius.circular(MiraloRadius.bottomSheet),
         ),
       ),
-      builder: (_) => AttachmentSheet(onImageSelected: onImageSelected),
+      builder: (_) => AttachmentSheet(
+        onImageSelected: onImageSelected,
+        onDocumentSelected: onDocumentSelected,
+      ),
     );
   }
 
@@ -41,11 +52,62 @@ class AttachmentSheet extends StatelessWidget {
       );
       if (file != null) {
         final bytes = await file.readAsBytes();
-        final base64String = base64Encode(bytes);
-        onImageSelected?.call(base64String, file.name);
+        
+        // Attempt Cloudinary upload first
+        final cloudUrl = await CloudinaryService.uploadFileBytes(
+          fileBytes: bytes,
+          fileName: file.name,
+          resourceType: 'image',
+        );
+
+        if (cloudUrl != null && cloudUrl.isNotEmpty) {
+          onImageSelected?.call(cloudUrl, file.name);
+        } else {
+          // Fallback to Base64
+          final base64String = base64Encode(bytes);
+          onImageSelected?.call(base64String, file.name);
+        }
       }
     } catch (e) {
       debugPrint('Error picking image: $e');
+    }
+  }
+
+  Future<void> _pickDocument(BuildContext context) async {
+    Navigator.pop(context);
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'doc', 'docx', 'txt', 'zip', 'csv', 'xlsx'],
+        withData: true,
+      );
+
+      if (result != null && result.files.isNotEmpty) {
+        final pickedFile = result.files.first;
+        final fileName = pickedFile.name;
+        final bytes = pickedFile.bytes;
+        final sizeKb = (pickedFile.size / 1024).toStringAsFixed(1);
+        final sizeText = pickedFile.size > 1024 * 1024
+            ? '${(pickedFile.size / (1024 * 1024)).toStringAsFixed(1)} MB'
+            : '$sizeKb KB';
+
+        if (bytes != null) {
+          final cloudUrl = await CloudinaryService.uploadFileBytes(
+            fileBytes: bytes,
+            fileName: fileName,
+            resourceType: 'raw',
+          );
+
+          if (cloudUrl != null && cloudUrl.isNotEmpty) {
+            onDocumentSelected?.call(cloudUrl, fileName, sizeText);
+          } else {
+            final base64String = base64Encode(bytes);
+            onDocumentSelected?.call(base64String, fileName, sizeText);
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error picking document: $e');
     }
   }
 
@@ -88,17 +150,17 @@ class AttachmentSheet extends StatelessWidget {
               ),
             ),
             Text(
-              'Share Image',
+              'Share Content',
               style: MiraloTypography.titleMedium(color: textColor),
             ),
             const SizedBox(height: MiraloSpacing.xs),
             Text(
-              'Select an image to send securely',
+              'Select photos or documents to send',
               style: MiraloTypography.bodySmall(color: subColor),
             ),
             const SizedBox(height: MiraloSpacing.lg),
 
-            // Strictly Images Only: Camera & Photos
+            // Camera, Photos & Document options
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
@@ -115,6 +177,13 @@ class AttachmentSheet extends StatelessWidget {
                   bgColor: iconBg,
                   textColor: textColor,
                   onTap: () => _pickImage(context, ImageSource.gallery),
+                ),
+                _ImageActionTile(
+                  icon: Icons.insert_drive_file_outlined,
+                  label: 'Document',
+                  bgColor: iconBg,
+                  textColor: textColor,
+                  onTap: () => _pickDocument(context),
                 ),
               ],
             ),
@@ -177,3 +246,4 @@ class _ImageActionTile extends StatelessWidget {
     );
   }
 }
+
