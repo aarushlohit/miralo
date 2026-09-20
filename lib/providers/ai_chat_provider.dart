@@ -1,14 +1,19 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/ai_chat_model.dart';
 import '../services/ai_service.dart';
 
 class AiChatProvider extends ChangeNotifier {
+  static const String _prefConversationsKey = 'miralo_ai_conversations_v2';
+
   final List<AiChatModel> _conversations = [];
   String? _activeChatId;
-  String _selectedModel = AiModels.gpt56;
+  String _selectedModel = AiModels.gemini35Flash;
   bool _isStreaming = false;
   String? _prefilledPrompt;
+  String _searchQuery = '';
 
   List<AiChatModel> get conversations => _conversations;
   String? get activeChatId => _activeChatId;
@@ -16,6 +21,7 @@ class AiChatProvider extends ChangeNotifier {
   bool get isStreaming => _isStreaming;
   List<String> get availableModels => AiModels.all;
   String? get prefilledPrompt => _prefilledPrompt;
+  String get searchQuery => _searchQuery;
 
   void prefillPrompt(String prompt) {
     _prefilledPrompt = prompt;
@@ -33,7 +39,7 @@ class AiChatProvider extends ChangeNotifier {
     try {
       return _conversations.firstWhere((c) => c.id == _activeChatId);
     } catch (_) {
-      return null;
+      return _conversations.isNotEmpty ? _conversations.first : null;
     }
   }
 
@@ -43,126 +49,89 @@ class AiChatProvider extends ChangeNotifier {
   List<AiChatModel> get recentChats =>
       _conversations.where((c) => !c.isPinned).toList();
 
+  List<AiChatModel> get filteredPinnedChats {
+    if (_searchQuery.trim().isEmpty) return pinnedChats;
+    final q = _searchQuery.toLowerCase();
+    return pinnedChats.where((c) => c.title.toLowerCase().contains(q)).toList();
+  }
+
+  List<AiChatModel> get filteredRecentChats {
+    if (_searchQuery.trim().isEmpty) return recentChats;
+    final q = _searchQuery.toLowerCase();
+    return recentChats.where((c) => c.title.toLowerCase().contains(q)).toList();
+  }
+
+  void setSearchQuery(String query) {
+    _searchQuery = query;
+    notifyListeners();
+  }
+
   AiChatProvider() {
+    _seedDefaultChat();
     _initService();
-    _seedInitialConversations();
   }
 
   Future<void> _initService() async {
     await AiService.instance.init();
     _selectedModel = AiService.instance.selectedModel;
+    await _loadConversations();
     notifyListeners();
   }
 
-  void _seedInitialConversations() {
-    final quantumChat = AiChatModel(
-      id: 'chat_quantum_001',
-      title: 'Quantum computing in simple words',
+  Future<void> _loadConversations() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_prefConversationsKey);
+
+    if (raw != null && raw.isNotEmpty) {
+      try {
+        final list = jsonDecode(raw) as List<dynamic>;
+        if (list.isNotEmpty) {
+          _conversations.clear();
+          for (final item in list) {
+            _conversations.add(AiChatModel.fromJson(item as Map<String, dynamic>));
+          }
+        }
+      } catch (_) {}
+    }
+
+    // Ensure at least one chat exists at all times
+    if (_conversations.isEmpty) {
+      _seedDefaultChat();
+    }
+
+    _activeChatId ??= _conversations.first.id;
+  }
+
+  void _seedDefaultChat() {
+    final welcomeChat = AiChatModel(
+      id: 'chat_default_welcome',
+      title: 'Welcome to MIRALO AI',
       isPinned: true,
-      createdAt: DateTime.now().subtract(const Duration(days: 1)),
-      updatedAt: DateTime.now().subtract(const Duration(hours: 2)),
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
       messages: [
         AiMessageModel(
-          id: 'msg_q_1',
-          role: 'user',
-          text: 'Explain quantum computing in simple words.',
-          timestamp: DateTime.now().subtract(const Duration(minutes: 20)),
-        ),
-        AiMessageModel(
-          id: 'msg_q_2',
+          id: 'msg_welcome_asst',
           role: 'assistant',
           text:
-              'Quantum computing uses quantum bits, or qubits, which can be 0 and 1 at the same time, to process information in fundamentally different ways than classical computers.\n\n'
-              'Here is how you can think about it:\n'
-              '• **Superposition**: A coin flipped in the air is both heads and tails until caught.\n'
-              '• **Entanglement**: Two coins spun miles apart that magically land on the same side every time.\n\n'
-              '```python\n'
-              '# Basic Qiskit circuit representation\n'
-              'from qiskit import QuantumCircuit\n'
-              'qc = QuantumCircuit(2, 2)\n'
-              'qc.h(0) # Apply Hadamard gate (superposition)\n'
-              'qc.cx(0, 1) # Entangle qubit 0 with qubit 1\n'
-              '```\n\n'
-              'This unlocks exponential processing power for molecular simulation, cryptography, and complex optimization.',
-          timestamp: DateTime.now().subtract(const Duration(minutes: 19)),
+              'Welcome to MIRALO AI. Your intelligence workspace is ready.\n\n'
+              '• Select from NVIDIA NIM, Google Gemini, and OpenCode models.\n'
+              '• Use voice dictation or attach images for multimodal analysis.\n'
+              '• All your conversations are strictly private.',
+          timestamp: DateTime.now(),
           liked: true,
         ),
       ],
     );
+    _conversations.add(welcomeChat);
+    _activeChatId = welcomeChat.id;
+    _saveConversations();
+  }
 
-    final projectBChat = AiChatModel(
-      id: 'chat_proj_b',
-      title: 'Project B Architecture',
-      isPinned: true,
-      createdAt: DateTime.now().subtract(const Duration(days: 3)),
-      updatedAt: DateTime.now().subtract(const Duration(days: 1)),
-      messages: [
-        AiMessageModel(
-          id: 'msg_pb_1',
-          role: 'user',
-          text: 'Design microservices architecture for real-time collaboration.',
-          timestamp: DateTime.now().subtract(const Duration(days: 1)),
-        ),
-        AiMessageModel(
-          id: 'msg_pb_2',
-          role: 'assistant',
-          text:
-              'For high-concurrency real-time collaboration, a hybrid CRDT and WebSocket gateway architecture with Redis pub/sub delivers under 15ms latency.',
-          timestamp: DateTime.now().subtract(const Duration(days: 1)),
-        ),
-      ],
-    );
-
-    final dsaChat = AiChatModel(
-      id: 'chat_dsa',
-      title: 'DSA ROADMAP',
-      isPinned: true,
-      createdAt: DateTime.now().subtract(const Duration(days: 5)),
-      updatedAt: DateTime.now().subtract(const Duration(days: 2)),
-      messages: [
-        AiMessageModel(
-          id: 'msg_dsa_1',
-          role: 'user',
-          text: 'Create a 12-week DSA roadmap covering graphs and DP.',
-          timestamp: DateTime.now().subtract(const Duration(days: 2)),
-        ),
-      ],
-    );
-
-    final learnChat = AiChatModel(
-      id: 'chat_learn_fast',
-      title: 'How to learn faster?',
-      isPinned: false,
-      createdAt: DateTime.now().subtract(const Duration(days: 2)),
-      updatedAt: DateTime.now().subtract(const Duration(hours: 5)),
-      messages: [
-        AiMessageModel(
-          id: 'msg_lf_1',
-          role: 'user',
-          text: 'What are the top 3 cognitive learning strategies?',
-          timestamp: DateTime.now().subtract(const Duration(hours: 5)),
-        ),
-      ],
-    );
-
-    final flutterChat = AiChatModel(
-      id: 'chat_flutter_app',
-      title: 'Build a Flutter app',
-      isPinned: false,
-      createdAt: DateTime.now().subtract(const Duration(hours: 8)),
-      updatedAt: DateTime.now().subtract(const Duration(hours: 4)),
-      messages: [
-        AiMessageModel(
-          id: 'msg_fa_1',
-          role: 'user',
-          text: 'How to build production UI in Flutter?',
-          timestamp: DateTime.now().subtract(const Duration(hours: 4)),
-        ),
-      ],
-    );
-
-    _conversations.addAll([quantumChat, projectBChat, dsaChat, learnChat, flutterChat]);
-    _activeChatId = quantumChat.id;
+  Future<void> _saveConversations() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = jsonEncode(_conversations.map((c) => c.toJson()).toList());
+    await prefs.setString(_prefConversationsKey, raw);
   }
 
   void selectModel(String model) {
@@ -187,12 +156,67 @@ class AiChatProvider extends ChangeNotifier {
     );
     _conversations.insert(0, newChat);
     _activeChatId = newChat.id;
+    _saveConversations();
     notifyListeners();
     return newChat.id;
   }
 
-  Future<void> sendPrompt(String prompt) async {
-    if (prompt.trim().isEmpty) return;
+  void togglePin(String chatId) {
+    final idx = _conversations.indexWhere((c) => c.id == chatId);
+    if (idx != -1) {
+      final chat = _conversations[idx];
+      _conversations[idx] = chat.copyWith(isPinned: !chat.isPinned);
+      _saveConversations();
+      notifyListeners();
+    }
+  }
+
+  void renameConversation(String chatId, String newTitle) {
+    final idx = _conversations.indexWhere((c) => c.id == chatId);
+    if (idx != -1 && newTitle.trim().isNotEmpty) {
+      _conversations[idx] = _conversations[idx].copyWith(
+        title: newTitle.trim(),
+        updatedAt: DateTime.now(),
+      );
+      _saveConversations();
+      notifyListeners();
+    }
+  }
+
+  /// Delete conversation with mandatory safeguard: must keep at least one chat
+  void deleteConversation(String chatId) {
+    if (_conversations.length <= 1) {
+      // Replace with clean conversation so list is never empty
+      _conversations.clear();
+      final freshChat = AiChatModel(
+        id: 'chat_${DateTime.now().millisecondsSinceEpoch}',
+        title: 'New Conversation',
+        isPinned: false,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        messages: [],
+      );
+      _conversations.add(freshChat);
+      _activeChatId = freshChat.id;
+      _saveConversations();
+      notifyListeners();
+      return;
+    }
+
+    _conversations.removeWhere((c) => c.id == chatId);
+    if (_activeChatId == chatId) {
+      _activeChatId = _conversations.first.id;
+    }
+    _saveConversations();
+    notifyListeners();
+  }
+
+  Future<void> sendPrompt(
+    String prompt, {
+    String? imageBase64,
+    bool isSpecialUser = false,
+  }) async {
+    if (prompt.trim().isEmpty && imageBase64 == null) return;
 
     if (_activeChatId == null) {
       createNewChat();
@@ -202,6 +226,7 @@ class AiChatProvider extends ChangeNotifier {
       id: 'msg_${DateTime.now().millisecondsSinceEpoch}',
       role: 'user',
       text: prompt.trim(),
+      imageBase64: imageBase64,
       timestamp: DateTime.now(),
     );
 
@@ -210,10 +235,10 @@ class AiChatProvider extends ChangeNotifier {
 
     final currentChat = _conversations[chatIndex];
     final updatedMessages = List<AiMessageModel>.from(currentChat.messages)..add(userMsg);
-    
+
     // Auto title if it was first message
     final newTitle = currentChat.messages.isEmpty
-        ? (prompt.length > 28 ? '${prompt.substring(0, 25)}...' : prompt)
+        ? (prompt.length > 28 ? '${prompt.substring(0, 25)}...' : (prompt.isNotEmpty ? prompt : 'Image Analysis'))
         : currentChat.title;
 
     _conversations[chatIndex] = currentChat.copyWith(
@@ -225,7 +250,7 @@ class AiChatProvider extends ChangeNotifier {
     _isStreaming = true;
     notifyListeners();
 
-    // Streaming response
+    // Streaming placeholder
     final assistantMsgId = 'msg_asst_${DateTime.now().millisecondsSinceEpoch}';
     final assistantMsg = AiMessageModel(
       id: assistantMsgId,
@@ -239,17 +264,19 @@ class AiChatProvider extends ChangeNotifier {
     );
     notifyListeners();
 
-    // Fetch response from real AiService (Gemini, NVIDIA NIM, OpenCode, or fallback)
+    // Fetch response from real AiService (Gemini, NVIDIA NIM, OpenCode)
     final fullResponse = await AiService.instance.sendPrompt(
       prompt: prompt,
       model: _selectedModel,
+      imageBase64: imageBase64,
+      isSpecialUser: isSpecialUser,
     );
 
     final words = fullResponse.split(' ');
     String currentText = '';
 
     for (int i = 0; i < words.length; i++) {
-      await Future.delayed(const Duration(milliseconds: 25));
+      await Future.delayed(const Duration(milliseconds: 20));
       currentText += (i == 0 ? '' : ' ') + words[i];
 
       final liveIndex = _conversations.indexWhere((c) => c.id == _activeChatId);
@@ -265,6 +292,7 @@ class AiChatProvider extends ChangeNotifier {
     }
 
     _isStreaming = false;
+    _saveConversations();
     notifyListeners();
   }
 
@@ -285,28 +313,24 @@ class AiChatProvider extends ChangeNotifier {
     }
 
     _conversations[chatIndex] = _conversations[chatIndex].copyWith(messages: msgs);
+    _saveConversations();
     notifyListeners();
   }
 
-  void regenerateLast() {
+  void regenerateLast({bool isSpecialUser = false}) {
     if (_activeChatId == null) return;
     final chat = activeChat;
     if (chat == null || chat.messages.isEmpty) return;
 
-    // Find last user prompt
     final lastUserMsg = chat.messages.lastWhere(
       (m) => m.role == 'user',
       orElse: () => chat.messages.first,
     );
 
-    sendPrompt(lastUserMsg.text);
-  }
-
-  void deleteConversation(String chatId) {
-    _conversations.removeWhere((c) => c.id == chatId);
-    if (_activeChatId == chatId) {
-      _activeChatId = _conversations.isNotEmpty ? _conversations.first.id : null;
-    }
-    notifyListeners();
+    sendPrompt(
+      lastUserMsg.text,
+      imageBase64: lastUserMsg.imageBase64,
+      isSpecialUser: isSpecialUser,
+    );
   }
 }

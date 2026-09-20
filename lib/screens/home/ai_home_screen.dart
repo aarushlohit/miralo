@@ -5,6 +5,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../providers/ai_chat_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../services/ai_service.dart';
 import '../../widgets/chat/composer.dart';
 import '../../widgets/common/app_sidebar_drawer.dart';
@@ -54,10 +55,12 @@ class _AiHomeScreenState extends State<AiHomeScreen> {
     ),
   ];
 
-  void _sendPrompt(BuildContext context, String prompt) {
+  void _sendPrompt(BuildContext context, String prompt, [String? imageBase64]) {
     final ai = Provider.of<AiChatProvider>(context, listen: false);
+    final auth = Provider.of<AuthProvider>(context, listen: false);
     ai.createNewChat();
-    ai.sendPrompt(prompt);
+    ai.sendPrompt(prompt,
+        imageBase64: imageBase64, isSpecialUser: auth.isSpecialUser);
     Navigator.pushNamed(context, AppRoutes.chat);
   }
 
@@ -353,6 +356,7 @@ class _AiHomeScreenState extends State<AiHomeScreen> {
             isPrivate: false,
             hintText: 'Ask anything...',
             onSubmitted: (prompt) => _sendPrompt(context, prompt),
+            onSubmittedWithImage: (prompt, img) => _sendPrompt(context, prompt, img),
           ),
         ],
       ),

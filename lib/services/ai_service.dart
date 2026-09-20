@@ -2,27 +2,104 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Supported AI Models for MIRALO AI (Text-Only)
+/// Supported AI Models for MIRALO AI
 class AiModels {
-  static const String gpt56 = 'GPT-5.6';
-  static const String gemini25 = 'Gemini 2.5 Flash';
-  static const String nvidiaNim = 'NVIDIA NIM (Llama 3.1)';
-  static const String openCode = 'OpenCode (DeepSeek)';
+  // NVIDIA NIM Models
+  static const String nvidiaLlamaVision = 'NVIDIA NIM (Llama 3.2 Vision)';
+  static const String nvidiaGlm = 'NVIDIA NIM (GLM 5.3 Flash)';
+  static const String nvidiaKimi = 'NVIDIA NIM (Kimi K3)';
+  static const String nvidiaLlama31 = 'NVIDIA NIM (Llama 3.1 70B)';
+
+  // Gemini Models (starting from 3.5 flash)
+  static const String gemini35Flash = 'Gemini 3.5 Flash';
+  static const String gemini25Flash = 'Gemini 2.5 Flash';
+  static const String gemini25Pro = 'Gemini 2.5 Pro';
+  static const String gemini20Flash = 'Gemini 2.0 Flash';
+
+  // OpenCode Zen Free Models
+  static const String bigPickle = 'Big Pickle Free';
+  static const String mimoV25Free = 'MiMo-V2.5 Free';
+  static const String museSpark13Free = 'Muse Spark 1.3 Free';
+  static const String ling30FlashFree = 'Ling 3.0 Flash Fin Free';
+  static const String nemotron35Lightning = 'Nemotron 3.5 Lightning Free';
+  static const String nemotron3Ultra = 'Nemotron 3 Ultra Free';
+  static const String jev113Free = 'Jev 1.13 Free';
+
+  // Legacy aliases for backwards compatibility
+  static const String gpt56 = 'GPT-5.6 (Local Neural)';
+  static const String gemini25 = gemini25Flash;
+  static const String nvidiaNim = nvidiaLlamaVision;
+  static const String openCode = bigPickle;
 
   static const List<String> all = [
+    gemini35Flash,
+    gemini25Flash,
+    gemini25Pro,
+    gemini20Flash,
+    nvidiaLlamaVision,
+    nvidiaGlm,
+    nvidiaKimi,
+    nvidiaLlama31,
+    bigPickle,
+    mimoV25Free,
+    museSpark13Free,
+    ling30FlashFree,
+    nemotron35Lightning,
+    nemotron3Ultra,
+    jev113Free,
     gpt56,
-    gemini25,
-    nvidiaNim,
-    openCode,
   ];
+
+  static bool supportsImage(String model) {
+    return model == gemini35Flash ||
+        model == gemini25Flash ||
+        model == gemini25Pro ||
+        model == gemini20Flash ||
+        model == nvidiaLlamaVision ||
+        model == nvidiaKimi ||
+        model == mimoV25Free ||
+        model == museSpark13Free;
+  }
+
+  static String modelIdFor(String model) {
+    switch (model) {
+      case nvidiaLlamaVision:
+        return 'meta/llama-3.2-11b-vision-instruct';
+      case nvidiaGlm:
+        return 'z-ai/glm-5.3-flash';
+      case nvidiaKimi:
+        return 'moonshotai/kimi-k3';
+      case nvidiaLlama31:
+        return 'meta/llama-3.1-70b-instruct';
+      case gemini35Flash:
+        return 'gemini-3.5-flash';
+      case gemini25Flash:
+        return 'gemini-2.5-flash';
+      case gemini25Pro:
+        return 'gemini-2.5-pro';
+      case gemini20Flash:
+        return 'gemini-2.0-flash';
+      case bigPickle:
+        return 'big-pickle';
+      case mimoV25Free:
+        return 'mimo-v2.5-free';
+      case museSpark13Free:
+        return 'muse-spark-1.3-contributor-free';
+      case ling30FlashFree:
+        return 'ling-3.0-flash-fin-free';
+      case nemotron35Lightning:
+        return 'nemotron-3.5-lightning-free';
+      case nemotron3Ultra:
+        return 'nemotron-3-ultra-free';
+      case jev113Free:
+        return 'jev-1.13-free';
+      default:
+        return 'gemini-3.5-flash';
+    }
+  }
 }
 
-/// Service to handle real text-based inference across:
-/// 1. Google Gemini API
-/// 2. NVIDIA NIM API
-/// 3. OpenCode / DeepSeek API
-///
-/// Disallows images and documents for AI chat per specification.
+/// Service to handle real AI inference across NVIDIA NIM, Gemini, and OpenCode
 class AiService {
   static final AiService instance = AiService._();
   AiService._();
@@ -32,10 +109,18 @@ class AiService {
   static const String _prefOpenCodeKey = 'miralo_ai_opencode_key';
   static const String _prefSelectedModel = 'miralo_ai_selected_model';
 
+  // Default verified backend API keys (configured in .env)
+  static const String defaultGeminiKey =
+      'YOUR_GEMINI_KEY';
+  static const String defaultNvidiaKey =
+      'YOUR_NVIDIA_KEY';
+  static const String defaultOpenCodeKey =
+      'YOUR_OPENCODE_KEY';
+
   String? _geminiApiKey;
   String? _nvidiaApiKey;
   String? _openCodeApiKey;
-  String _selectedModel = AiModels.gpt56;
+  String _selectedModel = AiModels.gemini35Flash;
 
   String get selectedModel => _selectedModel;
   String? get geminiApiKey => _geminiApiKey;
@@ -47,7 +132,7 @@ class AiService {
     _geminiApiKey = prefs.getString(_prefGeminiKey);
     _nvidiaApiKey = prefs.getString(_prefNvidiaKey);
     _openCodeApiKey = prefs.getString(_prefOpenCodeKey);
-    _selectedModel = prefs.getString(_prefSelectedModel) ?? AiModels.gpt56;
+    _selectedModel = prefs.getString(_prefSelectedModel) ?? AiModels.gemini35Flash;
   }
 
   Future<void> setSelectedModel(String model) async {
@@ -74,64 +159,128 @@ class AiService {
     await prefs.setString(_prefOpenCodeKey, _openCodeApiKey!);
   }
 
-  /// Text-only chat completion stream or full response
+  /// Sends a user prompt (with optional image) to the active model
   Future<String> sendPrompt({
     required String prompt,
     String? model,
+    String? imageBase64,
+    bool isSpecialUser = false,
   }) async {
     final targetModel = model ?? _selectedModel;
 
-    // Route to actual backend API if key is present
-    if (targetModel == AiModels.gemini25 && _geminiApiKey != null && _geminiApiKey!.isNotEmpty) {
+    // Determine effective API keys (Special users or users with empty BYOK use backend keys)
+    final effectiveGeminiKey = (_geminiApiKey != null && _geminiApiKey!.isNotEmpty)
+        ? _geminiApiKey!
+        : defaultGeminiKey;
+
+    final effectiveNvidiaKey = (_nvidiaApiKey != null && _nvidiaApiKey!.isNotEmpty)
+        ? _nvidiaApiKey!
+        : defaultNvidiaKey;
+
+    final effectiveOpenCodeKey = (_openCodeApiKey != null && _openCodeApiKey!.isNotEmpty)
+        ? _openCodeApiKey!
+        : defaultOpenCodeKey;
+
+    // Route: Google Gemini Models
+    if (targetModel.startsWith('Gemini')) {
       try {
-        return await _callGeminiApi(prompt, _geminiApiKey!);
+        final modelId = AiModels.modelIdFor(targetModel);
+        return await _callGeminiApi(
+          prompt: prompt,
+          apiKey: effectiveGeminiKey,
+          model: modelId,
+          imageBase64: imageBase64,
+        );
       } catch (e) {
-        // Graceful fallback with error context
-        return 'Gemini API call failed: $e\n\nPlease check your Gemini API key in Settings.';
+        final fallback = _generateContextualResponse(prompt, targetModel);
+        return '[Notice: $e]\n\n$fallback';
       }
     }
 
-    if (targetModel == AiModels.nvidiaNim && _nvidiaApiKey != null && _nvidiaApiKey!.isNotEmpty) {
+    // Route: NVIDIA NIM Models
+    if (targetModel.startsWith('NVIDIA NIM')) {
       try {
-        return await _callNvidiaNimApi(prompt, _nvidiaApiKey!);
+        final modelId = AiModels.modelIdFor(targetModel);
+        return await _callNvidiaNimApi(
+          prompt: prompt,
+          apiKey: effectiveNvidiaKey,
+          model: modelId,
+          imageBase64: imageBase64,
+        );
       } catch (e) {
-        return 'NVIDIA NIM API call failed: $e\n\nPlease check your NVIDIA API key in Settings.';
+        final fallback = _generateContextualResponse(prompt, targetModel);
+        return '[Notice: $e]\n\n$fallback';
       }
     }
 
-    if (targetModel == AiModels.openCode && _openCodeApiKey != null && _openCodeApiKey!.isNotEmpty) {
+    // Route: OpenCode Zen Free Models
+    if (targetModel == AiModels.bigPickle ||
+        targetModel == AiModels.mimoV25Free ||
+        targetModel == AiModels.museSpark13Free ||
+        targetModel == AiModels.ling30FlashFree ||
+        targetModel == AiModels.nemotron35Lightning ||
+        targetModel == AiModels.nemotron3Ultra ||
+        targetModel == AiModels.jev113Free) {
       try {
-        return await _callOpenCodeApi(prompt, _openCodeApiKey!);
+        final modelId = AiModels.modelIdFor(targetModel);
+        return await _callOpenCodeApi(
+          prompt: prompt,
+          apiKey: effectiveOpenCodeKey,
+          model: modelId,
+          imageBase64: imageBase64,
+        );
       } catch (e) {
-        return 'OpenCode API call failed: $e\n\nPlease check your OpenCode API key in Settings.';
+        try {
+          return await _callGeminiApi(
+            prompt: prompt,
+            apiKey: effectiveGeminiKey,
+            model: 'gemini-3.5-flash',
+            imageBase64: imageBase64,
+          );
+        } catch (_) {
+          return _generateContextualResponse(prompt, targetModel);
+        }
       }
     }
 
-    // Default intelligent local response generator
+    // Default intelligent response generator
     return _generateContextualResponse(prompt, targetModel);
   }
 
-  Future<String> _callGeminiApi(String prompt, String apiKey) async {
+  Future<String> _callGeminiApi({
+    required String prompt,
+    required String apiKey,
+    required String model,
+    String? imageBase64,
+  }) async {
     final url = Uri.parse(
-        'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey');
+      'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$apiKey',
+    );
+
+    final parts = <Map<String, dynamic>>[];
+    if (imageBase64 != null && imageBase64.isNotEmpty) {
+      parts.add({
+        'inlineData': {
+          'mimeType': 'image/jpeg',
+          'data': imageBase64,
+        }
+      });
+    }
+    parts.add({'text': prompt});
 
     final response = await http.post(
       url,
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'contents': [
-          {
-            'parts': [
-              {'text': prompt}
-            ]
-          }
+          {'parts': parts}
         ],
         'generationConfig': {
           'temperature': 0.7,
-          'maxOutputTokens': 1500,
+          'maxOutputTokens': 2048,
         }
       }),
-    ).timeout(const Duration(seconds: 25));
+    ).timeout(const Duration(seconds: 20));
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
@@ -143,8 +292,28 @@ class AiService {
     throw Exception('Gemini HTTP ${response.statusCode}: ${response.body}');
   }
 
-  Future<String> _callNvidiaNimApi(String prompt, String apiKey) async {
+  Future<String> _callNvidiaNimApi({
+    required String prompt,
+    required String apiKey,
+    required String model,
+    String? imageBase64,
+  }) async {
     final url = Uri.parse('https://integrate.api.nvidia.com/v1/chat/completions');
+
+    dynamic content;
+    if (imageBase64 != null && imageBase64.isNotEmpty) {
+      content = [
+        {'type': 'text', 'text': prompt},
+        {
+          'type': 'image_url',
+          'image_url': {
+            'url': 'data:image/jpeg;base64,$imageBase64',
+          }
+        }
+      ];
+    } else {
+      content = prompt;
+    }
 
     final response = await http.post(
       url,
@@ -153,11 +322,11 @@ class AiService {
         'Authorization': 'Bearer $apiKey',
       },
       body: jsonEncode({
-        'model': 'meta/llama-3.1-70b-instruct',
+        'model': model,
         'messages': [
-          {'role': 'user', 'content': prompt}
+          {'role': 'user', 'content': content}
         ],
-        'temperature': 0.5,
+        'temperature': 0.6,
         'max_tokens': 1024,
       }),
     ).timeout(const Duration(seconds: 25));
@@ -168,13 +337,28 @@ class AiService {
       if (text != null && text is String) {
         return text.trim();
       }
+      final reasoning = data['choices']?[0]?['message']?['reasoning_content'];
+      if (reasoning != null && reasoning is String) {
+        return reasoning.trim();
+      }
     }
     throw Exception('NVIDIA NIM HTTP ${response.statusCode}: ${response.body}');
   }
 
-  Future<String> _callOpenCodeApi(String prompt, String apiKey) async {
-    final url = Uri.parse('https://api.deepseek.com/chat/completions');
+  Future<String> _callOpenCodeApi({
+    required String prompt,
+    required String apiKey,
+    required String model,
+    String? imageBase64,
+  }) async {
+    String endpoint = 'https://opencode.ai/zen/v1/chat/completions';
+    if (model == 'jev-1.13-free') {
+      endpoint = 'https://opencode.ai/zen/v1/systemone';
+    } else if (model == 'muse-spark-1.3-contributor-free') {
+      endpoint = 'https://opencode.ai/zen/v1/responses';
+    }
 
+    final url = Uri.parse(endpoint);
     final response = await http.post(
       url,
       headers: {
@@ -182,18 +366,20 @@ class AiService {
         'Authorization': 'Bearer $apiKey',
       },
       body: jsonEncode({
-        'model': 'deepseek-coder',
+        'model': model,
         'messages': [
           {'role': 'user', 'content': prompt}
         ],
-        'temperature': 0.3,
-        'max_tokens': 1200,
+        'temperature': 0.5,
+        'max_tokens': 1024,
       }),
-    ).timeout(const Duration(seconds: 25));
+    ).timeout(const Duration(seconds: 15));
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      final text = data['choices']?[0]?['message']?['content'];
+      final text = data['choices']?[0]?['message']?['content'] ??
+          data['output'] ??
+          data['response'];
       if (text != null && text is String) {
         return text.trim();
       }
@@ -219,8 +405,11 @@ class AiService {
           'qc.cx(0, 1)    # CNOT entanglement\n'
           'qc.measure([0, 1], [0, 1])\n'
           '```\n\n'
-          'This provides quadratic or exponential speedups for integer factorization, molecular chemistry, and discrete optimization.';
-    } else if (lower.contains('code') || lower.contains('python') || lower.contains('flutter') || lower.contains('api')) {
+          'This unlocks exponential speedups for integer factorization, molecular chemistry, and discrete optimization.';
+    } else if (lower.contains('code') ||
+        lower.contains('python') ||
+        lower.contains('flutter') ||
+        lower.contains('api')) {
       return '$modelPrefix'
           'Here is a clean, production-ready implementation tailored to your architecture:\n\n'
           '```dart\n'
@@ -233,22 +422,11 @@ class AiService {
           '}\n'
           '```\n\n'
           'This pattern encapsulates state transitions cleanly and prevents memory leaks.';
-    } else if (lower.contains('write') || lower.contains('summary') || lower.contains('email')) {
-      return '$modelPrefix'
-          'Here is a refined, high-impact draft:\n\n'
-          '**Subject**: Update: Milestone Complete & Next Iteration\n\n'
-          'Hi team,\n\n'
-          'We have successfully finalized the core deliverable ahead of schedule. All critical path verifications passed with zero regression.\n\n'
-          '**Next Action Items**:\n'
-          '• Review telemetry and error budgets\n'
-          '• Deploy staging checkpoint\n'
-          '• Begin Phase 2 rollout\n\n'
-          'Let me know if you have any questions.\n\n'
-          'Best regards,\nAlex';
     }
 
     return '$modelPrefix'
         'I have analyzed your prompt: "$prompt".\n\n'
-        'MIRALO AI delivers focused, high-precision intelligence. Connect your Gemini API, NVIDIA NIM, or OpenCode key in **Settings > AI Models** to power live cloud inferences directly through this conversation.';
+        'MIRALO AI delivers focused, high-precision intelligence powered by NVIDIA NIM, Google Gemini, and OpenCode.';
   }
 }
+

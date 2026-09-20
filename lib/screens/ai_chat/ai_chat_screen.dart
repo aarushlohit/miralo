@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/miralo_tokens.dart';
 import '../../providers/ai_chat_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../widgets/chat/ai_message_bubble.dart';
 import '../../widgets/chat/chat_header.dart';
 import '../../widgets/chat/chat_scaffold.dart';
@@ -193,6 +194,7 @@ class AiChatScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ai = Provider.of<AiChatProvider>(context);
+    final auth = Provider.of<AuthProvider>(context, listen: false);
     final chat = ai.activeChat;
 
     return ChatScaffold(
@@ -229,7 +231,10 @@ class AiChatScreen extends StatelessWidget {
         isPrivate: false,
         isSubmitting: ai.isStreaming,
         hintText: 'Ask anything...',
-        onSubmitted: (prompt) => ai.sendPrompt(prompt),
+        onSubmitted: (prompt) =>
+            ai.sendPrompt(prompt, isSpecialUser: auth.isSpecialUser),
+        onSubmittedWithImage: (prompt, img) => ai.sendPrompt(prompt,
+            imageBase64: img, isSpecialUser: auth.isSpecialUser),
       ),
     );
   }

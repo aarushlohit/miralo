@@ -31,6 +31,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   // Step 3 (Account) Controllers
   final _nameController = TextEditingController();
+  final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passController = TextEditingController();
   final _confirmPassController = TextEditingController();
@@ -45,6 +46,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   void dispose() {
     _pageCtrl.dispose();
     _nameController.dispose();
+    _usernameController.dispose();
     _emailController.dispose();
     _passController.dispose();
     _confirmPassController.dispose();
@@ -66,11 +68,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     if (_currentStep == 2) {
       // Validate Account
       final name = _nameController.text.trim();
+      final username = _usernameController.text.trim();
       final email = _emailController.text.trim();
       final pass = _passController.text;
       final confirm = _confirmPassController.text;
 
-      if (name.isEmpty || email.isEmpty || pass.isEmpty) {
+      if (name.isEmpty || username.isEmpty || email.isEmpty || pass.isEmpty) {
         setState(() => _accountError = 'Please fill in all fields.');
         return;
       }
@@ -80,7 +83,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       }
       setState(() => _accountError = null);
       final auth = Provider.of<AuthProvider>(context, listen: false);
-      auth.signup(name, email, pass);
+      auth.signup(name, email, pass, username: username);
       _goToStep(3);
       return;
     }
@@ -303,6 +306,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             controller: _nameController,
             hint: 'Full name',
             prefixIcon: Icons.person_outline,
+          ),
+          const SizedBox(height: AppSpacing.sm + 2),
+          MiraloTextField(
+            controller: _usernameController,
+            hint: 'Username (e.g. aarushlohit)',
+            prefixIcon: Icons.alternate_email_rounded,
           ),
           const SizedBox(height: AppSpacing.sm + 2),
           MiraloTextField(

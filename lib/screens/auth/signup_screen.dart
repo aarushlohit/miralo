@@ -18,6 +18,7 @@ class SignUpScreen extends StatefulWidget {
 
 class _SignUpScreenState extends State<SignUpScreen> {
   final _nameController = TextEditingController();
+  final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmController = TextEditingController();
@@ -26,6 +27,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   @override
   void dispose() {
     _nameController.dispose();
+    _usernameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmController.dispose();
@@ -34,6 +36,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   Future<void> _handleSignUp() async {
     final name = _nameController.text.trim();
+    final username = _usernameController.text.trim().toLowerCase();
     final email = _emailController.text.trim();
     final pass = _passwordController.text;
     final confirm = _confirmController.text;
@@ -57,7 +60,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
     setState(() => _errorMessage = null);
     final auth = Provider.of<AuthProvider>(context, listen: false);
-    final success = await auth.signup(name, email, pass);
+    final success = await auth.signup(name, email, pass, username: username.isNotEmpty ? username : null);
     if (success && mounted) {
       Navigator.pushReplacementNamed(context, AppRoutes.securitySetup);
     }
@@ -134,6 +137,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 controller: _nameController,
                 hint: 'Display name',
                 prefixIcon: Icons.person_outline,
+                textInputAction: TextInputAction.next,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              MiraloTextField(
+                controller: _usernameController,
+                hint: 'Username (e.g. aarushlohit)',
+                prefixIcon: Icons.alternate_email_rounded,
                 textInputAction: TextInputAction.next,
               ),
               const SizedBox(height: AppSpacing.md),

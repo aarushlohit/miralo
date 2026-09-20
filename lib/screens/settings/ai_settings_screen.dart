@@ -4,6 +4,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../providers/ai_chat_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../services/ai_service.dart';
 import '../../widgets/common/miralo_button.dart';
 import '../../widgets/common/miralo_list_tile.dart';
@@ -57,6 +58,8 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final ai = Provider.of<AiChatProvider>(context);
+    final auth = Provider.of<AuthProvider>(context);
+    final isSpecial = auth.isSpecialUser;
 
     final bg = isDark ? AppColors.darkBackground : AppColors.lightBackground;
     final textPrimary = isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
@@ -96,21 +99,64 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
             vertical: AppSpacing.md,
           ),
           children: [
-            MiraloSectionHeader('DEFAULT MODEL (TEXT-ONLY)'),
+            if (isSpecial) ...[
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                margin: const EdgeInsets.only(bottom: AppSpacing.lg),
+                decoration: BoxDecoration(
+                  color: AppColors.accent.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                  border: Border.all(
+                    color: AppColors.accent.withValues(alpha: 0.4),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.verified_user_rounded,
+                        color: AppColors.accent, size: 22),
+                    const SizedBox(width: AppSpacing.sm + 4),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Special Access Enabled (@${auth.currentUser?.username})',
+                            style: AppTypography.bodyMedium(color: textPrimary)
+                                .copyWith(fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Default backend API keys for NVIDIA NIM, Google Gemini, and OpenCode are active. Custom BYOK keys are completely optional.',
+                            style: AppTypography.caption(color: textSecondary),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            MiraloSectionHeader('DEFAULT MODEL (TEXT & MULTIMODAL)'),
             MiraloSettingsGroup(
               children: ai.availableModels.map((m) {
                 final isSelected = ai.selectedModel == m;
+                String subtitle = 'Default balanced text reasoning';
+                if (m == AiModels.gemini25) {
+                  subtitle = 'Google Gemini (gemini-3.5-flash / gemini-2.5-flash) • Fast Multimodal';
+                } else if (m == AiModels.nvidiaNim) {
+                  subtitle = 'NVIDIA NIM (glm-5.3-flash, llama-3.2-11b-vision, kimi-k3)';
+                } else if (m == AiModels.openCode) {
+                  subtitle = 'OpenCode Zen (big-pickle, mimo-v2.5, muse-spark)';
+                }
+
                 return MiraloListTile(
                   icon: isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked,
                   iconColor: isSelected ? AppColors.accent : textSecondary,
                   title: m,
-                  subtitle: m == AiModels.gemini25
-                      ? 'Google Gemini API • High-speed reasoning'
-                      : m == AiModels.nvidiaNim
-                          ? 'NVIDIA NIM • Llama 3.1 70B'
-                          : m == AiModels.openCode
-                              ? 'DeepSeek / OpenCode endpoint'
-                              : 'Default balanced text reasoning',
+                  subtitle: subtitle,
                   showChevron: false,
                   onTap: () => ai.selectModel(m),
                 );
@@ -121,7 +167,9 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
 
             MiraloSectionHeader('API KEYS (CLOUD INFERENCE)'),
             Text(
-              'Enter your API keys for live cloud model execution. Keys are stored securely on your device.',
+              isSpecial
+                  ? 'Custom API keys (optional for special users). Leave empty to use system backend keys.'
+                  : 'Enter your API keys for live cloud model execution. Keys are stored securely on your device.',
               style: AppTypography.caption(color: textSecondary),
             ),
             const SizedBox(height: AppSpacing.sm),

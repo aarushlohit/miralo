@@ -4,6 +4,7 @@ import '../../core/routes/app_routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
+import '../../models/ai_chat_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/ai_chat_provider.dart';
 import '../../providers/private_chat_provider.dart';
@@ -13,16 +14,13 @@ import 'miralo_avatar.dart';
 
 /// MIRALO AI Sidebar Drawer — Clean ChatGPT-inspired design.
 ///
-/// Key spec compliance:
-/// - No "PRIVATE WORKSPACE" section header
-/// - No unlock dialog in sidebar (secret is entered via AI composer)
-/// - Contacts appear only after vault.isPrivateUnlocked
-/// - Neutral "Contacts" section label only
-/// - No Naughty Mode visible
-/// - No flame icons
-/// - Monochrome icons with blue accent for actions
-/// - Avatar uses MiraloAvatar (deterministic blue, never amber/yellow)
-class AppSidebarDrawer extends StatelessWidget {
+/// Upgraded Features:
+/// - Real-time chat search & filtering directly in the drawer.
+/// - 3-dots button & long-press on every chat: Pin/Unpin, Rename, Delete.
+/// - Minimum 1-chat guarantee supported.
+/// - Library item with lock icon and passcode / system lock gating.
+/// - Pure monochrome / blue accent aesthetic.
+class AppSidebarDrawer extends StatefulWidget {
   final bool isPersistent;
   final VoidCallback? onClose;
 
@@ -32,12 +30,160 @@ class AppSidebarDrawer extends StatelessWidget {
     this.onClose,
   });
 
+  @override
+  State<AppSidebarDrawer> createState() => _AppSidebarDrawerState();
+}
+
+class _AppSidebarDrawerState extends State<AppSidebarDrawer> {
+  bool _isSearching = false;
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   void _close(BuildContext context) {
-    if (isPersistent) {
-      onClose?.call();
+    if (widget.isPersistent) {
+      widget.onClose?.call();
     } else {
       Navigator.pop(context);
     }
+  }
+
+  void _showChatOptions(BuildContext context, AiChatProvider ai, AiChatModel chat) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? AppColors.darkSurfacePrimary : AppColors.lightSurfacePrimary;
+    final textPrimary = isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
+    final border = isDark ? AppColors.darkBorder : AppColors.lightBorder;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: bg,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSpacing.radiusSheet)),
+      ),
+      builder: (ctx) => SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenH, vertical: 4),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  chat.title,
+                  style: AppTypography.heading3(color: textPrimary),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            ListTile(
+              leading: Icon(
+                chat.isPinned ? Icons.push_pin_rounded : Icons.push_pin_outlined,
+                color: AppColors.accent,
+                size: 20,
+              ),
+              title: Text(
+                chat.isPinned ? 'Unpin chat' : 'Pin chat',
+                style: AppTypography.bodyMedium(color: textPrimary),
+              ),
+              dense: true,
+              onTap: () {
+                Navigator.pop(ctx);
+                ai.togglePin(chat.id);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.edit_outlined, color: AppColors.accent, size: 20),
+              title: Text(
+                'Rename chat',
+                style: AppTypography.bodyMedium(color: textPrimary),
+              ),
+              dense: true,
+              onTap: () {
+                Navigator.pop(ctx);
+                _showRenameDialog(context, ai, chat);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline_rounded, color: AppColors.danger, size: 20),
+              title: Text(
+                'Delete chat',
+                style: AppTypography.bodyMedium(color: AppColors.danger),
+              ),
+              dense: true,
+              onTap: () {
+                Navigator.pop(ctx);
+                ai.deleteConversation(chat.id);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Chat removed.'),
+                    duration: Duration(seconds: 1),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: AppSpacing.md),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showRenameDialog(BuildContext context, AiChatProvider ai, AiChatModel chat) {
+    final controller = TextEditingController(text: chat.title);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? AppColors.darkSurfacePrimary : AppColors.lightSurfacePrimary;
+    final textPrimary = isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: bg,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Rename Conversation', style: AppTypography.heading3(color: textPrimary)),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          style: AppTypography.bodyMedium(color: textPrimary),
+          decoration: const InputDecoration(
+            hintText: 'Enter title',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final newTitle = controller.text.trim();
+              if (newTitle.isNotEmpty) {
+                ai.renameConversation(chat.id, newTitle);
+              }
+              Navigator.pop(ctx);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -63,6 +209,9 @@ class AppSidebarDrawer extends StatelessWidget {
     final iconBg =
         isDark ? AppColors.darkSurfaceSecondary : AppColors.lightSurfaceSecondary;
 
+    final pinnedList = ai.filteredPinnedChats;
+    final recentList = ai.filteredRecentChats;
+
     Widget content = SafeArea(
       child: Column(
         children: [
@@ -81,18 +230,23 @@ class AppSidebarDrawer extends StatelessWidget {
                 ),
                 // Search button
                 _CircleIconBtn(
-                  icon: Icons.search_rounded,
-                  color: textPrimary,
+                  icon: _isSearching ? Icons.search_off_rounded : Icons.search_rounded,
+                  color: _isSearching ? AppColors.accent : textPrimary,
                   bg: iconBg,
-                  tooltip: 'Search chats',
+                  tooltip: _isSearching ? 'Exit search' : 'Search chats',
                   onTap: () {
-                    _close(context);
-                    Navigator.pushNamed(context, AppRoutes.home);
+                    setState(() {
+                      _isSearching = !_isSearching;
+                      if (!_isSearching) {
+                        _searchController.clear();
+                        ai.setSearchQuery('');
+                      }
+                    });
                   },
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 // Close button (non-persistent)
-                if (!isPersistent)
+                if (!widget.isPersistent)
                   _CircleIconBtn(
                     icon: Icons.close_rounded,
                     color: textSecondary,
@@ -103,6 +257,46 @@ class AppSidebarDrawer extends StatelessWidget {
               ],
             ),
           ),
+
+          // ── Real-time Search Input Field (when searching) ───────
+          if (_isSearching)
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm + 4, vertical: AppSpacing.xs),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.darkSurfaceSecondary : AppColors.lightSurfaceSecondary,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: border, width: 0.8),
+                ),
+                child: TextField(
+                  controller: _searchController,
+                  autofocus: true,
+                  style: AppTypography.bodyMedium(color: textPrimary),
+                  decoration: InputDecoration(
+                    hintText: 'Search chats...',
+                    hintStyle: AppTypography.bodyMedium(color: textMuted),
+                    prefixIcon: const Icon(Icons.search_rounded, size: 18, color: AppColors.accent),
+                    suffixIcon: _searchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.close_rounded, size: 16),
+                            onPressed: () {
+                              _searchController.clear();
+                              ai.setSearchQuery('');
+                              setState(() {});
+                            },
+                          )
+                        : null,
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  onChanged: (val) {
+                    ai.setSearchQuery(val);
+                    setState(() {});
+                  },
+                ),
+              ),
+            ),
 
           // ── Nav list ─────────────────────────────────────────────
           Expanded(
@@ -143,32 +337,36 @@ class AppSidebarDrawer extends StatelessWidget {
                   ),
                 ),
 
-                // Search chats
+                // Search chats toggle
                 _NavItem(
                   icon: Icons.search_rounded,
-                  label: 'Search chats',
+                  label: _isSearching ? 'Close search' : 'Search chats',
                   onTap: () {
-                    _close(context);
-                    Navigator.pushNamed(context, AppRoutes.home);
+                    setState(() {
+                      _isSearching = !_isSearching;
+                      if (!_isSearching) {
+                        _searchController.clear();
+                        ai.setSearchQuery('');
+                      }
+                    });
                   },
                 ),
 
-                // Library
+                // Library — Lock icon + Passcode / Biometric gating
                 _NavItem(
                   icon: Icons.auto_stories_outlined,
                   label: 'Library',
                   trailing: !vault.isLibraryUnlocked
-                      ? Icon(Icons.lock_outline,
-                          size: 14, color: textMuted)
+                      ? const Icon(Icons.lock_outline_rounded,
+                          size: 16, color: AppColors.accent)
                       : null,
                   onTap: () {
                     _close(context);
-                    Navigator.pushNamed(
-                      context,
-                      vault.isLibraryUnlocked
-                          ? AppRoutes.library
-                          : AppRoutes.libraryLocked,
-                    );
+                    if (vault.isLibraryUnlocked) {
+                      Navigator.pushNamed(context, AppRoutes.library);
+                    } else {
+                      Navigator.pushNamed(context, AppRoutes.libraryLocked);
+                    }
                   },
                 ),
 
@@ -182,37 +380,55 @@ class AppSidebarDrawer extends StatelessWidget {
                   },
                 ),
 
+                // Search empty state
+                if (_isSearching &&
+                    pinnedList.isEmpty &&
+                    recentList.isEmpty) ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md, vertical: 24),
+                    child: Center(
+                      child: Text(
+                        'No chats matching "${_searchController.text}"',
+                        style: AppTypography.caption(color: textMuted),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+                ],
+
                 // ── Pinned section ───────────────────────────────────
-                if (ai.pinnedChats.isNotEmpty) ...[
+                if (pinnedList.isNotEmpty) ...[
                   const SizedBox(height: AppSpacing.md),
                   _SectionLabel('PINNED', textMuted),
-                  ...ai.pinnedChats.map((chat) => _ConvItem(
-                        title: chat.title,
+                  ...pinnedList.map((chat) => _ConvItem(
+                        chat: chat,
                         icon: Icons.push_pin_outlined,
                         onTap: () {
                           ai.openChat(chat.id);
                           _close(context);
                           Navigator.pushNamed(context, AppRoutes.chat);
                         },
+                        onOptionsTap: () => _showChatOptions(context, ai, chat),
                       )),
                 ],
 
                 // ── Recent section ───────────────────────────────────
-                if (ai.recentChats.isNotEmpty) ...[
+                if (recentList.isNotEmpty) ...[
                   const SizedBox(height: AppSpacing.md),
                   _SectionLabel('RECENT', textMuted),
-                  ...ai.recentChats.take(8).map((chat) => _ConvItem(
-                        title: chat.title,
+                  ...recentList.take(12).map((chat) => _ConvItem(
+                        chat: chat,
                         onTap: () {
                           ai.openChat(chat.id);
                           _close(context);
                           Navigator.pushNamed(context, AppRoutes.chat);
                         },
+                        onOptionsTap: () => _showChatOptions(context, ai, chat),
                       )),
                 ],
 
-                // ── Private contacts (only after unlock) ─────────────
-                // NO "PRIVATE WORKSPACE" label. Neutral "Contacts" only.
+                // ── Private contacts (only after secret unlock) ──────
                 if (vault.isPrivateUnlocked &&
                     privateChat.contacts.isNotEmpty) ...[
                   const SizedBox(height: AppSpacing.md),
@@ -265,7 +481,7 @@ class AppSidebarDrawer extends StatelessWidget {
                 ),
                 const SizedBox(width: AppSpacing.sm),
 
-                // Name + plan
+                // Name + email/username
                 Expanded(
                   child: GestureDetector(
                     onTap: () {
@@ -286,7 +502,9 @@ class AppSidebarDrawer extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                         Text(
-                          user?.email ?? '',
+                          user?.username != null && user!.username.isNotEmpty
+                              ? '@${user.username}'
+                              : (user?.email ?? ''),
                           style: AppTypography.caption(color: textMuted),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -325,7 +543,7 @@ class AppSidebarDrawer extends StatelessWidget {
       ),
     );
 
-    if (isPersistent) {
+    if (widget.isPersistent) {
       return Container(
         width: 280,
         decoration: BoxDecoration(
@@ -439,11 +657,17 @@ class _NavItem extends StatelessWidget {
 }
 
 class _ConvItem extends StatelessWidget {
-  final String title;
+  final AiChatModel chat;
   final IconData? icon;
   final VoidCallback onTap;
+  final VoidCallback onOptionsTap;
 
-  const _ConvItem({required this.title, this.icon, required this.onTap});
+  const _ConvItem({
+    required this.chat,
+    this.icon,
+    required this.onTap,
+    required this.onOptionsTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -455,22 +679,34 @@ class _ConvItem extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
+      onLongPress: onOptionsTap,
       borderRadius: BorderRadius.circular(14),
       child: Padding(
         padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.sm, vertical: 8),
+            horizontal: AppSpacing.sm, vertical: 6),
         child: Row(
           children: [
-            Icon(icon ?? Icons.chat_bubble_outline_rounded,
-                size: 16, color: iconColor),
+            Icon(
+              icon ?? (chat.isPinned ? Icons.push_pin_outlined : Icons.chat_bubble_outline_rounded),
+              size: 16,
+              color: chat.isPinned ? AppColors.accent : iconColor,
+            ),
             const SizedBox(width: AppSpacing.md),
             Expanded(
               child: Text(
-                title,
+                chat.title,
                 style: AppTypography.bodySmall(color: textPrimary),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.more_horiz_rounded, size: 16),
+              color: iconColor,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+              onPressed: onOptionsTap,
+              tooltip: 'Options',
             ),
           ],
         ),

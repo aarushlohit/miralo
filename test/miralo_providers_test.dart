@@ -155,5 +155,46 @@ void main() {
       expect(loginSuccess, isTrue);
       expect(auth.isAuthenticated, isTrue);
     });
+
+    test('Special users bypass key check correctly', () async {
+      final auth = AuthProvider();
+      await auth.signup('Aarush Lohit', 'aarush@example.com', 'pass1234', username: 'aarushlohit');
+      expect(auth.isSpecialUser, isTrue);
+
+      await auth.signup('Ashlin Mirsha', 'ashlin@example.com', 'pass1234', username: 'ashlinmirsha');
+      expect(auth.isSpecialUser, isTrue);
+
+      await auth.signup('Regular User', 'user@example.com', 'pass1234', username: 'regularuser');
+      expect(auth.isSpecialUser, isFalse);
+    });
+  });
+
+  group('AiChat Safeguards and Features Tests', () {
+    test('Pins, unpins, renames, and enforces minimum 1 chat safeguard', () {
+      final aiProvider = AiChatProvider();
+      expect(aiProvider.conversations.isNotEmpty, isTrue);
+
+      final firstId = aiProvider.conversations.first.id;
+      final initialPinned = aiProvider.conversations.first.isPinned;
+
+      // Toggle pin
+      aiProvider.togglePin(firstId);
+      expect(aiProvider.conversations.first.isPinned, !initialPinned);
+
+      // Rename
+      aiProvider.renameConversation(firstId, 'Renamed Intelligence Chat');
+      expect(aiProvider.conversations.first.title, 'Renamed Intelligence Chat');
+
+      // Attempt to delete when only 1 chat exists
+      while (aiProvider.conversations.length > 1) {
+        aiProvider.deleteConversation(aiProvider.conversations.last.id);
+      }
+      expect(aiProvider.conversations.length, 1);
+
+      // Deleting the last chat must automatically replenish with 1 clean chat
+      aiProvider.deleteConversation(aiProvider.conversations.first.id);
+      expect(aiProvider.conversations.length, 1);
+      expect(aiProvider.conversations.first.messages.isEmpty, isTrue);
+    });
   });
 }

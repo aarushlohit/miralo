@@ -7,30 +7,31 @@ class AppColors {
   AppColors._();
 
   // ─── ACCENT ───────────────────────────────────────────────────
-  /// Primary accent: restrained ChatGPT-style blue
-  static const Color accent = Color(0xFF2878E8);
-  static const Color accentHover = Color(0xFF1F68D0);
-  static const Color accentSoft = Color(0xFF0F264A);
-  static const Color accentSoftLight = Color(0xFFE8F0FE);
+  /// Primary accent: #007ACC (restrained modern blue)
+  static const Color accent = Color(0xFF007ACC);
+  static const Color accentHover = Color(0xFF0066AA);
+  static const Color accentSoft = Color(0xFF0C2A44);
+  static const Color accentSoftLight = Color(0xFFE8F4FC);
 
   // Canonical alias
   static const Color accentBlue = accent;
 
-  // ─── DARK THEME (Charcoal Black & Refined Dark Blue Accent) ───
-  /// Primary background: #0B0D0F
-  static const Color darkBackground = Color(0xFF0B0D0F);
-  /// Surface: #121417
-  static const Color darkSurfacePrimary = Color(0xFF121417);
-  /// Secondary surface: #181B20
-  static const Color darkSurfaceSecondary = Color(0xFF181B20);
-  /// Elevated surface: #1D2127
-  static const Color darkSurfaceElevated = Color(0xFF1D2127);
-  static const Color darkSurfaceTertiary = Color(0xFF22262E);
-  static const Color darkSurfaceInput = Color(0xFF14171C);
+  // ─── DARK THEME (Charcoal Black #1C1C1C & Deep Black #101010) ───
+  /// Primary background: #1C1C1C (--bg-charcoal)
+  static const Color darkBackground = Color(0xFF1C1C1C);
+  /// Surface: #1C1C1C
+  static const Color darkSurfacePrimary = Color(0xFF1C1C1C);
+  /// Secondary surface: #101010 (--deep-black)
+  static const Color darkSurfaceSecondary = Color(0xFF101010);
+  /// Elevated surface: #222222
+  static const Color darkSurfaceElevated = Color(0xFF222222);
+  static const Color darkSurfaceTertiary = Color(0xFF262626);
+  /// Input surface: #101010
+  static const Color darkSurfaceInput = Color(0xFF101010);
 
-  /// Border: restrained white 5–9% opacity (subtle, non-boxy)
-  static const Color darkBorder = Color(0x0EFFFFFF); // 5.5% opacity
-  static const Color darkBorderHighlight = Color(0x18FFFFFF); // 9.5% opacity
+  /// Border/Divider: #282828 (--divider)
+  static const Color darkBorder = Color(0xFF282828);
+  static const Color darkBorderHighlight = Color(0xFF383838);
 
   /// Primary text: #F5F7FA
   static const Color darkTextPrimary = Color(0xFFF5F7FA);

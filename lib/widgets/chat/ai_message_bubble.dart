@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/theme/app_colors.dart';
@@ -57,7 +58,28 @@ class _UserMessage extends StatelessWidget {
               color: bg,
               borderRadius: BorderRadius.circular(MiraloDimensions.standardRadius),
             ),
-            child: Text(message.text, style: AppTypography.body(color: textColor)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (message.imageBase64 != null) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 220),
+                      child: Image.memory(
+                        base64Decode(message.imageBase64!),
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => const SizedBox(),
+                      ),
+                    ),
+                  ),
+                  if (message.text.isNotEmpty) const SizedBox(height: AppSpacing.xs + 4),
+                ],
+                if (message.text.isNotEmpty)
+                  Text(message.text, style: AppTypography.body(color: textColor)),
+              ],
+            ),
           ),
         ),
       ),

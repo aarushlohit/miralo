@@ -4,6 +4,7 @@ class AiMessageModel {
   final String text;
   final DateTime timestamp;
   final bool? liked; // true = thumbs up, false = thumbs down, null = neutral
+  final String? imageBase64;
 
   AiMessageModel({
     required this.id,
@@ -11,6 +12,7 @@ class AiMessageModel {
     required this.text,
     required this.timestamp,
     this.liked,
+    this.imageBase64,
   });
 
   AiMessageModel copyWith({
@@ -20,6 +22,7 @@ class AiMessageModel {
     DateTime? timestamp,
     bool? liked,
     bool clearLiked = false,
+    String? imageBase64,
   }) {
     return AiMessageModel(
       id: id ?? this.id,
@@ -27,6 +30,7 @@ class AiMessageModel {
       text: text ?? this.text,
       timestamp: timestamp ?? this.timestamp,
       liked: clearLiked ? null : (liked ?? this.liked),
+      imageBase64: imageBase64 ?? this.imageBase64,
     );
   }
 
@@ -37,6 +41,7 @@ class AiMessageModel {
       'text': text,
       'timestamp': timestamp.toIso8601String(),
       'liked': liked,
+      'imageBase64': imageBase64,
     };
   }
 
@@ -47,6 +52,7 @@ class AiMessageModel {
       text: json['text'] as String,
       timestamp: DateTime.parse(json['timestamp'] as String),
       liked: json['liked'] as bool?,
+      imageBase64: json['imageBase64'] as String?,
     );
   }
 }
