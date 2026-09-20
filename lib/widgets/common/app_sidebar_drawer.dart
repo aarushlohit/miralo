@@ -370,6 +370,31 @@ class _AppSidebarDrawerState extends State<AppSidebarDrawer> {
                       }
                     },
                   ),
+                  _NavItem(
+                    icon: Icons.shield_outlined,
+                    label: 'Blacksheep',
+                    trailing: vault.intruderLogs.isNotEmpty
+                        ? Container(
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(
+                              color: AppColors.danger,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.danger,
+                                  blurRadius: 4,
+                                  spreadRadius: 1,
+                                ),
+                              ],
+                            ),
+                          )
+                        : null,
+                    onTap: () {
+                      _close(context);
+                      Navigator.pushNamed(context, AppRoutes.blacksheep);
+                    },
+                  ),
                 ],
 
                 // Settings

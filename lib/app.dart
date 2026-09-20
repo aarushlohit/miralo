@@ -30,6 +30,7 @@ import 'screens/settings/ai_settings_screen.dart';
 import 'screens/settings/notifications_screen.dart';
 import 'screens/settings/data_controls_screen.dart';
 import 'screens/hide_mode/hide_mode_screen.dart';
+import 'screens/blacksheep/blacksheep_screen.dart';
 import 'screens/emergency/emergency_screen.dart';
 
 class MiraloApp extends StatelessWidget {
@@ -78,6 +79,7 @@ class MiraloApp extends StatelessWidget {
               AppRoutes.settingsData: (_) => const DataControlsScreen(),
               AppRoutes.hideMode: (_) => const HideModeScreen(),
               AppRoutes.emergency: (_) => const EmergencyScreen(),
+              AppRoutes.blacksheep: (_) => const BlacksheepScreen(),
             },
           );
         },

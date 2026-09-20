@@ -30,4 +30,5 @@ class AppRoutes {
   static const String settingsData = '/settings/data';
   static const String hideMode = '/hide-mode';
   static const String emergency = '/emergency';
+  static const String blacksheep = '/blacksheep';
 }
