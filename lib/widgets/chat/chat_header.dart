@@ -30,7 +30,7 @@ class ChatHeader extends StatelessWidget implements PreferredSizeWidget {
   });
 
   @override
-  Size get preferredSize => const Size.fromHeight(56.0);
+  Size get preferredSize => const Size.fromHeight(60.0);
 
   @override
   Widget build(BuildContext context) {
@@ -52,20 +52,21 @@ class ChatHeader extends StatelessWidget implements PreferredSizeWidget {
       backgroundColor: bg,
       elevation: 0,
       centerTitle: true,
+      toolbarHeight: 60,
       bottom: PreferredSize(
         preferredSize: const Size.fromHeight(0.6),
         child: Container(color: border, height: 0.6),
       ),
       leading: onBack != null
           ? IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+              icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 22),
               color: textPrimary,
               onPressed: onBack,
               tooltip: 'Back',
             )
           : (onMenu != null
               ? IconButton(
-                  icon: const Icon(Icons.menu_rounded, size: 22),
+                  icon: const Icon(Icons.menu_rounded, size: 26),
                   color: textPrimary,
                   onPressed: onMenu,
                   tooltip: 'Menu',
@@ -82,11 +83,11 @@ class ChatHeader extends StatelessWidget implements PreferredSizeWidget {
                     children: [
                       Text(
                         title ?? 'Chat',
-                        style: MiraloTypography.titleMedium(color: textPrimary),
+                        style: MiraloTypography.titleMedium(color: textPrimary).copyWith(fontSize: 16),
                       ),
                       if (onEditDisplayName != null) ...[
                         const SizedBox(width: 4),
-                        Icon(Icons.edit_outlined, size: 14, color: textMuted),
+                        Icon(Icons.edit_outlined, size: 16, color: textMuted),
                       ],
                     ],
                   ),
@@ -103,25 +104,28 @@ class ChatHeader extends StatelessWidget implements PreferredSizeWidget {
                   onTap: onModelSelectorTap,
                   borderRadius: BorderRadius.circular(MiraloRadius.pill),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
                       color: isDark
                           ? MiraloColors.darkSurfaceSecondary
                           : MiraloColors.lightSurfaceSecondary,
                       borderRadius: BorderRadius.circular(MiraloRadius.pill),
-                      border: Border.all(color: border, width: 0.6),
+                      border: Border.all(color: border, width: 0.8),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
                           modelName ?? 'Model',
-                          style: MiraloTypography.labelMedium(color: textPrimary),
+                          style: MiraloTypography.labelMedium(color: textPrimary).copyWith(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 6),
                         Icon(
                           Icons.keyboard_arrow_down_rounded,
-                          size: 16,
+                          size: 18,
                           color: textMuted,
                         ),
                       ],
@@ -130,12 +134,12 @@ class ChatHeader extends StatelessWidget implements PreferredSizeWidget {
                 )
               : Text(
                   title ?? 'MIRALO AI',
-                  style: MiraloTypography.titleMedium(color: textPrimary),
+                  style: MiraloTypography.titleMedium(color: textPrimary).copyWith(fontSize: 17),
                 )),
       actions: [
         if (onMoreOptions != null)
           IconButton(
-            icon: const Icon(Icons.more_horiz_rounded, size: 22),
+            icon: const Icon(Icons.more_horiz_rounded, size: 26),
             color: textPrimary,
             onPressed: onMoreOptions,
             tooltip: 'Options',

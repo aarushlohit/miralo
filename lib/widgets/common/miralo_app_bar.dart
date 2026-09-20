@@ -34,7 +34,7 @@ class MiraloAppBar extends StatelessWidget implements PreferredSizeWidget {
   });
 
   @override
-  Size get preferredSize => const Size.fromHeight(56.0);
+  Size get preferredSize => const Size.fromHeight(60.0);
 
   @override
   Widget build(BuildContext context) {
@@ -47,15 +47,15 @@ class MiraloAppBar extends StatelessWidget implements PreferredSizeWidget {
     Widget? leadingWidget = leading;
     if (leadingWidget == null && leadingIcon != null) {
       leadingWidget = Container(
-        width: 38,
-        height: 38,
+        width: 44,
+        height: 44,
         decoration: BoxDecoration(
           color: iconBg,
           shape: BoxShape.circle,
         ),
         child: IconButton(
           padding: EdgeInsets.zero,
-          icon: Icon(leadingIcon, color: textPrimary, size: 20),
+          icon: Icon(leadingIcon, color: textPrimary, size: 24),
           onPressed: onLeadingTap,
           tooltip: leadingTooltip,
         ),
@@ -73,7 +73,7 @@ class MiraloAppBar extends StatelessWidget implements PreferredSizeWidget {
       child: SafeArea(
         bottom: false,
         child: Container(
-          height: 56,
+          height: 60,
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenH),
           child: Row(
             children: [
@@ -81,7 +81,7 @@ class MiraloAppBar extends StatelessWidget implements PreferredSizeWidget {
               if (leadingWidget != null)
                 leadingWidget
               else
-                const SizedBox(width: 38),
+                const SizedBox(width: 44),
 
               // Title
               Expanded(
@@ -103,7 +103,7 @@ class MiraloAppBar extends StatelessWidget implements PreferredSizeWidget {
                   children: actions!,
                 )
               else
-                const SizedBox(width: 38),
+                const SizedBox(width: 44),
             ],
           ),
         ),
@@ -126,8 +126,8 @@ class MiraloCircularIconButton extends StatelessWidget {
     super.key,
     required this.icon,
     required this.onPressed,
-    this.size = 38,
-    this.iconSize = 20,
+    this.size = 44,
+    this.iconSize = 24,
     this.tooltip,
     this.color,
     this.backgroundColor,
