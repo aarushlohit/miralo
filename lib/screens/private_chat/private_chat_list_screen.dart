@@ -4,6 +4,7 @@ import '../../core/routes/app_routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/private_chat_provider.dart';
 import '../../providers/vault_provider.dart';
 import '../../widgets/common/miralo_app_bar.dart';
@@ -12,11 +13,6 @@ import '../../widgets/common/miralo_empty_state.dart';
 import '../../widgets/common/miralo_logo.dart';
 
 /// Private Chat List Screen.
-/// Key spec compliance:
-/// - "Private Workspace Locked" title is neutral, not a "Private Mode" banner
-/// - Unlock hint points to typing secret in AI composer (spec §9)
-/// - No "PRIVATE WORKSPACE" label or obvious private mode UI
-/// - Lock button in AppBar for quick re-lock
 class PrivateChatListScreen extends StatefulWidget {
   const PrivateChatListScreen({super.key});
 
@@ -36,7 +32,7 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
     super.dispose();
   }
 
-  void _showAddFriend(BuildContext context, PrivateChatProvider chat) {
+  void _showAddFriend(BuildContext context, PrivateChatProvider chat, AuthProvider auth) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg =
         isDark ? AppColors.darkSurfacePrimary : AppColors.lightSurfacePrimary;
@@ -73,14 +69,14 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
                         borderRadius: BorderRadius.circular(2)),
                   ),
                 ),
-                Text('Add contact',
+                Text('Add contact & Send Friend Request',
                     style: AppTypography.heading3(
                         color: isDark
                             ? AppColors.darkTextPrimary
                             : AppColors.lightTextPrimary)),
                 const SizedBox(height: 4),
                 Text(
-                  'Enter a username, email, or invite code.',
+                  'Enter username or email to send real Firebase request.',
                   style: AppTypography.body(
                       color: isDark
                           ? AppColors.darkTextSecondary
@@ -113,13 +109,19 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () {
-                          final name = ctrl.text.trim();
-                          if (name.isNotEmpty) {
-                            chat.addNewFriend(name);
+                          final input = ctrl.text.trim();
+                          if (input.isNotEmpty) {
+                            final currentUser = auth.currentUser;
+                            chat.sendFriendRequest(
+                              senderId: currentUser?.id ?? 'usr_me_001',
+                              senderName: currentUser?.displayName ?? 'Me',
+                              senderUsername: currentUser?.username ?? 'me',
+                              targetUsernameOrEmail: input,
+                            );
                             Navigator.pop(ctx);
                           }
                         },
-                        child: const Text('Add'),
+                        child: const Text('Add Friend'),
                       ),
                     ),
                   ],
@@ -137,6 +139,11 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final vault = Provider.of<VaultProvider>(context);
     final chat = Provider.of<PrivateChatProvider>(context);
+    final auth = Provider.of<AuthProvider>(context);
+
+    if (auth.currentUser != null) {
+      chat.initUserSession(auth.currentUser!.id);
+    }
 
     final bg = isDark ? AppColors.darkBackground : AppColors.lightBackground;
     final textPrimary =
@@ -262,7 +269,7 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
                 MiraloCircularIconButton(
                   icon: Icons.person_add_alt_1_rounded,
                   iconSize: 18,
-                  onPressed: () => _showAddFriend(context, chat),
+                  onPressed: () => _showAddFriend(context, chat, auth),
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 MiraloCircularIconButton(

@@ -96,8 +96,14 @@ void main() {
   });
 
   group('PrivateChatProvider Tests', () {
-    test('Sends private message and updates active chat', () {
+    test('Sends private message and updates active chat', () async {
       final chatProvider = PrivateChatProvider();
+      await chatProvider.sendFriendRequest(
+        senderId: 'usr_me_001',
+        senderName: 'Alex',
+        senderUsername: 'alex_m',
+        targetUsernameOrEmail: 'priya_sharma',
+      );
       final contact = chatProvider.contacts.first;
       chatProvider.setActiveChat(contact.id);
 
@@ -109,11 +115,18 @@ void main() {
       expect(chatProvider.activeMessages.last.isMe, isTrue);
     });
 
-    test('Toggles emoji reaction on private message', () {
+    test('Toggles emoji reaction on private message', () async {
       final chatProvider = PrivateChatProvider();
+      await chatProvider.sendFriendRequest(
+        senderId: 'usr_me_001',
+        senderName: 'Alex',
+        senderUsername: 'alex_m',
+        targetUsernameOrEmail: 'priya_sharma',
+      );
       final contact = chatProvider.contacts.first;
       chatProvider.setActiveChat(contact.id);
 
+      chatProvider.sendTextMessage('Let us test emoji reaction');
       final firstMsg = chatProvider.activeMessages.first;
       expect(firstMsg.reactions.containsKey('❤️'), isFalse);
 
