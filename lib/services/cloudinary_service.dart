@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 /// Service for uploading media & documents to Cloudinary (Free Tier).
 class CloudinaryService {
   // Configurable Cloudinary Cloud Name and Upload Preset
-  static String cloudName = 'miralo_app'; 
+  static String cloudName = 'ri3utim4'; 
   static String uploadPreset = 'miralo_preset';
 
   /// Configure Cloudinary credentials dynamically
