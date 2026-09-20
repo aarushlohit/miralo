@@ -359,11 +359,17 @@ class AiService {
     }
 
     final url = Uri.parse(endpoint);
+    final session = 'sess_${DateTime.now().millisecondsSinceEpoch}';
+
     final response = await http.post(
       url,
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $apiKey',
+        'User-Agent': 'opencode-websearch/1.0.0 (desktop; x64)',
+        'x-opencode-session': session,
+        'x-opencode-client': 'opencode-desktop',
+        'x-opencode-version': '1.0.0',
       },
       body: jsonEncode({
         'model': model,
@@ -384,6 +390,11 @@ class AiService {
         return text.trim();
       }
     }
+
+    if (response.statusCode == 403 || response.body.contains('FreeTierError')) {
+      throw Exception('OpenCode FreeTierError: Free tier requires official client session');
+    }
+
     throw Exception('OpenCode HTTP ${response.statusCode}: ${response.body}');
   }
 
