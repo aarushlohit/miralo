@@ -104,13 +104,13 @@ class ChatHeader extends StatelessWidget implements PreferredSizeWidget {
                   onTap: onModelSelectorTap,
                   borderRadius: BorderRadius.circular(MiraloRadius.pill),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
+                    padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 6.5),
                     decoration: BoxDecoration(
                       color: isDark
                           ? MiraloColors.darkSurfaceSecondary
                           : MiraloColors.lightSurfaceSecondary,
                       borderRadius: BorderRadius.circular(MiraloRadius.pill),
-                      border: Border.all(color: border, width: 1.0),
+                      border: Border.all(color: border, width: 0.8),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -118,15 +118,15 @@ class ChatHeader extends StatelessWidget implements PreferredSizeWidget {
                         Text(
                           modelName ?? 'Model',
                           style: MiraloTypography.labelMedium(color: textPrimary).copyWith(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 5),
                         Icon(
                           Icons.keyboard_arrow_down_rounded,
-                          size: 20,
-                          color: textPrimary,
+                          size: 17,
+                          color: textMuted,
                         ),
                       ],
                     ),
