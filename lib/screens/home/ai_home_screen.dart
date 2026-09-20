@@ -350,12 +350,13 @@ class _AiHomeScreenState extends State<AiHomeScreen> {
         titleWidget: GestureDetector(
           onTap: () => _showModelSelector(context, ai),
           child: Container(
-            constraints: const BoxConstraints(maxWidth: 280),
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 7.5),
-            decoration: BoxDecoration(
+            constraints: const BoxConstraints(maxWidth: 240),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 7),
+            decoration: ShapeDecoration(
               color: pillBg,
-              borderRadius: BorderRadius.circular(MiraloDimensions.composerRadius),
-              border: Border.all(color: borderColor, width: 0.8),
+              shape: StadiumBorder(
+                side: BorderSide(color: borderColor, width: 0.8),
+              ),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -364,17 +365,17 @@ class _AiHomeScreenState extends State<AiHomeScreen> {
                   child: Text(
                     ai.selectedModel,
                     style: AppTypography.body(color: textPrimary).copyWith(
-                      fontSize: 14.5,
+                      fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
                 Icon(
                   Icons.keyboard_arrow_down_rounded,
-                  size: 18,
+                  size: 17,
                   color: textSecondary,
                 ),
               ],

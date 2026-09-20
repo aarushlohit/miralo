@@ -102,15 +102,16 @@ class ChatHeader extends StatelessWidget implements PreferredSizeWidget {
           : (onModelSelectorTap != null
               ? InkWell(
                   onTap: onModelSelectorTap,
-                  borderRadius: BorderRadius.circular(MiraloRadius.pill),
+                  borderRadius: BorderRadius.circular(999),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 7.5),
-                    decoration: BoxDecoration(
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 7),
+                    decoration: ShapeDecoration(
                       color: isDark
                           ? MiraloColors.darkSurfaceSecondary
                           : MiraloColors.lightSurfaceSecondary,
-                      borderRadius: BorderRadius.circular(MiraloRadius.pill),
-                      border: Border.all(color: border, width: 0.8),
+                      shape: StadiumBorder(
+                        side: BorderSide(color: border, width: 0.8),
+                      ),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -118,14 +119,14 @@ class ChatHeader extends StatelessWidget implements PreferredSizeWidget {
                         Text(
                           modelName ?? 'Model',
                           style: MiraloTypography.labelMedium(color: textPrimary).copyWith(
-                            fontSize: 14.5,
+                            fontSize: 14,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 6),
                         Icon(
                           Icons.keyboard_arrow_down_rounded,
-                          size: 18,
+                          size: 17,
                           color: textMuted,
                         ),
                       ],
