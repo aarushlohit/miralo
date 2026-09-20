@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'app.dart';
 import 'firebase_options.dart';
+import 'providers/vault_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,6 +16,10 @@ void main() async {
     debugPrint('Firebase init notice: $e');
   }
 
+  // Load persisted vault credentials (passcode / library PIN) before UI.
+  final vault = VaultProvider();
+  await vault.loadFromStorage();
+
   // Set system UI overlay style for dark-first premium mobile aesthetic
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -25,5 +30,5 @@ void main() async {
     ),
   );
 
-  runApp(const MiraloApp());
+  runApp(MiraloApp(vault: vault));
 }

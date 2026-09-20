@@ -34,7 +34,8 @@ import 'screens/blacksheep/blacksheep_screen.dart';
 import 'screens/emergency/emergency_screen.dart';
 
 class MiraloApp extends StatelessWidget {
-  const MiraloApp({super.key});
+  final VaultProvider vault;
+  const MiraloApp({super.key, required this.vault});
 
   @override
   Widget build(BuildContext context) {
@@ -42,7 +43,8 @@ class MiraloApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => VaultProvider()),
+        // Use the pre-loaded vault so persisted passcode is available immediately
+        ChangeNotifierProvider.value(value: vault),
         ChangeNotifierProvider(create: (_) => AiChatProvider()),
         ChangeNotifierProvider(create: (_) => PrivateChatProvider()),
         ChangeNotifierProvider(create: (_) => LibraryProvider()),

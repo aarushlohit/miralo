@@ -27,7 +27,7 @@ class _SecuritySetupScreenState extends State<SecuritySetupScreen> {
     super.dispose();
   }
 
-  void _handleContinue() {
+  Future<void> _handleContinue() async {
     final secret = _privateSecretController.text.trim();
     final pin = _libraryPinController.text.trim();
 
@@ -37,10 +37,10 @@ class _SecuritySetupScreenState extends State<SecuritySetupScreen> {
     }
 
     final vault = Provider.of<VaultProvider>(context, listen: false);
-    vault.setPrivateChatSecret(secret);
-    vault.setLibraryPin(pin);
+    await vault.setPrivateChatSecret(secret);
+    await vault.setLibraryPin(pin);
 
-    Navigator.pushReplacementNamed(context, AppRoutes.home);
+    if (mounted) Navigator.pushReplacementNamed(context, AppRoutes.home);
   }
 
   @override

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/intruder_log_model.dart';
 
 class HideModeSettings {
@@ -39,6 +40,11 @@ class HideModeSettings {
 }
 
 class VaultProvider extends ChangeNotifier {
+  // SharedPreferences keys
+  static const _keyPrivateSecret = 'vault_private_secret';
+  static const _keyLibraryPin = 'vault_library_pin';
+  static const _keyAutoLock = 'vault_auto_lock_minutes';
+
   // Credentials (Configured by user in onboarding or security setup)
   String _privateChatSecret = '';
   String _libraryPin = '';
@@ -192,19 +198,35 @@ class VaultProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Update credentials
-  void setPrivateChatSecret(String newSecret) {
+  // ── Persistence ──────────────────────────────────────────────────────────
+  /// Load saved credentials from SharedPreferences. Call once at app startup.
+  Future<void> loadFromStorage() async {
+    final prefs = await SharedPreferences.getInstance();
+    _privateChatSecret = prefs.getString(_keyPrivateSecret) ?? '';
+    _libraryPin = prefs.getString(_keyLibraryPin) ?? '';
+    _autoLockMinutes = prefs.getInt(_keyAutoLock) ?? 5;
+    notifyListeners();
+  }
+
+  // Update credentials (persisted)
+  Future<void> setPrivateChatSecret(String newSecret) async {
     _privateChatSecret = newSecret.trim();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyPrivateSecret, _privateChatSecret);
     notifyListeners();
   }
 
-  void setLibraryPin(String newPin) {
+  Future<void> setLibraryPin(String newPin) async {
     _libraryPin = newPin.trim();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyLibraryPin, _libraryPin);
     notifyListeners();
   }
 
-  void setAutoLockMinutes(int minutes) {
+  Future<void> setAutoLockMinutes(int minutes) async {
     _autoLockMinutes = minutes;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_keyAutoLock, minutes);
     notifyListeners();
   }
 
