@@ -167,7 +167,25 @@ class _ComposerState extends State<Composer> {
     } else {
       // ─── PRIVATE MODE COMMAND INTERCEPTION ───
       final lower = text.toLowerCase();
-      if (lower == '/urgent') {
+      if (lower == '/logout') {
+        // Intercept /logout command: Lock everything and return to AI Chat immediately
+        _controller.clear();
+        final vault = Provider.of<VaultProvider>(context, listen: false);
+        vault.lockAll();
+
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          AppRoutes.home,
+          (route) => false,
+        );
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Logged out of private workspace.'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+        return;
+      } else if (lower == '/urgent') {
         // Quick exit to AI chat with fallback prompt
         _controller.clear();
         final vault = Provider.of<VaultProvider>(context, listen: false);

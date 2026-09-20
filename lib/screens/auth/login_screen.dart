@@ -5,6 +5,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/vault_provider.dart';
 import '../../widgets/common/miralo_app_bar.dart';
 import '../../widgets/common/miralo_button.dart';
 import '../../widgets/common/miralo_text_field.dart';
@@ -22,6 +23,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   String? _errorMessage;
 
+  int _failedAttempts = 0;
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -38,6 +41,24 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
     setState(() => _errorMessage = null);
+
+    // Demonstration check for invalid login password
+    if (pass != 'password' && pass != '123456' && pass != '1234') {
+      _failedAttempts++;
+      final vault = Provider.of<VaultProvider>(context, listen: false);
+
+      if (_failedAttempts >= 2) {
+        vault.recordLoginIntruderAttempt(_failedAttempts);
+        setState(() {
+          _errorMessage = 'Incorrect credentials. Security photo captured after $_failedAttempts failed attempts.';
+        });
+      } else {
+        setState(() {
+          _errorMessage = 'Incorrect password. Try again.';
+        });
+      }
+      return;
+    }
 
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final success = await auth.login(email, pass);

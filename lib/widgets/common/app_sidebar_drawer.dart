@@ -352,23 +352,25 @@ class _AppSidebarDrawerState extends State<AppSidebarDrawer> {
                   },
                 ),
 
-                // Library — Lock icon + Passcode / Biometric gating
-                _NavItem(
-                  icon: Icons.auto_stories_outlined,
-                  label: 'Library',
-                  trailing: !vault.isLibraryUnlocked
-                      ? const Icon(Icons.lock_outline_rounded,
-                          size: 16, color: AppColors.accent)
-                      : null,
-                  onTap: () {
-                    _close(context);
-                    if (vault.isLibraryUnlocked) {
-                      Navigator.pushNamed(context, AppRoutes.library);
-                    } else {
-                      Navigator.pushNamed(context, AppRoutes.libraryLocked);
-                    }
-                  },
-                ),
+                // Library — ONLY visible after secret passcode entered & unlocked
+                if (vault.isPrivateUnlocked || vault.isLibraryUnlocked) ...[
+                  _NavItem(
+                    icon: Icons.auto_stories_outlined,
+                    label: 'Library',
+                    trailing: !vault.isLibraryUnlocked
+                        ? const Icon(Icons.lock_outline_rounded,
+                            size: 16, color: AppColors.accent)
+                        : null,
+                    onTap: () {
+                      _close(context);
+                      if (vault.isLibraryUnlocked) {
+                        Navigator.pushNamed(context, AppRoutes.library);
+                      } else {
+                        Navigator.pushNamed(context, AppRoutes.libraryLocked);
+                      }
+                    },
+                  ),
+                ],
 
                 // Settings
                 _NavItem(

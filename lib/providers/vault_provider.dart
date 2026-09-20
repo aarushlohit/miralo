@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../models/intruder_log_model.dart';
 
 class HideModeSettings {
   bool isEnabled;
@@ -38,13 +39,24 @@ class HideModeSettings {
 }
 
 class VaultProvider extends ChangeNotifier {
-  // Credentials
+  // Credentials (Can be ANY string passcode or PIN)
   String _privateChatSecret = '1234';
   String _libraryPin = '1234';
 
   // Independent session states
   bool _isPrivateUnlocked = false;
   bool _isLibraryUnlocked = false;
+
+  // Rate Limiting & Security Lockout
+  int _failedPrivateAttempts = 0;
+  int _failedLibraryAttempts = 0;
+  DateTime? _privateLockoutEndTime;
+  DateTime? _libraryLockoutEndTime;
+  static const int _maxAttemptsBeforeLockout = 3;
+  static const Duration _lockoutDuration = Duration(seconds: 30);
+
+  // Intruder Detection Log
+  final List<IntruderLogModel> _intruderLogs = [];
 
   // Auto-lock setting (in minutes; 0 = immediate, 5 = 5 min, -1 = never)
   int _autoLockMinutes = 5;
@@ -59,18 +71,63 @@ class VaultProvider extends ChangeNotifier {
   bool get hasLibraryPin => _libraryPin.isNotEmpty;
   int get autoLockMinutes => _autoLockMinutes;
   HideModeSettings get hideMode => _hideMode;
+  List<IntruderLogModel> get intruderLogs => _intruderLogs;
+
+  // Rate Limiting Getters
+  bool get isPrivateLockedOut {
+    if (_privateLockoutEndTime == null) return false;
+    if (DateTime.now().isAfter(_privateLockoutEndTime!)) {
+      _privateLockoutEndTime = null;
+      _failedPrivateAttempts = 0;
+      return false;
+    }
+    return true;
+  }
+
+  int get privateLockoutRemainingSeconds {
+    if (_privateLockoutEndTime == null) return 0;
+    final diff = _privateLockoutEndTime!.difference(DateTime.now()).inSeconds;
+    return diff > 0 ? diff : 0;
+  }
+
+  bool get isLibraryLockedOut {
+    if (_libraryLockoutEndTime == null) return false;
+    if (DateTime.now().isAfter(_libraryLockoutEndTime!)) {
+      _libraryLockoutEndTime = null;
+      _failedLibraryAttempts = 0;
+      return false;
+    }
+    return true;
+  }
+
+  int get libraryLockoutRemainingSeconds {
+    if (_libraryLockoutEndTime == null) return 0;
+    final diff = _libraryLockoutEndTime!.difference(DateTime.now()).inSeconds;
+    return diff > 0 ? diff : 0;
+  }
 
   // Private Chat unlock/lock
   bool verifyPasscode(String inputSecret) =>
       inputSecret.trim() == _privateChatSecret;
 
   bool unlockPrivate(String inputSecret) {
+    if (isPrivateLockedOut) return false;
+
     if (verifyPasscode(inputSecret)) {
       _isPrivateUnlocked = true;
+      _failedPrivateAttempts = 0;
+      _privateLockoutEndTime = null;
       notifyListeners();
       return true;
+    } else {
+      _failedPrivateAttempts++;
+      if (_failedPrivateAttempts >= _maxAttemptsBeforeLockout) {
+        _privateLockoutEndTime = DateTime.now().add(_lockoutDuration);
+        _recordIntruderAttempt('private_vault', _failedPrivateAttempts);
+      }
+      notifyListeners();
+      return false;
     }
-    return false;
   }
 
   void lockPrivate() {
@@ -78,18 +135,53 @@ class VaultProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Library Vault unlock/lock
-  bool unlockLibrary(String inputPin) {
-    if (inputPin.trim() == _libraryPin) {
+  // Library Vault unlock/lock (Accepts ANY passcode, string, or digits)
+  bool unlockLibrary(String inputPasscode) {
+    if (isLibraryLockedOut) return false;
+
+    final cleanInput = inputPasscode.trim();
+    if (cleanInput == _libraryPin) {
       _isLibraryUnlocked = true;
+      _failedLibraryAttempts = 0;
+      _libraryLockoutEndTime = null;
       notifyListeners();
       return true;
+    } else {
+      _failedLibraryAttempts++;
+      if (_failedLibraryAttempts >= _maxAttemptsBeforeLockout) {
+        _libraryLockoutEndTime = DateTime.now().add(_lockoutDuration);
+        _recordIntruderAttempt('library', _failedLibraryAttempts);
+      }
+      notifyListeners();
+      return false;
     }
-    return false;
   }
 
   void lockLibrary() {
     _isLibraryUnlocked = false;
+    notifyListeners();
+  }
+
+  // Intruder Attempt Recorder
+  void recordLoginIntruderAttempt(int failedCount) {
+    _recordIntruderAttempt('login', failedCount);
+  }
+
+  void _recordIntruderAttempt(String type, int count) {
+    final log = IntruderLogModel(
+      id: 'intruder_${DateTime.now().millisecondsSinceEpoch}',
+      timestamp: DateTime.now(),
+      attemptType: type,
+      failedAttempts: count,
+      // Simulated camera capture frame placeholder
+      photoBase64: 'captured_intruder_frame',
+    );
+    _intruderLogs.add(log);
+    notifyListeners();
+  }
+
+  void clearIntruderLogs() {
+    _intruderLogs.clear();
     notifyListeners();
   }
 
@@ -144,3 +236,4 @@ class VaultProvider extends ChangeNotifier {
     notifyListeners();
   }
 }
+

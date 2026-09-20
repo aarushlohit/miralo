@@ -6,6 +6,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../providers/ai_chat_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/vault_provider.dart';
 import '../../services/ai_service.dart';
 import '../../widgets/chat/composer.dart';
 import '../../widgets/common/app_sidebar_drawer.dart';
@@ -54,6 +55,84 @@ class _AiHomeScreenState extends State<AiHomeScreen> {
       prompt: 'Give me 5 creative project ideas blending local AI intelligence with offline security.',
     ),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkIntruderLogs();
+    });
+  }
+
+  void _checkIntruderLogs() {
+    final vault = Provider.of<VaultProvider>(context, listen: false);
+    if (vault.intruderLogs.isNotEmpty) {
+      final logs = List.of(vault.intruderLogs);
+      final count = logs.length;
+      final isDark = Theme.of(context).brightness == Brightness.dark;
+      final bg = isDark ? AppColors.darkSurfacePrimary : AppColors.lightSurfacePrimary;
+      final textPrimary = isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
+      final textSecondary = isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
+
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: bg,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusSheet)),
+          title: Row(
+            children: [
+              const Icon(Icons.security_rounded, color: AppColors.danger, size: 24),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text('Security Alert: Intruder Detected',
+                    style: AppTypography.heading3(color: textPrimary)),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Someone attempted to access your account or vault with incorrect passcodes ($count failed attempt(s)).',
+                style: AppTypography.body(color: textSecondary),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Container(
+                width: double.infinity,
+                height: 120,
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.darkSurfaceSecondary : AppColors.lightSurfaceSecondary,
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                  border: Border.all(color: AppColors.danger.withValues(alpha: 0.4)),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.camera_alt_outlined, color: AppColors.danger, size: 36),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text('[Captured Intruder Frame]',
+                        style: AppTypography.caption(color: AppColors.danger)),
+                    Text('Time: ${logs.last.timestamp.hour}:${logs.last.timestamp.minute}:${logs.last.timestamp.second}',
+                        style: AppTypography.caption(color: textSecondary)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () {
+                vault.clearIntruderLogs();
+                Navigator.pop(ctx);
+              },
+              child: const Text('Dismiss Alert'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
 
   void _sendPrompt(BuildContext context, String prompt, [String? imageBase64]) {
     final ai = Provider.of<AiChatProvider>(context, listen: false);
