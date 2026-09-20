@@ -4,11 +4,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// Supported AI Models for MIRALO AI
 class AiModels {
-  // NVIDIA NIM Models
-  static const String nvidiaLlamaVision = 'NVIDIA NIM (Llama 3.2 Vision)';
-  static const String nvidiaGlm = 'NVIDIA NIM (GLM 5.3 Flash)';
-  static const String nvidiaKimi = 'NVIDIA NIM (Kimi K3)';
-  static const String nvidiaLlama31 = 'NVIDIA NIM (Llama 3.1 70B)';
+  // Vision & General Models
+  static const String nvidiaLlamaVision = 'Llama 3.2 Vision';
+  static const String nvidiaGlm = 'GLM 5.3 Flash';
+  static const String nvidiaKimi = 'Kimi K3';
+  static const String nvidiaLlama31 = 'Llama 3.1 70B';
 
   // Gemini Models (starting from 3.5 flash)
   static const String gemini35Flash = 'Gemini 3.5 Flash';
@@ -16,14 +16,14 @@ class AiModels {
   static const String gemini25Pro = 'Gemini 2.5 Pro';
   static const String gemini20Flash = 'Gemini 2.0 Flash';
 
-  // OpenCode Zen Free Models
-  static const String bigPickle = 'Big Pickle Free';
-  static const String mimoV25Free = 'MiMo-V2.5 Free';
-  static const String museSpark13Free = 'Muse Spark 1.3 Free';
-  static const String ling30FlashFree = 'Ling 3.0 Flash Fin Free';
-  static const String nemotron35Lightning = 'Nemotron 3.5 Lightning Free';
-  static const String nemotron3Ultra = 'Nemotron 3 Ultra Free';
-  static const String jev113Free = 'Jev 1.13 Free';
+  // OpenCode Zen Models
+  static const String bigPickle = 'Big Pickle';
+  static const String mimoV25Free = 'MiMo-V2.5';
+  static const String museSpark13Free = 'Muse Spark 1.3';
+  static const String ling30FlashFree = 'Ling 3.0 Flash Fin';
+  static const String nemotron35Lightning = 'Nemotron 3.5 Lightning';
+  static const String nemotron3Ultra = 'Nemotron 3 Ultra';
+  static const String jev113Free = 'Jev 1.13';
 
   // Legacy aliases for backwards compatibility
   static const String gpt56 = 'GPT-5.6 (Local Neural)';
@@ -195,8 +195,11 @@ class AiService {
       }
     }
 
-    // Route: NVIDIA NIM Models
-    if (targetModel.startsWith('NVIDIA NIM')) {
+    // Route: NVIDIA / Vision / General Models
+    if (targetModel == AiModels.nvidiaLlamaVision ||
+        targetModel == AiModels.nvidiaGlm ||
+        targetModel == AiModels.nvidiaKimi ||
+        targetModel == AiModels.nvidiaLlama31) {
       try {
         final modelId = AiModels.modelIdFor(targetModel);
         return await _callNvidiaNimApi(
@@ -219,7 +222,7 @@ class AiService {
       }
     }
 
-    // Route: OpenCode Zen Free Models
+    // Route: OpenCode Zen Models
     if (targetModel == AiModels.bigPickle ||
         targetModel == AiModels.mimoV25Free ||
         targetModel == AiModels.museSpark13Free ||

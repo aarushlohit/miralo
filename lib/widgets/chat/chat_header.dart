@@ -102,16 +102,15 @@ class ChatHeader extends StatelessWidget implements PreferredSizeWidget {
           : (onModelSelectorTap != null
               ? InkWell(
                   onTap: onModelSelectorTap,
-                  borderRadius: BorderRadius.circular(999),
+                  borderRadius: BorderRadius.circular(MiraloRadius.pill),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 7),
-                    decoration: ShapeDecoration(
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
+                    decoration: BoxDecoration(
                       color: isDark
                           ? MiraloColors.darkSurfaceSecondary
                           : MiraloColors.lightSurfaceSecondary,
-                      shape: StadiumBorder(
-                        side: BorderSide(color: border, width: 0.8),
-                      ),
+                      borderRadius: BorderRadius.circular(MiraloRadius.pill),
+                      border: Border.all(color: border, width: 1.0),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -119,15 +118,15 @@ class ChatHeader extends StatelessWidget implements PreferredSizeWidget {
                         Text(
                           modelName ?? 'Model',
                           style: MiraloTypography.labelMedium(color: textPrimary).copyWith(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 8),
                         Icon(
                           Icons.keyboard_arrow_down_rounded,
-                          size: 17,
-                          color: textMuted,
+                          size: 20,
+                          color: textPrimary,
                         ),
                       ],
                     ),

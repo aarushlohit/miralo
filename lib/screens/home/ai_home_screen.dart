@@ -240,7 +240,7 @@ class _AiHomeScreenState extends State<AiHomeScreen> {
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis)
                               else if (m == AiModels.nvidiaNim)
-                                Text('NVIDIA NIM Cloud • Llama 3.1 70B',
+                                Text('Cloud Reasoning • Llama 3.2 Vision',
                                     style: AppTypography.caption(color: textSecondary),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis)
@@ -351,12 +351,11 @@ class _AiHomeScreenState extends State<AiHomeScreen> {
           onTap: () => _showModelSelector(context, ai),
           child: Container(
             constraints: const BoxConstraints(maxWidth: 240),
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 7),
-            decoration: ShapeDecoration(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+            decoration: BoxDecoration(
               color: pillBg,
-              shape: StadiumBorder(
-                side: BorderSide(color: borderColor, width: 0.8),
-              ),
+              borderRadius: BorderRadius.circular(MiraloDimensions.composerRadius),
+              border: Border.all(color: borderColor, width: 1.0),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -365,18 +364,18 @@ class _AiHomeScreenState extends State<AiHomeScreen> {
                   child: Text(
                     ai.selectedModel,
                     style: AppTypography.body(color: textPrimary).copyWith(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 8),
                 Icon(
                   Icons.keyboard_arrow_down_rounded,
-                  size: 17,
-                  color: textSecondary,
+                  size: 20,
+                  color: textPrimary,
                 ),
               ],
             ),
