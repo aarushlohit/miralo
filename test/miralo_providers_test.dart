@@ -17,6 +17,8 @@ void main() {
   group('VaultProvider Tests', () {
     test('Independent vault unlock and lock credentials', () async {
       final vault = VaultProvider();
+      vault.setPrivateChatSecret('1234');
+      vault.setLibraryPin('1234');
 
       // Initial state: locked
       expect(vault.isPrivateUnlocked, isFalse);

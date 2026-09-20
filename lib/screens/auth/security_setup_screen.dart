@@ -16,8 +16,8 @@ class SecuritySetupScreen extends StatefulWidget {
 }
 
 class _SecuritySetupScreenState extends State<SecuritySetupScreen> {
-  final _privateSecretController = TextEditingController(text: '1234');
-  final _libraryPinController = TextEditingController(text: '1234');
+  final _privateSecretController = TextEditingController();
+  final _libraryPinController = TextEditingController();
   String? _error;
 
   @override

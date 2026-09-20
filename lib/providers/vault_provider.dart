@@ -39,9 +39,9 @@ class HideModeSettings {
 }
 
 class VaultProvider extends ChangeNotifier {
-  // Credentials (Can be ANY string passcode or PIN)
-  String _privateChatSecret = '1234';
-  String _libraryPin = '1234';
+  // Credentials (Configured by user in onboarding or security setup)
+  String _privateChatSecret = '';
+  String _libraryPin = '';
 
   // Independent session states
   bool _isPrivateUnlocked = false;

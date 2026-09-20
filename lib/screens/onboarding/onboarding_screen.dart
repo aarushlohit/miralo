@@ -38,8 +38,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   String? _accountError;
 
   // Step 5 & 6 (Passcodes) Controllers
-  final _privatePasscodeController = TextEditingController(text: '1234');
-  final _libraryPasscodeController = TextEditingController(text: '1234');
+  final _privatePasscodeController = TextEditingController();
+  final _libraryPasscodeController = TextEditingController();
   String? _passcodeError;
 
   @override
