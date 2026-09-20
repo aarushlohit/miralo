@@ -5,6 +5,18 @@ allprojects {
     }
 }
 
+// Force all plugin subprojects to compile against SDK 36 to satisfy
+// flutter_plugin_android_lifecycle AAR metadata requirement.
+subprojects {
+    afterEvaluate {
+        if (project.hasProperty("android")) {
+            (project.extensions.findByName("android") as? com.android.build.gradle.BaseExtension)?.apply {
+                compileSdkVersion(36)
+            }
+        }
+    }
+}
+
 val newBuildDir: Directory =
     rootProject.layout.buildDirectory
         .dir("../../build")
