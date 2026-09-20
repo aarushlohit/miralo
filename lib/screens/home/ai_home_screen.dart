@@ -350,8 +350,8 @@ class _AiHomeScreenState extends State<AiHomeScreen> {
         titleWidget: GestureDetector(
           onTap: () => _showModelSelector(context, ai),
           child: Container(
-            constraints: const BoxConstraints(maxWidth: 210),
-            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 6.5),
+            constraints: const BoxConstraints(maxWidth: 280),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 7.5),
             decoration: BoxDecoration(
               color: pillBg,
               borderRadius: BorderRadius.circular(MiraloDimensions.composerRadius),
@@ -371,10 +371,10 @@ class _AiHomeScreenState extends State<AiHomeScreen> {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                const SizedBox(width: 5),
+                const SizedBox(width: 8),
                 Icon(
                   Icons.keyboard_arrow_down_rounded,
-                  size: 17,
+                  size: 18,
                   color: textSecondary,
                 ),
               ],
