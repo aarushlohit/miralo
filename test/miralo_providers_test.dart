@@ -5,6 +5,7 @@ import 'package:miralo/providers/ai_chat_provider.dart';
 import 'package:miralo/providers/private_chat_provider.dart';
 import 'package:miralo/providers/library_provider.dart';
 import 'package:miralo/providers/auth_provider.dart';
+import 'package:miralo/services/ai_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -195,6 +196,15 @@ void main() {
       aiProvider.deleteConversation(aiProvider.conversations.first.id);
       expect(aiProvider.conversations.length, 1);
       expect(aiProvider.conversations.first.messages.isEmpty, isTrue);
+    });
+
+    test('OpenCode model sendPrompt returns live response via fallback engine', () async {
+      final response = await AiService.instance.sendPrompt(
+        prompt: 'What is 2+2?',
+        model: AiModels.bigPickle,
+      );
+      expect(response, isNotEmpty);
+      expect(response.contains('4') || response.contains('2'), isTrue);
     });
   });
 }
