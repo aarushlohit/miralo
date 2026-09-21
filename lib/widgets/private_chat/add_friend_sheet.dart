@@ -33,7 +33,6 @@ class _AddFriendSheetState extends State<AddFriendSheet> {
   List<Map<String, String>> _searchResults = [];
   bool _isSearching = false;
   int _selectedTab = 0; // 0: Search, 1: Invitations
-  final Set<String> _sentRequests = {};
 
   @override
   void dispose() {
@@ -59,6 +58,140 @@ class _AddFriendSheetState extends State<AddFriendSheet> {
         _isSearching = false;
       });
     }
+  }
+
+  /// Returns 'contact' | 'pending' | 'accepted' | 'rejected' | 'blocked' | null
+  String? _resolveStatus(
+    PrivateChatProvider chat,
+    String targetId,
+    String targetUsername,
+  ) {
+    if (chat.isBlocked(targetId)) return 'blocked';
+    if (chat.contacts.any((c) => c.id == targetId)) return 'contact';
+    final sentStatus = chat.getSentRequestStatus(targetUsername);
+    return sentStatus; // 'pending' | 'accepted' | 'rejected' | null
+  }
+
+  Widget _buildActionButton({
+    required String? status,
+    required bool isDark,
+    required Color textMuted,
+    required VoidCallback onAdd,
+    required String targetUsername,
+  }) {
+    switch (status) {
+      case 'contact':
+      case 'accepted':
+        return _statusChip(
+          label: 'Added ✓',
+          bg: Colors.green.withValues(alpha: 0.15),
+          fg: Colors.green,
+        );
+      case 'pending':
+        return _statusChip(
+          label: 'Sent ✓',
+          bg: isDark ? Colors.white10 : Colors.grey.shade200,
+          fg: textMuted,
+        );
+      case 'blocked':
+        return _statusChip(
+          label: 'Blocked',
+          bg: Colors.red.withValues(alpha: 0.12),
+          fg: Colors.red,
+        );
+      case 'rejected':
+      default:
+        // rejected → allow re-sending; null → first time
+        return ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.accent,
+            foregroundColor: Colors.white,
+            elevation: 1,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+          onPressed: onAdd,
+          child: const Text('Add', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+        );
+    }
+  }
+
+  Widget _statusChip({required String label, required Color bg, required Color fg}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(label, style: TextStyle(color: fg, fontSize: 12, fontWeight: FontWeight.w600)),
+    );
+  }
+
+  void _showBlockConfirm(
+    BuildContext context,
+    PrivateChatProvider chat,
+    String targetId,
+    String targetUsername,
+    String displayName,
+  ) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Block user?'),
+        content: Text(
+          'Blocking @$targetUsername will prevent them from sending you messages or friend requests. '
+          'They won\'t be notified.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              chat.blockUser(
+                targetId: targetId,
+                targetUsername: targetUsername,
+                targetDisplayName: displayName,
+              );
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('@$targetUsername has been blocked.')),
+              );
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Block'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showUnblockConfirm(
+    BuildContext context,
+    PrivateChatProvider chat,
+    String targetId,
+    String targetUsername,
+  ) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Unblock user?'),
+        content: Text('Allow @$targetUsername to contact you again?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              chat.unblockUser(targetId);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('@$targetUsername has been unblocked.')),
+              );
+            },
+            child: const Text('Unblock'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -203,7 +336,7 @@ class _AddFriendSheetState extends State<AddFriendSheet> {
               const SizedBox(height: AppSpacing.md),
 
               if (_selectedTab == 0) ...[
-                // Search Tab Content
+                // ── Search Tab ──────────────────────────────────────────────
                 Container(
                   decoration: BoxDecoration(
                     color: surfaceSecondary,
@@ -262,7 +395,7 @@ class _AddFriendSheetState extends State<AddFriendSheet> {
                   )
                 else
                   ConstrainedBox(
-                    constraints: const BoxConstraints(maxHeight: 260),
+                    constraints: const BoxConstraints(maxHeight: 300),
                     child: ListView.separated(
                       shrinkWrap: true,
                       itemCount: _searchResults.length,
@@ -272,73 +405,108 @@ class _AddFriendSheetState extends State<AddFriendSheet> {
                         final name = item['name'] ?? 'User';
                         final username = item['username'] ?? '';
                         final targetId = item['id'] ?? 'usr_$username';
-                        final isSent = _sentRequests.contains(username);
+                        final status = _resolveStatus(privateChat, targetId, username);
+                        final blocked = status == 'blocked';
 
                         return Padding(
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           child: Row(
                             children: [
-                              MiraloAvatar(name: name, size: 36, isOnline: true),
+                              MiraloAvatar(name: name, size: 36, isOnline: !blocked),
                               const SizedBox(width: AppSpacing.sm),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(name, style: AppTypography.bodyMedium(color: textPrimary)),
+                                    Row(
+                                      children: [
+                                        Text(name, style: AppTypography.bodyMedium(color: textPrimary)),
+                                        if (blocked) ...[
+                                          const SizedBox(width: 6),
+                                          Icon(Icons.block_rounded, size: 13, color: Colors.red.withValues(alpha: 0.8)),
+                                        ],
+                                      ],
+                                    ),
                                     Text('@$username', style: AppTypography.caption(color: textMuted)),
                                   ],
                                 ),
                               ),
-                              // Quick Chat Icon Button
-                              IconButton(
-                                icon: const Icon(Icons.chat_bubble_outline_rounded,
-                                    color: AppColors.accent, size: 20),
-                                tooltip: 'Chat',
-                                onPressed: () {
-                                  privateChat.setActiveChat(targetId);
-                                  Navigator.pop(ctx);
-                                  Navigator.pushNamed(context, AppRoutes.privateChat);
+
+                              // Chat icon (only if not blocked)
+                              if (!blocked)
+                                IconButton(
+                                  icon: const Icon(Icons.chat_bubble_outline_rounded,
+                                      color: AppColors.accent, size: 20),
+                                  tooltip: 'Chat',
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                  onPressed: () {
+                                    privateChat.setActiveChat(targetId);
+                                    Navigator.pop(ctx);
+                                    Navigator.pushNamed(context, AppRoutes.privateChat);
+                                  },
+                                ),
+
+                              // ── 3-state action button ──
+                              _buildActionButton(
+                                status: status,
+                                isDark: isDark,
+                                textMuted: textMuted,
+                                targetUsername: username,
+                                onAdd: () {
+                                  privateChat.sendFriendRequest(
+                                    senderId: currentUser?.id ?? 'me',
+                                    senderName: currentUser?.displayName ?? 'User',
+                                    senderUsername: currentUser?.username ?? 'user',
+                                    targetUsernameOrEmail: username,
+                                  );
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Friend request sent to @$username'),
+                                      duration: const Duration(seconds: 2),
+                                    ),
+                                  );
                                 },
                               ),
-                              // Dynamic Add / Sent Button
-                              ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: isSent
-                                      ? (isDark ? Colors.white12 : Colors.grey.shade300)
-                                      : AppColors.accent,
-                                  foregroundColor: isSent ? textMuted : Colors.white,
-                                  elevation: isSent ? 0 : 1,
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                  minimumSize: Size.zero,
-                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                ),
-                                onPressed: isSent
-                                    ? null
-                                    : () {
-                                        setState(() {
-                                          _sentRequests.add(username);
-                                        });
-                                        privateChat.sendFriendRequest(
-                                          senderId: currentUser?.id ?? 'me',
-                                          senderName: currentUser?.displayName ?? 'User',
-                                          senderUsername: currentUser?.username ?? 'user',
-                                          targetUsernameOrEmail: username,
-                                        );
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(
-                                            content: Text('Friend request sent to @$username'),
-                                            duration: const Duration(seconds: 2),
-                                          ),
-                                        );
-                                      },
-                                child: Text(
-                                  isSent ? 'Sent ✓' : 'Add',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: isSent ? FontWeight.normal : FontWeight.bold,
-                                  ),
-                                ),
+
+                              const SizedBox(width: 4),
+
+                              // ── ••• popup menu ──
+                              PopupMenuButton<String>(
+                                icon: Icon(Icons.more_vert_rounded, size: 18, color: textMuted),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                itemBuilder: (_) => [
+                                  if (!blocked)
+                                    PopupMenuItem(
+                                      value: 'block',
+                                      child: Row(
+                                        children: const [
+                                          Icon(Icons.block_rounded, size: 16, color: Colors.red),
+                                          SizedBox(width: 8),
+                                          Text('Block user', style: TextStyle(color: Colors.red)),
+                                        ],
+                                      ),
+                                    )
+                                  else
+                                    PopupMenuItem(
+                                      value: 'unblock',
+                                      child: Row(
+                                        children: const [
+                                          Icon(Icons.lock_open_rounded, size: 16),
+                                          SizedBox(width: 8),
+                                          Text('Unblock user'),
+                                        ],
+                                      ),
+                                    ),
+                                ],
+                                onSelected: (val) {
+                                  if (val == 'block') {
+                                    _showBlockConfirm(context, privateChat, targetId, username, name);
+                                  } else if (val == 'unblock') {
+                                    _showUnblockConfirm(context, privateChat, targetId, username);
+                                  }
+                                },
                               ),
                             ],
                           ),
@@ -347,7 +515,7 @@ class _AddFriendSheetState extends State<AddFriendSheet> {
                     ),
                   ),
               ] else ...[
-                // Invitations Tab Content
+                // ── Invitations Tab ─────────────────────────────────────────
                 if (pendingRequests.isEmpty)
                   Center(
                     child: Padding(
@@ -364,7 +532,7 @@ class _AddFriendSheetState extends State<AddFriendSheet> {
                   )
                 else
                   ConstrainedBox(
-                    constraints: const BoxConstraints(maxHeight: 260),
+                    constraints: const BoxConstraints(maxHeight: 300),
                     child: ListView.separated(
                       shrinkWrap: true,
                       itemCount: pendingRequests.length,
@@ -423,6 +591,35 @@ class _AddFriendSheetState extends State<AddFriendSheet> {
                                 },
                                 child: const Text('Decline', style: TextStyle(fontSize: 12)),
                               ),
+                              const SizedBox(width: 4),
+                              // Block from invitations tab too
+                              PopupMenuButton<String>(
+                                icon: Icon(Icons.more_vert_rounded, size: 18, color: textMuted),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                itemBuilder: (_) => [
+                                  PopupMenuItem(
+                                    value: 'block',
+                                    child: Row(
+                                      children: const [
+                                        Icon(Icons.block_rounded, size: 16, color: Colors.red),
+                                        SizedBox(width: 8),
+                                        Text('Block user', style: TextStyle(color: Colors.red)),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                                onSelected: (val) {
+                                  if (val == 'block') {
+                                    _showBlockConfirm(
+                                      context, privateChat,
+                                      req.senderId, req.senderUsername, req.senderName,
+                                    );
+                                    // Also decline the request
+                                    privateChat.respondToFriendRequest(req, false);
+                                  }
+                                },
+                              ),
                             ],
                           ),
                         );
@@ -437,4 +634,3 @@ class _AddFriendSheetState extends State<AddFriendSheet> {
     );
   }
 }
-

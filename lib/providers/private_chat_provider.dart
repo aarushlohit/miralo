@@ -17,14 +17,28 @@ class PrivateChatProvider extends ChangeNotifier {
   String? _currentUserId;
   bool _isAutoBackupEnabled = true;
 
+  // sent_requests: targetUsername -> status ('pending'|'accepted'|'rejected')
+  final Map<String, String> _sentRequestStatuses = {};
+  // blocked user IDs (Firebase UIDs)
+  final Set<String> _blockedUserIds = {};
+
   StreamSubscription<DatabaseEvent>? _messagesSubscription;
   StreamSubscription<DatabaseEvent>? _contactsSubscription;
   StreamSubscription<DatabaseEvent>? _requestsSubscription;
+  StreamSubscription<DatabaseEvent>? _sentRequestsSubscription;
+  StreamSubscription<DatabaseEvent>? _blockedSubscription;
 
   List<PrivateContactModel> get contacts => _contacts;
   List<FriendRequestModel> get pendingFriendRequests => _pendingFriendRequests;
   String? get activeChatId => _activeChatId;
   bool get isAutoBackupEnabled => _isAutoBackupEnabled;
+  Set<String> get blockedUserIds => _blockedUserIds;
+
+  /// Returns null (not sent), 'pending', 'accepted', or 'rejected'
+  String? getSentRequestStatus(String targetUsername) =>
+      _sentRequestStatuses[targetUsername.toLowerCase().trim()];
+
+  bool isBlocked(String userId) => _blockedUserIds.contains(userId);
 
   PrivateContactModel? get activeContact {
     if (_activeChatId == null) return null;
@@ -133,6 +147,8 @@ class PrivateChatProvider extends ChangeNotifier {
     _currentUserId = userId;
     _listenToFirebaseUserContacts(userId);
     _listenToFirebaseFriendRequests(userId);
+    _listenToFirebaseSentRequests(userId);
+    _listenToFirebaseBlockedUsers(userId);
   }
 
   void _listenToFirebaseUserContacts(String userId) {
@@ -183,6 +199,86 @@ class PrivateChatProvider extends ChangeNotifier {
       });
     } catch (e) {
       debugPrint('Firebase RTDB not initialized or offline: $e');
+    }
+  }
+
+  void _listenToFirebaseSentRequests(String userId) {
+    _sentRequestsSubscription?.cancel();
+    try {
+      final ref = FirebaseDatabase.instance.ref('sent_requests/$userId');
+      _sentRequestsSubscription = ref.onValue.listen((event) {
+        _sentRequestStatuses.clear();
+        if (event.snapshot.value != null && event.snapshot.value is Map) {
+          final rawMap = Map<String, dynamic>.from(event.snapshot.value as Map);
+          for (var entry in rawMap.entries) {
+            if (entry.value is Map) {
+              final data = Map<String, dynamic>.from(entry.value as Map);
+              final targetUsername = data['targetUsername']?.toString() ?? entry.key;
+              final status = data['status']?.toString() ?? 'pending';
+              _sentRequestStatuses[targetUsername.toLowerCase().trim()] = status;
+            }
+          }
+        }
+        notifyListeners();
+      }, onError: (e) {
+        debugPrint('Firebase RTDB sent requests error: $e');
+      });
+    } catch (e) {
+      debugPrint('Firebase RTDB not initialized or offline: $e');
+    }
+  }
+
+  void _listenToFirebaseBlockedUsers(String userId) {
+    _blockedSubscription?.cancel();
+    try {
+      final ref = FirebaseDatabase.instance.ref('blocked_users/$userId');
+      _blockedSubscription = ref.onValue.listen((event) {
+        _blockedUserIds.clear();
+        if (event.snapshot.value != null && event.snapshot.value is Map) {
+          final rawMap = Map<String, dynamic>.from(event.snapshot.value as Map);
+          _blockedUserIds.addAll(rawMap.keys);
+        }
+        notifyListeners();
+      }, onError: (e) {
+        debugPrint('Firebase RTDB blocked users error: $e');
+      });
+    } catch (e) {
+      debugPrint('Firebase RTDB not initialized or offline: $e');
+    }
+  }
+
+  Future<void> blockUser({
+    required String targetId,
+    required String targetUsername,
+    required String targetDisplayName,
+  }) async {
+    _blockedUserIds.add(targetId);
+    notifyListeners();
+    if (_currentUserId == null) return;
+    try {
+      await FirebaseDatabase.instance
+          .ref('blocked_users/$_currentUserId/$targetId')
+          .set({
+        'userId': targetId,
+        'username': targetUsername,
+        'displayName': targetDisplayName,
+        'blockedAt': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      debugPrint('Firebase block user error: $e');
+    }
+  }
+
+  Future<void> unblockUser(String targetId) async {
+    _blockedUserIds.remove(targetId);
+    notifyListeners();
+    if (_currentUserId == null) return;
+    try {
+      await FirebaseDatabase.instance
+          .ref('blocked_users/$_currentUserId/$targetId')
+          .remove();
+    } catch (e) {
+      debugPrint('Firebase unblock user error: $e');
     }
   }
 
@@ -463,9 +559,25 @@ class PrivateChatProvider extends ChangeNotifier {
             .ref('friend_requests/$targetUsername/$requestId')
             .set(request.toJson());
       }
+      // Also write to sender's sent_requests node so status persists on reopen
+      if (_currentUserId != null) {
+        await FirebaseDatabase.instance
+            .ref('sent_requests/$_currentUserId/$requestId')
+            .set({
+          'requestId': requestId,
+          'targetId': targetId,
+          'targetUsername': targetUsername,
+          'targetDisplayName': targetDisplayName,
+          'status': 'pending',
+          'createdAt': DateTime.now().toIso8601String(),
+        });
+      }
     } catch (e) {
       debugPrint('Firebase friend request error: $e');
     }
+
+    // Update local status immediately (optimistic)
+    _sentRequestStatuses[targetUsername.toLowerCase().trim()] = 'pending';
 
     // Direct add as local & online contact
     final newContact = PrivateContactModel(
@@ -502,6 +614,10 @@ class PrivateChatProvider extends ChangeNotifier {
             .ref('friend_requests/${req.receiverUsername}/${req.id}')
             .update({'status': status});
       }
+      // Update status in the SENDER's sent_requests node so their UI updates
+      await FirebaseDatabase.instance
+          .ref('sent_requests/${req.senderId}/${req.id}')
+          .update({'status': status});
     } catch (_) {}
 
     _pendingFriendRequests.removeWhere((r) => r.id == req.id);
@@ -604,6 +720,8 @@ class PrivateChatProvider extends ChangeNotifier {
     _messagesSubscription?.cancel();
     _contactsSubscription?.cancel();
     _requestsSubscription?.cancel();
+    _sentRequestsSubscription?.cancel();
+    _blockedSubscription?.cancel();
     super.dispose();
   }
 }
