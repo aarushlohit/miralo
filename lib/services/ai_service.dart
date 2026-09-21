@@ -63,21 +63,16 @@ class AiModels {
   static String modelIdFor(String model) {
     switch (model) {
       case nvidiaLlamaVision:
-        return 'meta/llama-3.2-11b-vision-instruct';
       case nvidiaGlm:
-        return 'z-ai/glm-5.3-flash';
       case nvidiaKimi:
-        return 'moonshotai/kimi-k3';
       case nvidiaLlama31:
         return 'meta/llama-3.2-11b-vision-instruct';
       case gemini35Flash:
-        return 'gemini-1.5-flash';
       case gemini25Flash:
-        return 'gemini-1.5-flash';
-      case gemini25Pro:
-        return 'gemini-1.5-pro';
       case gemini20Flash:
-        return 'gemini-1.5-flash';
+        return 'gemini-2.5-flash';
+      case gemini25Pro:
+        return 'gemini-2.5-pro';
       case bigPickle:
         return 'big-pickle';
       case mimoV25Free:
@@ -93,7 +88,7 @@ class AiModels {
       case jev113Free:
         return 'jev-1.13-free';
       default:
-        return 'gemini-1.5-flash';
+        return 'gemini-2.5-flash';
     }
   }
 }
@@ -263,8 +258,8 @@ class AiService {
     String? imageBase64,
   }) async {
     // Standardize Gemini model ID for Google Generative Language API
-    final effectiveModel = model.contains('2.') || model.contains('3.')
-        ? 'gemini-1.5-flash'
+    final effectiveModel = (model == 'gemini-1.5-flash' || model == 'gemini-1.5-pro' || model.contains('3.'))
+        ? 'gemini-2.5-flash'
         : model;
 
     final url = Uri.parse(
@@ -294,12 +289,12 @@ class AiService {
           'maxOutputTokens': 2048,
         }
       }),
-    ).timeout(const Duration(seconds: 20));
+    ).timeout(const Duration(seconds: 25));
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       final text = data['candidates']?[0]?['content']?['parts']?[0]?['text'];
-      if (text != null && text is String) {
+      if (text != null && text is String && text.trim().isNotEmpty) {
         return text.trim();
       }
     }
@@ -344,16 +339,16 @@ class AiService {
         'temperature': 0.6,
         'max_tokens': 1024,
       }),
-    ).timeout(const Duration(seconds: 25));
+    ).timeout(const Duration(seconds: 30));
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       final text = data['choices']?[0]?['message']?['content'];
-      if (text != null && text is String) {
+      if (text != null && text is String && text.trim().isNotEmpty) {
         return text.trim();
       }
       final reasoning = data['choices']?[0]?['message']?['reasoning_content'];
-      if (reasoning != null && reasoning is String) {
+      if (reasoning != null && reasoning is String && reasoning.trim().isNotEmpty) {
         return reasoning.trim();
       }
     }
