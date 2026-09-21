@@ -50,6 +50,7 @@ dependencies:
   record: ^5.1.2
   audioplayers: ^6.1.0
   path_provider: ^2.1.5
+  cloud_firestore: ^6.10.0
 
 dependency_overrides:
   record_platform_interface: 1.2.0
