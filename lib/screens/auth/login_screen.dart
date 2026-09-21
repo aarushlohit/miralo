@@ -32,17 +32,17 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleLogin() async {
-    final email = _emailController.text.trim();
+    final identifier = _emailController.text.trim();
     final pass = _passwordController.text;
 
-    if (email.isEmpty || pass.isEmpty) {
-      setState(() => _errorMessage = 'Please enter your email and password.');
+    if (identifier.isEmpty || pass.isEmpty) {
+      setState(() => _errorMessage = 'Please enter your email or username and password.');
       return;
     }
     setState(() => _errorMessage = null);
 
     final auth = Provider.of<AuthProvider>(context, listen: false);
-    final success = await auth.login(email, pass);
+    final success = await auth.login(identifier, pass);
     if (success && mounted) {
       _failedAttempts = 0;
       if (auth.currentUser != null) {
@@ -64,7 +64,7 @@ class _LoginScreenState extends State<LoginScreen> {
         });
       } else {
         setState(() {
-          _errorMessage = auth.errorMessage ?? 'Incorrect credentials. Try again.';
+          _errorMessage = auth.errorMessage ?? 'Incorrect email, username or password. Please try again.';
         });
       }
     }
@@ -134,11 +134,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ],
 
-              // Email
+              // Email or Username
               MiraloTextField(
                 controller: _emailController,
-                hint: 'Email',
-                prefixIcon: Icons.mail_outline,
+                hint: 'Email or username',
+                prefixIcon: Icons.person_outline_rounded,
                 keyboardType: TextInputType.emailAddress,
                 textInputAction: TextInputAction.next,
               ),

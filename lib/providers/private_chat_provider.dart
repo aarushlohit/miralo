@@ -186,23 +186,39 @@ class PrivateChatProvider extends ChangeNotifier {
     }
   }
 
+  String getConversationChannelId(String contactId) {
+    if (_currentUserId == null || _currentUserId!.isEmpty) return contactId;
+    return _currentUserId!.compareTo(contactId) < 0
+        ? 'chat_${_currentUserId}_$contactId'
+        : 'chat_${contactId}_$_currentUserId';
+  }
+
+  bool isMyMessage(PrivateMessageModel msg) {
+    if (msg.senderId == 'me') return true;
+    if (_currentUserId != null && _currentUserId!.isNotEmpty) {
+      return msg.senderId == _currentUserId;
+    }
+    return false;
+  }
+
   void setActiveChat(String chatId) {
     _activeChatId = chatId;
     final contactIndex = _contacts.indexWhere((c) => c.id == chatId);
     if (contactIndex != -1) {
       _contacts[contactIndex] = _contacts[contactIndex].copyWith(unreadCount: 0);
     }
-    _listenToFirebaseChat(chatId);
+    final channelId = getConversationChannelId(chatId);
+    _listenToFirebaseChat(chatId, channelId);
     notifyListeners();
   }
 
-  void _listenToFirebaseChat(String chatId) {
+  void _listenToFirebaseChat(String contactId, String channelId) {
     _messagesSubscription?.cancel();
     _messagesSubscription = null;
     try {
-      final ref = FirebaseDatabase.instance.ref('chats/$chatId/messages');
+      final ref = FirebaseDatabase.instance.ref('chats/$channelId/messages');
       _messagesSubscription = ref.onValue.listen((event) {
-        final list = _messages.putIfAbsent(chatId, () => []);
+        final list = _messages.putIfAbsent(contactId, () => []);
         list.clear();
         if (event.snapshot.value != null && event.snapshot.value is Map) {
           final rawMap = Map<String, dynamic>.from(event.snapshot.value as Map);
@@ -222,9 +238,9 @@ class PrivateChatProvider extends ChangeNotifier {
     }
   }
 
-  void _syncMessageToFirebase(PrivateMessageModel msg) {
+  void _syncMessageToFirebase(PrivateMessageModel msg, String channelId) {
     try {
-      final ref = FirebaseDatabase.instance.ref('chats/${msg.chatId}/messages/${msg.id}');
+      final ref = FirebaseDatabase.instance.ref('chats/$channelId/messages/${msg.id}');
       ref.set(msg.toJson());
     } catch (e) {
       debugPrint('Firebase RTDB sync error: $e');
@@ -234,10 +250,11 @@ class PrivateChatProvider extends ChangeNotifier {
   void sendTextMessage(String text, {String? replyToText}) {
     if (text.trim().isEmpty || _activeChatId == null) return;
     final senderId = _currentUserId ?? 'me';
+    final channelId = getConversationChannelId(_activeChatId!);
 
     final newMsg = PrivateMessageModel(
       id: 'pmsg_${DateTime.now().millisecondsSinceEpoch}',
-      chatId: _activeChatId!,
+      chatId: channelId,
       senderId: senderId,
       type: 'text',
       text: text.trim(),
@@ -248,7 +265,7 @@ class PrivateChatProvider extends ChangeNotifier {
 
     _messages.putIfAbsent(_activeChatId!, () => []).add(newMsg);
     notifyListeners();
-    _syncMessageToFirebase(newMsg);
+    _syncMessageToFirebase(newMsg, channelId);
   }
 
   void sendMediaMessage({
@@ -261,10 +278,11 @@ class PrivateChatProvider extends ChangeNotifier {
   }) {
     if (_activeChatId == null) return;
     final senderId = _currentUserId ?? 'me';
+    final channelId = getConversationChannelId(_activeChatId!);
 
     final newMsg = PrivateMessageModel(
       id: 'pmsg_${DateTime.now().millisecondsSinceEpoch}',
-      chatId: _activeChatId!,
+      chatId: channelId,
       senderId: senderId,
       type: type,
       text: text,
@@ -278,7 +296,7 @@ class PrivateChatProvider extends ChangeNotifier {
 
     _messages.putIfAbsent(_activeChatId!, () => []).add(newMsg);
     notifyListeners();
-    _syncMessageToFirebase(newMsg);
+    _syncMessageToFirebase(newMsg, channelId);
   }
 
   void toggleReaction(String messageId, String emoji) {
@@ -305,7 +323,8 @@ class PrivateChatProvider extends ChangeNotifier {
     final updatedMsg = msg.copyWith(reactions: reactions);
     list[index] = updatedMsg;
     notifyListeners();
-    _syncMessageToFirebase(updatedMsg);
+    final channelId = getConversationChannelId(_activeChatId!);
+    _syncMessageToFirebase(updatedMsg, channelId);
   }
 
   void deleteMessage(String messageId) {
@@ -314,16 +333,18 @@ class PrivateChatProvider extends ChangeNotifier {
     if (list == null) return;
 
     list.removeWhere((m) => m.id == messageId);
+    final channelId = getConversationChannelId(_activeChatId!);
     try {
-      FirebaseDatabase.instance.ref('chats/$_activeChatId/messages/$messageId').remove();
+      FirebaseDatabase.instance.ref('chats/$channelId/messages/$messageId').remove();
     } catch (_) {}
     notifyListeners();
   }
 
   void deleteCurrentChat() {
     if (_activeChatId == null) return;
+    final channelId = getConversationChannelId(_activeChatId!);
     try {
-      FirebaseDatabase.instance.ref('chats/$_activeChatId').remove();
+      FirebaseDatabase.instance.ref('chats/$channelId').remove();
       if (_currentUserId != null) {
         FirebaseDatabase.instance.ref('users/$_currentUserId/contacts/$_activeChatId').remove();
       }
@@ -337,8 +358,9 @@ class PrivateChatProvider extends ChangeNotifier {
   void clearActiveChat() {
     if (_activeChatId == null) return;
     _messages[_activeChatId]?.clear();
+    final channelId = getConversationChannelId(_activeChatId!);
     try {
-      FirebaseDatabase.instance.ref('chats/$_activeChatId/messages').remove();
+      FirebaseDatabase.instance.ref('chats/$channelId/messages').remove();
     } catch (_) {}
     notifyListeners();
   }
@@ -390,7 +412,34 @@ class PrivateChatProvider extends ChangeNotifier {
     final clean = targetUsernameOrEmail.trim().toLowerCase();
     if (clean.isEmpty) return;
 
-    final targetId = 'usr_${clean.replaceAll(' ', '_').replaceAll('@', '_at_')}';
+    String targetId = clean;
+    String targetDisplayName = clean;
+    String targetUsername = clean;
+
+    // Resolve real target user from user_index or email_index
+    try {
+      if (!clean.contains('@')) {
+        final indexSnap = await FirebaseDatabase.instance.ref('user_index/$clean').get();
+        if (indexSnap.exists && indexSnap.value is Map) {
+          final data = Map<String, dynamic>.from(indexSnap.value as Map);
+          targetId = data['id']?.toString() ?? targetId;
+          targetDisplayName = data['displayName']?.toString() ?? targetDisplayName;
+          targetUsername = data['username']?.toString() ?? targetUsername;
+        }
+      } else {
+        final safeEmail = clean.replaceAll('.', '_').replaceAll('@', '_at_');
+        final emailSnap = await FirebaseDatabase.instance.ref('email_index/$safeEmail').get();
+        if (emailSnap.exists && emailSnap.value is Map) {
+          final data = Map<String, dynamic>.from(emailSnap.value as Map);
+          targetId = data['userId']?.toString() ?? data['id']?.toString() ?? targetId;
+          targetUsername = data['username']?.toString() ?? targetUsername;
+          targetDisplayName = data['displayName']?.toString() ?? targetDisplayName;
+        }
+      }
+    } catch (e) {
+      debugPrint('Error resolving target user for friend request: $e');
+    }
+
     final requestId = 'req_${DateTime.now().millisecondsSinceEpoch}';
 
     final request = FriendRequestModel(
@@ -399,15 +448,21 @@ class PrivateChatProvider extends ChangeNotifier {
       senderName: senderName,
       senderUsername: senderUsername,
       receiverId: targetId,
-      receiverUsername: clean,
+      receiverUsername: targetUsername,
       status: 'pending',
       createdAt: DateTime.now(),
     );
 
-    // Write to Firebase Realtime Database
+    // Write to Firebase Realtime Database under target user's real ID AND username
     try {
-      final ref = FirebaseDatabase.instance.ref('friend_requests/$targetId/$requestId');
-      await ref.set(request.toJson());
+      await FirebaseDatabase.instance
+          .ref('friend_requests/$targetId/$requestId')
+          .set(request.toJson());
+      if (targetUsername != targetId) {
+        await FirebaseDatabase.instance
+            .ref('friend_requests/$targetUsername/$requestId')
+            .set(request.toJson());
+      }
     } catch (e) {
       debugPrint('Firebase friend request error: $e');
     }
@@ -415,8 +470,8 @@ class PrivateChatProvider extends ChangeNotifier {
     // Direct add as local & online contact
     final newContact = PrivateContactModel(
       id: targetId,
-      displayName: clean,
-      username: clean,
+      displayName: targetDisplayName,
+      username: targetUsername,
       isOnline: true,
       lastSeenText: 'Online',
       unreadCount: 0,
@@ -426,7 +481,7 @@ class PrivateChatProvider extends ChangeNotifier {
       _contacts.insert(0, newContact);
       if (_currentUserId != null) {
         try {
-          FirebaseDatabase.instance
+          await FirebaseDatabase.instance
               .ref('users/$_currentUserId/contacts/$targetId')
               .set(newContact.toJson());
         } catch (_) {}
@@ -442,6 +497,11 @@ class PrivateChatProvider extends ChangeNotifier {
       await FirebaseDatabase.instance
           .ref('friend_requests/${req.receiverId}/${req.id}')
           .update({'status': status});
+      if (req.receiverUsername != req.receiverId) {
+        await FirebaseDatabase.instance
+            .ref('friend_requests/${req.receiverUsername}/${req.id}')
+            .update({'status': status});
+      }
     } catch (_) {}
 
     _pendingFriendRequests.removeWhere((r) => r.id == req.id);
@@ -457,13 +517,36 @@ class PrivateChatProvider extends ChangeNotifier {
       );
       if (!_contacts.any((c) => c.id == req.senderId)) {
         _contacts.insert(0, newContact);
-        if (_currentUserId != null) {
+      }
+      if (_currentUserId != null) {
+        try {
+          // 1. Add sender to receiver's contacts
+          await FirebaseDatabase.instance
+              .ref('users/$_currentUserId/contacts/${req.senderId}')
+              .set(newContact.toJson());
+
+          // 2. Also add receiver to sender's contacts (try to fetch real display name)
+          String receiverDisplayName = req.receiverUsername;
           try {
-            FirebaseDatabase.instance
-                .ref('users/$_currentUserId/contacts/${req.senderId}')
-                .set(newContact.toJson());
+            final receiverSnap = await FirebaseDatabase.instance.ref('users/$_currentUserId').get();
+            if (receiverSnap.exists && receiverSnap.value is Map) {
+              final data = Map<String, dynamic>.from(receiverSnap.value as Map);
+              receiverDisplayName = data['displayName']?.toString() ?? req.receiverUsername;
+            }
           } catch (_) {}
-        }
+
+          final receiverContact = PrivateContactModel(
+            id: _currentUserId!,
+            displayName: receiverDisplayName,
+            username: req.receiverUsername,
+            isOnline: true,
+            lastSeenText: 'Online',
+            unreadCount: 0,
+          );
+          await FirebaseDatabase.instance
+              .ref('users/${req.senderId}/contacts/$_currentUserId')
+              .set(receiverContact.toJson());
+        } catch (_) {}
       }
     }
     notifyListeners();

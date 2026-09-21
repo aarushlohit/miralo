@@ -91,14 +91,50 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> login(String email, String password, {String? username}) async {
+  Future<bool> login(String emailOrUsername, String password, {String? username}) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
+    final cleanInput = emailOrUsername.trim().toLowerCase();
+    String resolvedEmail = cleanInput;
+
+    // If identifier is a username (no @), resolve email via user_index
+    if (!cleanInput.contains('@')) {
+      try {
+        final snap = await FirebaseDatabase.instance.ref('user_index/$cleanInput').get();
+        if (snap.exists && snap.value != null && snap.value is Map) {
+          final data = Map<String, dynamic>.from(snap.value as Map);
+          final emailFromIndex = data['email']?.toString();
+          if (emailFromIndex != null && emailFromIndex.isNotEmpty) {
+            resolvedEmail = emailFromIndex.trim().toLowerCase();
+          } else {
+            _isLoading = false;
+            _errorMessage = 'Incorrect email, username or password. Please try again.';
+            notifyListeners();
+            return false;
+          }
+        } else {
+          // Username not found in index. To prevent username enumeration, return generic error.
+          _isLoading = false;
+          _errorMessage = 'Incorrect email, username or password. Please try again.';
+          notifyListeners();
+          return false;
+        }
+      } catch (e) {
+        debugPrint('Username lookup error: $e');
+        if (!e.toString().contains('no-app')) {
+          _isLoading = false;
+          _errorMessage = 'Incorrect email, username or password. Please try again.';
+          notifyListeners();
+          return false;
+        }
+      }
+    }
+
     try {
       final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: email.trim(),
+        email: resolvedEmail,
         password: password.trim(),
       );
 
@@ -125,13 +161,13 @@ class AuthProvider extends ChangeNotifier {
       if (_currentUser == null) {
         final uname = (username != null && username.trim().isNotEmpty)
             ? username.trim().toLowerCase()
-            : email.split('@').first.toLowerCase();
+            : (cleanInput.contains('@') ? cleanInput.split('@').first : cleanInput);
 
         _currentUser = UserModel(
           id: uid,
-          displayName: credential.user?.displayName ?? email.split('@').first,
+          displayName: credential.user?.displayName ?? cleanInput.split('@').first,
           username: uname,
-          email: email.trim(),
+          email: resolvedEmail,
           avatarUrl: credential.user?.photoURL,
           createdAt: DateTime.now(),
         );
@@ -139,16 +175,11 @@ class AuthProvider extends ChangeNotifier {
     } on FirebaseAuthException catch (e) {
       debugPrint('FirebaseAuthException login: ${e.code} - ${e.message}');
       _isLoading = false;
-      if (e.code == 'user-not-found') {
-        _errorMessage = 'No user account found with this email.';
-      } else if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
-        _errorMessage = 'Incorrect password. Please try again.';
-      } else if (e.code == 'invalid-email') {
-        _errorMessage = 'Please enter a valid email address.';
-      } else if (e.code == 'user-disabled') {
+      if (e.code == 'user-disabled') {
         _errorMessage = 'This account has been disabled.';
       } else {
-        _errorMessage = e.message ?? 'Login failed. Please check your credentials.';
+        // Prevent username enumeration: Return identical generic message
+        _errorMessage = 'Incorrect email, username or password. Please try again.';
       }
       notifyListeners();
       return false;
@@ -157,19 +188,19 @@ class AuthProvider extends ChangeNotifier {
         // In local test environments without Firebase native app initialization
         final uname = (username != null && username.trim().isNotEmpty)
             ? username.trim().toLowerCase()
-            : email.split('@').first.toLowerCase();
+            : (cleanInput.contains('@') ? cleanInput.split('@').first : cleanInput);
 
         _currentUser = UserModel(
-          id: 'usr_${email.split('@').first}',
-          displayName: email.split('@').first,
+          id: 'usr_$uname',
+          displayName: uname,
           username: uname,
-          email: email.trim(),
+          email: resolvedEmail,
           createdAt: DateTime.now(),
         );
       } else {
         debugPrint('Login exception: $e');
         _isLoading = false;
-        _errorMessage = 'Login failed. Please check your network connection.';
+        _errorMessage = 'Incorrect email, username or password. Please try again.';
         notifyListeners();
         return false;
       }

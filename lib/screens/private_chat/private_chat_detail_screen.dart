@@ -334,11 +334,12 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
         itemCount: messages.length,
         itemBuilder: (context, index) {
           final msg = messages[index];
+          final isMe = chat.isMyMessage(msg);
           return MessageRenderer(
             id: msg.id,
             text: msg.text,
-            isMe: msg.isMe,
-            senderName: msg.isMe ? null : displayName,
+            isMe: isMe,
+            senderName: isMe ? null : displayName,
             createdAt: msg.createdAt,
             imageBase64: msg.imageBase64,
             imageUrl: msg.mediaUrl,
