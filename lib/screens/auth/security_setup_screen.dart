@@ -4,6 +4,7 @@ import '../../core/routes/app_routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/vault_provider.dart';
 import '../../widgets/common/miralo_button.dart';
 import '../../widgets/common/miralo_text_field.dart';
@@ -36,9 +37,12 @@ class _SecuritySetupScreenState extends State<SecuritySetupScreen> {
       return;
     }
 
+    final auth = Provider.of<AuthProvider>(context, listen: false);
     final vault = Provider.of<VaultProvider>(context, listen: false);
-    await vault.setPrivateChatSecret(secret);
-    await vault.setLibraryPin(pin);
+    final uid = auth.currentUser?.id;
+
+    await vault.setPrivateChatSecret(secret, userId: uid);
+    await vault.setLibraryPin(pin, userId: uid);
 
     if (mounted) Navigator.pushReplacementNamed(context, AppRoutes.home);
   }

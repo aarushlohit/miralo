@@ -62,7 +62,13 @@ class _LoginScreenState extends State<LoginScreen> {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final success = await auth.login(email, pass);
     if (success && mounted) {
-      Navigator.pushReplacementNamed(context, AppRoutes.home);
+      if (auth.currentUser != null) {
+        final vault = Provider.of<VaultProvider>(context, listen: false);
+        await vault.attachUser(auth.currentUser!.id);
+      }
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, AppRoutes.home);
+      }
     } else if (mounted) {
       setState(() => _errorMessage = 'Incorrect credentials. Please try again.');
     }

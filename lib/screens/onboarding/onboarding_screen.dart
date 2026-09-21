@@ -64,7 +64,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  void _next() {
+  Future<void> _next() async {
     if (_currentStep == 2) {
       // Validate Account
       final name = _nameController.text.trim();
@@ -96,8 +96,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         return;
       }
       setState(() => _passcodeError = null);
+      final auth = Provider.of<AuthProvider>(context, listen: false);
       final vault = Provider.of<VaultProvider>(context, listen: false);
-      vault.setPrivateChatSecret(pass);
+      await vault.setPrivateChatSecret(pass, userId: auth.currentUser?.id);
       _goToStep(5);
       return;
     }
@@ -110,8 +111,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         return;
       }
       setState(() => _passcodeError = null);
+      final auth = Provider.of<AuthProvider>(context, listen: false);
       final vault = Provider.of<VaultProvider>(context, listen: false);
-      vault.setLibraryPin(pin);
+      await vault.setLibraryPin(pin, userId: auth.currentUser?.id);
       _goToStep(6);
       return;
     }

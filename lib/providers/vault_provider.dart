@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/intruder_log_model.dart';
 
@@ -198,8 +199,52 @@ class VaultProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ── Persistence ──────────────────────────────────────────────────────────
-  /// Load saved credentials from SharedPreferences. Call once at app startup.
+  // ── Database & Persistence ───────────────────────────────────────────────
+  String? _currentUserId;
+
+  /// Attach active user ID and sync secrets from Firebase Realtime Database
+  Future<void> attachUser(String? userId) async {
+    if (userId == null || userId.isEmpty) return;
+    _currentUserId = userId;
+    await syncFromDb(userId);
+  }
+
+  /// Synchronize privateChatSecret and libraryPin directly from Firebase Realtime Database
+  Future<void> syncFromDb(String userId) async {
+    _currentUserId = userId;
+    try {
+      final snap = await FirebaseDatabase.instance
+          .ref('users/$userId/security_vault')
+          .get();
+
+      if (snap.exists && snap.value is Map) {
+        final data = Map<String, dynamic>.from(snap.value as Map);
+        final dbSecret = (data['privateChatSecret'] ?? '').toString();
+        final dbPin = (data['libraryPin'] ?? '').toString();
+
+        if (dbSecret.isNotEmpty) {
+          _privateChatSecret = dbSecret;
+        }
+        if (dbPin.isNotEmpty) {
+          _libraryPin = dbPin;
+        }
+
+        // Cache locally for offline availability
+        final prefs = await SharedPreferences.getInstance();
+        if (_privateChatSecret.isNotEmpty) {
+          await prefs.setString(_keyPrivateSecret, _privateChatSecret);
+        }
+        if (_libraryPin.isNotEmpty) {
+          await prefs.setString(_keyLibraryPin, _libraryPin);
+        }
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Firebase Vault sync error: $e');
+    }
+  }
+
+  /// Load saved credentials from local storage on initial startup (offline fallback)
   Future<void> loadFromStorage() async {
     final prefs = await SharedPreferences.getInstance();
     _privateChatSecret = prefs.getString(_keyPrivateSecret) ?? '';
@@ -208,16 +253,44 @@ class VaultProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Update credentials (persisted)
-  Future<void> setPrivateChatSecret(String newSecret) async {
+  // Update credentials (saved to Firebase Realtime Database & local cache)
+  Future<void> setPrivateChatSecret(String newSecret, {String? userId}) async {
     _privateChatSecret = newSecret.trim();
+    final uid = userId ?? _currentUserId;
+
+    // Save to Firebase Realtime Database
+    if (uid != null && uid.isNotEmpty) {
+      try {
+        await FirebaseDatabase.instance
+            .ref('users/$uid/security_vault/privateChatSecret')
+            .set(_privateChatSecret);
+      } catch (e) {
+        debugPrint('Firebase save private secret error: $e');
+      }
+    }
+
+    // Local cache
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyPrivateSecret, _privateChatSecret);
     notifyListeners();
   }
 
-  Future<void> setLibraryPin(String newPin) async {
+  Future<void> setLibraryPin(String newPin, {String? userId}) async {
     _libraryPin = newPin.trim();
+    final uid = userId ?? _currentUserId;
+
+    // Save to Firebase Realtime Database
+    if (uid != null && uid.isNotEmpty) {
+      try {
+        await FirebaseDatabase.instance
+            .ref('users/$uid/security_vault/libraryPin')
+            .set(_libraryPin);
+      } catch (e) {
+        debugPrint('Firebase save library pin error: $e');
+      }
+    }
+
+    // Local cache
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyLibraryPin, _libraryPin);
     notifyListeners();

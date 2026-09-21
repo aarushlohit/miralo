@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/vault_provider.dart';
 import '../../widgets/common/miralo_list_tile.dart';
 
@@ -39,7 +40,8 @@ class PrivacySecurityScreen extends StatelessWidget {
           ElevatedButton(
             onPressed: () {
               if (controller.text.trim().isNotEmpty) {
-                vault.setPrivateChatSecret(controller.text.trim());
+                final auth = Provider.of<AuthProvider>(context, listen: false);
+                vault.setPrivateChatSecret(controller.text.trim(), userId: auth.currentUser?.id);
                 Navigator.pop(ctx);
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Private Chat Secret updated.')),
@@ -84,7 +86,8 @@ class PrivacySecurityScreen extends StatelessWidget {
           ElevatedButton(
             onPressed: () {
               if (controller.text.trim().isNotEmpty) {
-                vault.setLibraryPin(controller.text.trim());
+                final auth = Provider.of<AuthProvider>(context, listen: false);
+                vault.setLibraryPin(controller.text.trim(), userId: auth.currentUser?.id);
                 Navigator.pop(ctx);
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Library Vault PIN updated.')),

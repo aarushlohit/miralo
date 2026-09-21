@@ -61,6 +61,11 @@ class _AiHomeScreenState extends State<AiHomeScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkIntruderLogs();
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      if (auth.currentUser != null) {
+        final vault = Provider.of<VaultProvider>(context, listen: false);
+        vault.attachUser(auth.currentUser!.id);
+      }
     });
   }
 

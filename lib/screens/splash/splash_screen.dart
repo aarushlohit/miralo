@@ -5,6 +5,7 @@ import '../../core/routes/app_routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/vault_provider.dart';
 import '../../widgets/common/miralo_logo.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -35,13 +36,22 @@ class _SplashScreenState extends State<SplashScreen>
     _ctrl.forward();
 
     _timer = Timer(const Duration(milliseconds: 2400), () {
-      if (!mounted) return;
-      final auth = Provider.of<AuthProvider>(context, listen: false);
-      Navigator.pushReplacementNamed(
-        context,
-        auth.isAuthenticated ? AppRoutes.home : AppRoutes.onboarding,
-      );
+      _proceed();
     });
+  }
+
+  Future<void> _proceed() async {
+    if (!mounted) return;
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    if (auth.isAuthenticated && auth.currentUser != null) {
+      final vault = Provider.of<VaultProvider>(context, listen: false);
+      await vault.attachUser(auth.currentUser!.id);
+    }
+    if (!mounted) return;
+    Navigator.pushReplacementNamed(
+      context,
+      auth.isAuthenticated ? AppRoutes.home : AppRoutes.onboarding,
+    );
   }
 
   @override
@@ -61,14 +71,7 @@ class _SplashScreenState extends State<SplashScreen>
     return Scaffold(
       backgroundColor: bg,
       body: GestureDetector(
-        onTap: () {
-          if (!mounted) return;
-          final auth = Provider.of<AuthProvider>(context, listen: false);
-          Navigator.pushReplacementNamed(
-            context,
-            auth.isAuthenticated ? AppRoutes.home : AppRoutes.onboarding,
-          );
-        },
+        onTap: _proceed,
         behavior: HitTestBehavior.opaque,
         child: FadeTransition(
           opacity: _fade,
