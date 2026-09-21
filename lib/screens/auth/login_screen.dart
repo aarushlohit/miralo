@@ -41,27 +41,10 @@ class _LoginScreenState extends State<LoginScreen> {
     }
     setState(() => _errorMessage = null);
 
-    // Demonstration check for invalid login password
-    if (pass != 'password' && pass != '123456' && pass != '1234') {
-      _failedAttempts++;
-      final vault = Provider.of<VaultProvider>(context, listen: false);
-
-      if (_failedAttempts >= 2) {
-        vault.recordLoginIntruderAttempt(_failedAttempts);
-        setState(() {
-          _errorMessage = 'Incorrect credentials. Security photo captured after $_failedAttempts failed attempts.';
-        });
-      } else {
-        setState(() {
-          _errorMessage = 'Incorrect password. Try again.';
-        });
-      }
-      return;
-    }
-
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final success = await auth.login(email, pass);
     if (success && mounted) {
+      _failedAttempts = 0;
       if (auth.currentUser != null) {
         final vault = Provider.of<VaultProvider>(context, listen: false);
         await vault.attachUser(auth.currentUser!.id);
@@ -70,7 +53,20 @@ class _LoginScreenState extends State<LoginScreen> {
         Navigator.pushReplacementNamed(context, AppRoutes.home);
       }
     } else if (mounted) {
-      setState(() => _errorMessage = 'Incorrect credentials. Please try again.');
+      _failedAttempts++;
+      final vault = Provider.of<VaultProvider>(context, listen: false);
+
+      if (_failedAttempts >= 2) {
+        vault.recordLoginIntruderAttempt(_failedAttempts);
+        setState(() {
+          _errorMessage = auth.errorMessage ??
+              'Incorrect credentials. Security photo captured after $_failedAttempts failed attempts.';
+        });
+      } else {
+        setState(() {
+          _errorMessage = auth.errorMessage ?? 'Incorrect credentials. Try again.';
+        });
+      }
     }
   }
 

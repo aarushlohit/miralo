@@ -101,10 +101,10 @@ void main() {
     test('Sends private message and updates active chat', () async {
       final chatProvider = PrivateChatProvider();
       await chatProvider.sendFriendRequest(
-        senderId: 'usr_me_001',
-        senderName: 'Alex',
-        senderUsername: 'alex_m',
-        targetUsernameOrEmail: 'priya_sharma',
+        senderId: 'usr_test_01',
+        senderName: 'Test User',
+        senderUsername: 'test_user',
+        targetUsernameOrEmail: 'receiver_user',
       );
       final contact = chatProvider.contacts.first;
       chatProvider.setActiveChat(contact.id);
@@ -120,10 +120,10 @@ void main() {
     test('Toggles emoji reaction on private message', () async {
       final chatProvider = PrivateChatProvider();
       await chatProvider.sendFriendRequest(
-        senderId: 'usr_me_001',
-        senderName: 'Alex',
-        senderUsername: 'alex_m',
-        targetUsernameOrEmail: 'priya_sharma',
+        senderId: 'usr_test_01',
+        senderName: 'Test User',
+        senderUsername: 'test_user',
+        targetUsernameOrEmail: 'receiver_user',
       );
       final contact = chatProvider.contacts.first;
       chatProvider.setActiveChat(contact.id);

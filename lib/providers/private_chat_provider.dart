@@ -40,6 +40,14 @@ class PrivateChatProvider extends ChangeNotifier {
     return _messages[_activeChatId] ?? [];
   }
 
+  PrivateMessageModel? getLastMessageForContact(String contactId) {
+    final list = _messages[contactId];
+    if (list != null && list.isNotEmpty) {
+      return list.last;
+    }
+    return null;
+  }
+
   PrivateChatProvider() {
     // No mock seed chats or fake friends. Clean & real state!
   }

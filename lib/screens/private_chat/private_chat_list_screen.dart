@@ -336,14 +336,16 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
                                 ? 'Contact ${i + 1}'
                                 : contact.displayName;
 
-                        final lastMsg =
-                            isHidden && vault.hideMode.hideMessagePreviews
-                                ? '••••••••••'
-                                : (contact.id == 'contact_priya'
-                                    ? 'Caught this sunset on the drive back 🌅'
-                                    : (contact.id == 'contact_rohan'
-                                        ? 'Let me know when you\'re free...'
-                                        : 'The presentation slides are saved'));
+                        final lastMessageObj = chat.getLastMessageForContact(contact.id);
+                        final lastMsg = isHidden && vault.hideMode.hideMessagePreviews
+                            ? '••••••••••'
+                            : (lastMessageObj != null
+                                ? (lastMessageObj.type == 'image'
+                                    ? '📷 Photo'
+                                    : (lastMessageObj.type == 'voice'
+                                        ? '🎤 Voice note'
+                                        : lastMessageObj.text))
+                                : 'Tap to start conversation');
 
                         return InkWell(
                           onTap: () {

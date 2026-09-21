@@ -193,7 +193,7 @@ class HideModeScreen extends StatelessWidget {
                     child: Center(
                       child: hide.isEnabled && hide.hideProfilePicture
                           ? const Icon(Icons.shield_outlined, size: 20, color: AppColors.accent)
-                          : Text('P', style: AppTypography.heading3(color: textPrimary)),
+                          : Text('C', style: AppTypography.heading3(color: textPrimary)),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.md),
@@ -204,7 +204,7 @@ class HideModeScreen extends StatelessWidget {
                         Text(
                           hide.isEnabled && hide.hidePrivateChatNames
                               ? 'Protected Contact'
-                              : 'Priya',
+                              : 'Contact',
                           style: AppTypography.bodyMedium(color: textPrimary)
                               .copyWith(fontWeight: FontWeight.w600),
                         ),

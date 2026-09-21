@@ -50,6 +50,7 @@ class AuthProvider extends ChangeNotifier {
 
   Future<bool> login(String email, String password, {String? username}) async {
     _isLoading = true;
+    _errorMessage = null;
     notifyListeners();
 
     try {
@@ -58,32 +59,77 @@ class AuthProvider extends ChangeNotifier {
         password: password.trim(),
       );
 
-      final uid = credential.user?.uid ?? 'usr_me_001';
-      final uname = (username != null && username.trim().isNotEmpty)
-          ? username.trim().toLowerCase()
-          : email.split('@').first.toLowerCase();
+      final uid = credential.user?.uid;
+      if (uid == null) {
+        _isLoading = false;
+        _errorMessage = 'Authentication failed. Please try again.';
+        notifyListeners();
+        return false;
+      }
 
-      _currentUser = UserModel(
-        id: uid,
-        displayName: credential.user?.displayName ?? email.split('@').first,
-        username: uname,
-        email: email.trim(),
-        avatarUrl: credential.user?.photoURL,
-        createdAt: DateTime.now(),
-      );
+      // 1. Attempt to fetch canonical user profile from Firebase Realtime Database
+      try {
+        final snap = await FirebaseDatabase.instance.ref('users/$uid').get();
+        if (snap.exists && snap.value != null && snap.value is Map) {
+          final data = Map<String, dynamic>.from(snap.value as Map);
+          _currentUser = UserModel.fromJson(data);
+        }
+      } catch (dbErr) {
+        debugPrint('Notice loading profile from DB: $dbErr');
+      }
+
+      // 2. If not found in DB yet, construct from Firebase Auth credential
+      if (_currentUser == null) {
+        final uname = (username != null && username.trim().isNotEmpty)
+            ? username.trim().toLowerCase()
+            : email.split('@').first.toLowerCase();
+
+        _currentUser = UserModel(
+          id: uid,
+          displayName: credential.user?.displayName ?? email.split('@').first,
+          username: uname,
+          email: email.trim(),
+          avatarUrl: credential.user?.photoURL,
+          createdAt: DateTime.now(),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      debugPrint('FirebaseAuthException login: ${e.code} - ${e.message}');
+      _isLoading = false;
+      if (e.code == 'user-not-found') {
+        _errorMessage = 'No user account found with this email.';
+      } else if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
+        _errorMessage = 'Incorrect password. Please try again.';
+      } else if (e.code == 'invalid-email') {
+        _errorMessage = 'Please enter a valid email address.';
+      } else if (e.code == 'user-disabled') {
+        _errorMessage = 'This account has been disabled.';
+      } else {
+        _errorMessage = e.message ?? 'Login failed. Please check your credentials.';
+      }
+      notifyListeners();
+      return false;
     } catch (e) {
-      debugPrint('FirebaseAuth login error (falling back to offline local profile): $e');
-      final uname = (username != null && username.trim().isNotEmpty)
-          ? username.trim().toLowerCase()
-          : email.split('@').first.toLowerCase();
+      if (e.toString().contains('no-app')) {
+        // In local test environments without Firebase native app initialization
+        final uname = (username != null && username.trim().isNotEmpty)
+            ? username.trim().toLowerCase()
+            : email.split('@').first.toLowerCase();
 
-      _currentUser = UserModel(
-        id: 'usr_${email.split('@').first}',
-        displayName: email.split('@').first,
-        username: uname,
-        email: email.trim(),
-        createdAt: DateTime.now(),
-      );
+        _currentUser = UserModel(
+          id: 'usr_${email.split('@').first}',
+          displayName: email.split('@').first,
+          username: uname,
+          email: email.trim(),
+          createdAt: DateTime.now(),
+        );
+      } else {
+        debugPrint('Login exception: $e');
+        _isLoading = false;
+        _errorMessage = 'Login failed. Please check your network connection.';
+        notifyListeners();
+        return false;
+      }
     }
 
     _isLoading = false;
@@ -145,7 +191,7 @@ class AuthProvider extends ChangeNotifier {
         password: password.trim(),
       );
 
-      final uid = credential.user?.uid ?? 'usr_me_${DateTime.now().millisecondsSinceEpoch}';
+      final uid = credential.user?.uid ?? 'usr_${DateTime.now().millisecondsSinceEpoch}';
       await credential.user?.updateDisplayName(displayName);
 
       _currentUser = UserModel(
