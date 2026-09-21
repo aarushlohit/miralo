@@ -143,14 +143,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
             MiraloSettingsGroup(
               children: ai.availableModels.map((m) {
                 final isSelected = ai.selectedModel == m;
-                String subtitle = 'Default balanced text reasoning';
-                if (m == AiModels.gemini25) {
-                  subtitle = 'Google Gemini (gemini-3.5-flash / gemini-2.5-flash) • Fast Multimodal';
-                } else if (m == AiModels.nvidiaNim) {
-                  subtitle = 'NVIDIA NIM (glm-5.3-flash, llama-3.2-11b-vision, kimi-k3)';
-                } else if (m == AiModels.openCode) {
-                  subtitle = 'OpenCode Zen (big-pickle, mimo-v2.5, muse-spark)';
-                }
+                final subtitle = AiModels.descriptionFor(m);
 
                 return MiraloListTile(
                   icon: isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked,

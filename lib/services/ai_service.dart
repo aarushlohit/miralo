@@ -4,72 +4,73 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// Supported AI Models for MIRALO AI
 class AiModels {
-  // Vision & General Models
-  static const String nvidiaLlamaVision = 'Llama 3.2 Vision';
-  static const String nvidiaGlm = 'GLM 5.3 Flash';
-  static const String nvidiaKimi = 'Kimi K3';
-  static const String nvidiaLlama31 = 'Llama 3.1 70B';
+  // Flagship NVIDIA NIM Models (Verified Active on integrate.api.nvidia.com)
+  static const String nemotronSuper120b = 'Nemotron 3 Super 120B';
+  static const String nemotronOmni30b = 'Nemotron 3 Omni 30B';
+  static const String llamaVision11b = 'Llama 3.2 Vision 11B';
+  static const String gemma26b = 'Gemma 26B Instruct';
+  static const String gptOss20b = 'GPT-OSS 20B';
 
-  // Gemini Models (starting from 3.5 flash)
-  static const String gemini35Flash = 'Gemini 3.5 Flash';
+  // Google Gemini Cloud Models
   static const String gemini25Flash = 'Gemini 2.5 Flash';
   static const String gemini25Pro = 'Gemini 2.5 Pro';
-  static const String gemini20Flash = 'Gemini 2.0 Flash';
 
   // OpenCode Zen Models
   static const String bigPickle = 'Big Pickle';
   static const String mimoV25Free = 'MiMo-V2.5';
   static const String museSpark13Free = 'Muse Spark 1.3';
-  static const String ling30FlashFree = 'Ling 3.0 Flash Fin';
-  static const String nemotron35Lightning = 'Nemotron 3.5 Lightning';
-  static const String nemotron3Ultra = 'Nemotron 3 Ultra';
-  static const String jev113Free = 'Jev 1.13';
+  static const String ling30FlashFree = 'Ling 3.0 Flash';
 
-  // Legacy aliases for backwards compatibility
-  static const String gpt56 = 'GPT-5.6 (Local Neural)';
+  // Aliases for backwards compatibility
+  static const String nvidiaNim = nemotronSuper120b;
+  static const String nvidiaLlamaVision = llamaVision11b;
+  static const String nvidiaGlm = nemotronOmni30b;
+  static const String nvidiaKimi = gemma26b;
+  static const String nvidiaLlama31 = nemotronSuper120b;
+  static const String gemini35Flash = gemini25Flash;
+  static const String gemini20Flash = gemini25Flash;
   static const String gemini25 = gemini25Flash;
-  static const String nvidiaNim = nvidiaLlamaVision;
   static const String openCode = bigPickle;
+  static const String gpt56 = 'GPT-5.6 (Local Neural)';
+  static const String nemotron35Lightning = nemotronOmni30b;
+  static const String nemotron3Ultra = nemotronSuper120b;
+  static const String jev113Free = mimoV25Free;
 
   static const List<String> all = [
-    gemini35Flash,
+    nemotronSuper120b,
+    nemotronOmni30b,
+    llamaVision11b,
+    gemma26b,
+    gptOss20b,
     gemini25Flash,
     gemini25Pro,
-    gemini20Flash,
-    nvidiaLlamaVision,
-    nvidiaGlm,
-    nvidiaKimi,
-    nvidiaLlama31,
     bigPickle,
     mimoV25Free,
     museSpark13Free,
     ling30FlashFree,
-    nemotron35Lightning,
-    nemotron3Ultra,
-    jev113Free,
   ];
 
   static bool supportsImage(String model) {
-    return model == gemini35Flash ||
+    return model == llamaVision11b ||
+        model == nvidiaLlamaVision ||
         model == gemini25Flash ||
         model == gemini25Pro ||
-        model == gemini20Flash ||
-        model == nvidiaLlamaVision ||
-        model == nvidiaKimi ||
-        model == mimoV25Free ||
-        model == museSpark13Free;
+        model == gemini35Flash;
   }
 
   static String modelIdFor(String model) {
     switch (model) {
-      case nvidiaLlamaVision:
-      case nvidiaGlm:
-      case nvidiaKimi:
-      case nvidiaLlama31:
+      case nemotronSuper120b:
+        return 'nvidia/nemotron-3-super-120b-a12b';
+      case nemotronOmni30b:
+        return 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning';
+      case llamaVision11b:
         return 'meta/llama-3.2-11b-vision-instruct';
-      case gemini35Flash:
+      case gemma26b:
+        return 'google/diffusiongemma-26b-a4b-it';
+      case gptOss20b:
+        return 'openai/gpt-oss-20b';
       case gemini25Flash:
-      case gemini20Flash:
         return 'gemini-2.5-flash';
       case gemini25Pro:
         return 'gemini-2.5-pro';
@@ -81,14 +82,37 @@ class AiModels {
         return 'muse-spark-1.3-contributor-free';
       case ling30FlashFree:
         return 'ling-3.0-flash-fin-free';
-      case nemotron35Lightning:
-        return 'nemotron-3.5-lightning-free';
-      case nemotron3Ultra:
-        return 'nemotron-3-ultra-free';
-      case jev113Free:
-        return 'jev-1.13-free';
       default:
-        return 'gemini-2.5-flash';
+        return 'nvidia/nemotron-3-super-120b-a12b';
+    }
+  }
+
+  static String descriptionFor(String model) {
+    switch (model) {
+      case nemotronSuper120b:
+        return 'NVIDIA NIM • 120B MoE Flagship Architecture';
+      case nemotronOmni30b:
+        return 'NVIDIA NIM • 30B High-Speed Reasoning Engine';
+      case llamaVision11b:
+        return 'NVIDIA NIM • Multimodal Vision & Deep Analysis';
+      case gemma26b:
+        return 'NVIDIA NIM • 26B Instruction Tuned Cloud Model';
+      case gptOss20b:
+        return 'NVIDIA NIM • 20B Conversational Model';
+      case gemini25Flash:
+        return 'Google Cloud • High-speed multimodal inference';
+      case gemini25Pro:
+        return 'Google Cloud • Flagship deep reasoning & code';
+      case bigPickle:
+        return 'OpenCode Zen • Code generation & scripting';
+      case mimoV25Free:
+        return 'OpenCode Zen • Lightweight fast assistant';
+      case museSpark13Free:
+        return 'OpenCode Zen • Creative reasoning engine';
+      case ling30FlashFree:
+        return 'OpenCode Zen • Multilingual conversational AI';
+      default:
+        return 'High-Performance Cloud AI';
     }
   }
 }
@@ -190,8 +214,13 @@ class AiService {
       }
     }
 
-    // Route: NVIDIA / Vision / General Models
-    if (targetModel == AiModels.nvidiaLlamaVision ||
+    // Route: NVIDIA NIM Models (Nemotron Super 120B, Omni 30B, Llama 3.2 Vision, Gemma 26B, GPT-OSS 20B)
+    if (targetModel == AiModels.nemotronSuper120b ||
+        targetModel == AiModels.nemotronOmni30b ||
+        targetModel == AiModels.llamaVision11b ||
+        targetModel == AiModels.gemma26b ||
+        targetModel == AiModels.gptOss20b ||
+        targetModel == AiModels.nvidiaLlamaVision ||
         targetModel == AiModels.nvidiaGlm ||
         targetModel == AiModels.nvidiaKimi ||
         targetModel == AiModels.nvidiaLlama31) {
@@ -208,7 +237,7 @@ class AiService {
           return await _callGeminiApi(
             prompt: prompt,
             apiKey: effectiveGeminiKey,
-            model: 'gemini-1.5-flash',
+            model: 'gemini-2.5-flash',
             imageBase64: imageBase64,
           );
         } catch (_) {
@@ -221,10 +250,7 @@ class AiService {
     if (targetModel == AiModels.bigPickle ||
         targetModel == AiModels.mimoV25Free ||
         targetModel == AiModels.museSpark13Free ||
-        targetModel == AiModels.ling30FlashFree ||
-        targetModel == AiModels.nemotron35Lightning ||
-        targetModel == AiModels.nemotron3Ultra ||
-        targetModel == AiModels.jev113Free) {
+        targetModel == AiModels.ling30FlashFree) {
       try {
         final modelId = AiModels.modelIdFor(targetModel);
         return await _callOpenCodeApi(
@@ -238,7 +264,7 @@ class AiService {
           return await _callGeminiApi(
             prompt: prompt,
             apiKey: effectiveGeminiKey,
-            model: 'gemini-1.5-flash',
+            model: 'gemini-2.5-flash',
             imageBase64: imageBase64,
           );
         } catch (_) {

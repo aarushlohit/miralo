@@ -239,21 +239,12 @@ class _AiHomeScreenState extends State<AiHomeScreen> {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
-                              if (m == AiModels.gemini25)
-                                Text('Google Gemini API • Text-optimized',
-                                    style: AppTypography.caption(color: textSecondary),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis)
-                              else if (m == AiModels.nvidiaNim)
-                                Text('Cloud Reasoning • Llama 3.2 Vision',
-                                    style: AppTypography.caption(color: textSecondary),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis)
-                              else if (m == AiModels.openCode)
-                                Text('DeepSeek / OpenCode endpoint',
-                                    style: AppTypography.caption(color: textSecondary),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis),
+                              Text(
+                                AiModels.descriptionFor(m),
+                                style: AppTypography.caption(color: textSecondary),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ],
                           ),
                         ),
