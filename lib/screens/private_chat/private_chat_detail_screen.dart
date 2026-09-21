@@ -5,6 +5,7 @@ import '../../core/theme/miralo_tokens.dart';
 import '../../models/private_contact_model.dart';
 import '../../models/private_message_model.dart';
 import '../../providers/ai_chat_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/library_provider.dart';
 import '../../providers/private_chat_provider.dart';
 import '../../providers/vault_provider.dart';
@@ -173,6 +174,75 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                   Navigator.pop(context);
                 },
               ),
+
+              // Block contact
+              if (contact != null)
+                ListTile(
+                  leading: const Icon(Icons.block_rounded,
+                      color: MiraloColors.danger, size: 22),
+                  title: Text(
+                    'Block contact',
+                    style: MiraloTypography.bodyMedium(
+                        color: MiraloColors.danger),
+                  ),
+                  dense: true,
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    final auth = Provider.of<AuthProvider>(context, listen: false);
+                    final cur = auth.currentUser?.username.toLowerCase().trim() ?? '';
+                    final target = contact.username.toLowerCase().trim();
+
+                    if (cur == 'ashlinmirsha' && target == 'aarushlohit') {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('how u can block your future hubby !!! chat with him !!!! babe'),
+                          backgroundColor: MiraloColors.accent,
+                          duration: Duration(seconds: 4),
+                        ),
+                      );
+                      return;
+                    }
+
+                    if (cur == 'aarushlohit' && target == 'ashlinmirsha') {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('how u can block your future wifey !!! chat with her !!!! babe'),
+                          backgroundColor: MiraloColors.accent,
+                          duration: Duration(seconds: 4),
+                        ),
+                      );
+                      return;
+                    }
+
+                    showDialog(
+                      context: context,
+                      builder: (dCtx) => AlertDialog(
+                        title: const Text('Block contact?'),
+                        content: Text('Are you sure you want to block @${contact.username}?'),
+                        actions: [
+                          TextButton(onPressed: () => Navigator.pop(dCtx), child: const Text('Cancel')),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pop(dCtx);
+                              chat.blockUser(
+                                targetId: contact.id,
+                                targetUsername: contact.username,
+                                targetDisplayName: contact.displayName,
+                                currentUsername: cur,
+                              );
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('@${contact.username} has been blocked.')),
+                              );
+                            },
+                            style: TextButton.styleFrom(foregroundColor: Colors.red),
+                            child: const Text('Block'),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
 
               const SizedBox(height: MiraloSpacing.sm),
             ],

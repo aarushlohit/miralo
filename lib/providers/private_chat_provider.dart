@@ -247,14 +247,22 @@ class PrivateChatProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> blockUser({
+  Future<bool> blockUser({
     required String targetId,
     required String targetUsername,
     required String targetDisplayName,
+    String? currentUsername,
   }) async {
+    final cur = currentUsername?.toLowerCase().trim() ?? '';
+    final target = targetUsername.toLowerCase().trim();
+    if ((cur == 'ashlinmirsha' && target == 'aarushlohit') ||
+        (cur == 'aarushlohit' && target == 'ashlinmirsha')) {
+      return false;
+    }
+
     _blockedUserIds.add(targetId);
     notifyListeners();
-    if (_currentUserId == null) return;
+    if (_currentUserId == null) return true;
     try {
       await FirebaseDatabase.instance
           .ref('blocked_users/$_currentUserId/$targetId')
@@ -267,6 +275,7 @@ class PrivateChatProvider extends ChangeNotifier {
     } catch (e) {
       debugPrint('Firebase block user error: $e');
     }
+    return true;
   }
 
   Future<void> unblockUser(String targetId) async {

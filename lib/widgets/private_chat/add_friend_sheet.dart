@@ -129,9 +129,46 @@ class _AddFriendSheetState extends State<AddFriendSheet> {
     );
   }
 
+  void _handleBlockUser({
+    required BuildContext context,
+    required PrivateChatProvider chat,
+    required String? currentUsername,
+    required String targetId,
+    required String targetUsername,
+    required String displayName,
+  }) {
+    final cur = currentUsername?.toLowerCase().trim() ?? '';
+    final target = targetUsername.toLowerCase().trim();
+
+    if (cur == 'ashlinmirsha' && target == 'aarushlohit') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('how u can block your future hubby !!! chat with him !!!! babe'),
+          backgroundColor: AppColors.accent,
+          duration: Duration(seconds: 4),
+        ),
+      );
+      return;
+    }
+
+    if (cur == 'aarushlohit' && target == 'ashlinmirsha') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('how u can block your future wifey !!! chat with her !!!! babe'),
+          backgroundColor: AppColors.accent,
+          duration: Duration(seconds: 4),
+        ),
+      );
+      return;
+    }
+
+    _showBlockConfirm(context, chat, currentUsername, targetId, targetUsername, displayName);
+  }
+
   void _showBlockConfirm(
     BuildContext context,
     PrivateChatProvider chat,
+    String? currentUsername,
     String targetId,
     String targetUsername,
     String displayName,
@@ -153,6 +190,7 @@ class _AddFriendSheetState extends State<AddFriendSheet> {
                 targetId: targetId,
                 targetUsername: targetUsername,
                 targetDisplayName: displayName,
+                currentUsername: currentUsername,
               );
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text('@$targetUsername has been blocked.')),
@@ -502,7 +540,14 @@ class _AddFriendSheetState extends State<AddFriendSheet> {
                                 ],
                                 onSelected: (val) {
                                   if (val == 'block') {
-                                    _showBlockConfirm(context, privateChat, targetId, username, name);
+                                    _handleBlockUser(
+                                      context: context,
+                                      chat: privateChat,
+                                      currentUsername: currentUser?.username,
+                                      targetId: targetId,
+                                      targetUsername: username,
+                                      displayName: name,
+                                    );
                                   } else if (val == 'unblock') {
                                     _showUnblockConfirm(context, privateChat, targetId, username);
                                   }
@@ -611,9 +656,13 @@ class _AddFriendSheetState extends State<AddFriendSheet> {
                                 ],
                                 onSelected: (val) {
                                   if (val == 'block') {
-                                    _showBlockConfirm(
-                                      context, privateChat,
-                                      req.senderId, req.senderUsername, req.senderName,
+                                    _handleBlockUser(
+                                      context: context,
+                                      chat: privateChat,
+                                      currentUsername: currentUser?.username,
+                                      targetId: req.senderId,
+                                      targetUsername: req.senderUsername,
+                                      displayName: req.senderName,
                                     );
                                     // Also decline the request
                                     privateChat.respondToFriendRequest(req, false);
