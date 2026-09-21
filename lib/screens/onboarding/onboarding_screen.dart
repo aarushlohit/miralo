@@ -83,7 +83,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       }
       setState(() => _accountError = null);
       final auth = Provider.of<AuthProvider>(context, listen: false);
-      auth.signup(name, email, pass, username: username);
+      final success = await auth.signup(name, email, pass, username: username);
+      if (!success) {
+        if (mounted) {
+          setState(() => _accountError = auth.errorMessage ?? 'Sign up failed. Please try again.');
+        }
+        return;
+      }
       _goToStep(3);
       return;
     }

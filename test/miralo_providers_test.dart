@@ -156,13 +156,16 @@ void main() {
   group('AuthProvider Tests', () {
     test('Sign up, login, update profile, and logout', () async {
       final auth = AuthProvider();
-      expect(auth.isAuthenticated, isTrue); // Initial test seed
+      expect(auth.isAuthenticated, isFalse); // Initially logged out
+
+      await auth.signup('Aarush Lohl', 'aarush.lohl@example.com', 'password123', username: 'aarush_lohl');
+      expect(auth.isAuthenticated, isTrue);
+      expect(auth.currentUser?.displayName, 'Aarush Lohl');
 
       auth.updateProfile(
-        displayName: 'Aarush Lohl',
-        username: 'aarush_lohl',
+        displayName: 'Aarush Lohl Updated',
       );
-      expect(auth.currentUser?.displayName, 'Aarush Lohl');
+      expect(auth.currentUser?.displayName, 'Aarush Lohl Updated');
 
       auth.logout();
       expect(auth.isAuthenticated, isFalse);

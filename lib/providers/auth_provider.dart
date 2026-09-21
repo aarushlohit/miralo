@@ -8,19 +8,14 @@ import '../models/user_model.dart';
 class AuthProvider extends ChangeNotifier {
   static const String _prefUserKey = 'miralo_auth_user_v2';
 
-  UserModel? _currentUser = UserModel(
-    id: 'usr_me_001',
-    displayName: 'Alex Morgan',
-    username: 'alexm',
-    email: 'alex.morgan@miralo.ai',
-    avatarUrl: null,
-    createdAt: DateTime.now().subtract(const Duration(days: 30)),
-  );
+  UserModel? _currentUser;
   bool _isLoading = false;
+  String? _errorMessage;
 
   UserModel? get currentUser => _currentUser;
   bool get isAuthenticated => _currentUser != null;
   bool get isLoading => _isLoading;
+  String? get errorMessage => _errorMessage;
 
   bool get isSpecialUser {
     if (_currentUser == null) return false;
@@ -105,15 +100,48 @@ class AuthProvider extends ChangeNotifier {
     String? username,
   }) async {
     _isLoading = true;
+    _errorMessage = null;
     notifyListeners();
 
+    final cleanEmail = email.trim().toLowerCase();
     final uname = (username != null && username.trim().isNotEmpty)
         ? username.trim().toLowerCase()
         : displayName.toLowerCase().replaceAll(' ', '_');
 
+    // 1. Check if username is already taken in database
+    try {
+      final userIndexSnap = await FirebaseDatabase.instance
+          .ref('user_index/$uname')
+          .get();
+      if (userIndexSnap.exists && userIndexSnap.value != null) {
+        _isLoading = false;
+        _errorMessage = 'Username "$uname" is already taken. Please choose another.';
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      debugPrint('Username availability check notice: $e');
+    }
+
+    // 2. Check if email is already taken in database
+    final safeEmailKey = cleanEmail.replaceAll('.', '_').replaceAll('@', '_at_');
+    try {
+      final emailIndexSnap = await FirebaseDatabase.instance
+          .ref('email_index/$safeEmailKey')
+          .get();
+      if (emailIndexSnap.exists && emailIndexSnap.value != null) {
+        _isLoading = false;
+        _errorMessage = 'An account with email "$cleanEmail" already exists.';
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      debugPrint('Email availability check notice: $e');
+    }
+
     try {
       final credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: email.trim(),
+        email: cleanEmail,
         password: password.trim(),
       );
 
@@ -124,21 +152,36 @@ class AuthProvider extends ChangeNotifier {
         id: uid,
         displayName: displayName,
         username: uname,
-        email: email.trim(),
+        email: cleanEmail,
         createdAt: DateTime.now(),
       );
+    } on FirebaseAuthException catch (e) {
+      debugPrint('FirebaseAuthException during signup: ${e.code} - ${e.message}');
+      _isLoading = false;
+      if (e.code == 'email-already-in-use') {
+        _errorMessage = 'An account with email "$cleanEmail" already exists.';
+      } else if (e.code == 'invalid-email') {
+        _errorMessage = 'The email address is invalid.';
+      } else if (e.code == 'weak-password') {
+        _errorMessage = 'The password is too weak.';
+      } else {
+        _errorMessage = e.message ?? 'Sign up failed. Please try again.';
+      }
+      notifyListeners();
+      return false;
     } catch (e) {
-      debugPrint('FirebaseAuth signup error (falling back to offline local profile): $e');
+      debugPrint('FirebaseAuth signup fallback: $e');
       _currentUser = UserModel(
         id: 'usr_${uname}_${DateTime.now().millisecondsSinceEpoch}',
         displayName: displayName,
         username: uname,
-        email: email.trim(),
+        email: cleanEmail,
         createdAt: DateTime.now(),
       );
     }
 
     _isLoading = false;
+    _errorMessage = null;
     await _saveUser();
     _syncUserToFirebase();
     notifyListeners();
@@ -150,10 +193,19 @@ class AuthProvider extends ChangeNotifier {
     try {
       final ref = FirebaseDatabase.instance.ref('users/${_currentUser!.id}');
       ref.update(_currentUser!.toJson());
-      // Also write username index for fast add friend search
+      // Also write username index for fast add friend search and uniqueness
       FirebaseDatabase.instance
           .ref('user_index/${_currentUser!.username}')
           .set(_currentUser!.toJson());
+      // Also write email index to prevent duplicate account creation
+      final safeEmailKey = _currentUser!.email.toLowerCase().replaceAll('.', '_').replaceAll('@', '_at_');
+      FirebaseDatabase.instance
+          .ref('email_index/$safeEmailKey')
+          .set({
+        'userId': _currentUser!.id,
+        'username': _currentUser!.username,
+        'email': _currentUser!.email,
+      });
     } catch (e) {
       debugPrint('Firebase Database user sync error: $e');
     }

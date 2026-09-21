@@ -63,6 +63,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
     final success = await auth.signup(name, email, pass, username: username.isNotEmpty ? username : null);
     if (success && mounted) {
       Navigator.pushReplacementNamed(context, AppRoutes.securitySetup);
+    } else if (mounted) {
+      setState(() => _errorMessage = auth.errorMessage ?? 'Sign up failed. Please try again.');
     }
   }
 
