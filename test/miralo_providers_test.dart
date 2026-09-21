@@ -216,10 +216,10 @@ void main() {
       expect(aiProvider.conversations.first.messages.isEmpty, isTrue);
     });
 
-    test('OpenCode model sendPrompt returns live response via fallback engine', () async {
+    test('Active AI model sendPrompt returns live response', () async {
       final response = await AiService.instance.sendPrompt(
         prompt: 'What is 2+2?',
-        model: AiModels.bigPickle,
+        model: AiModels.gemini25Flash,
       );
       expect(response, isNotEmpty);
       expect(response.contains('4') || response.contains('2'), isTrue);

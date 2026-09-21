@@ -44,10 +44,6 @@ class AiModels {
     gptOss20b,
     gemini25Flash,
     gemini25Pro,
-    bigPickle,
-    mimoV25Free,
-    museSpark13Free,
-    ling30FlashFree,
   ];
 
   static bool supportsImage(String model) {
@@ -74,14 +70,6 @@ class AiModels {
         return 'gemini-2.5-flash';
       case gemini25Pro:
         return 'gemini-2.5-pro';
-      case bigPickle:
-        return 'big-pickle';
-      case mimoV25Free:
-        return 'mimo-v2.5-free';
-      case museSpark13Free:
-        return 'muse-spark-1.3-contributor-free';
-      case ling30FlashFree:
-        return 'ling-3.0-flash-fin-free';
       default:
         return 'nvidia/nemotron-3-super-120b-a12b';
     }
@@ -103,14 +91,6 @@ class AiModels {
         return 'Google Cloud • High-speed multimodal inference';
       case gemini25Pro:
         return 'Google Cloud • Flagship deep reasoning & code';
-      case bigPickle:
-        return 'OpenCode Zen • Code generation & scripting';
-      case mimoV25Free:
-        return 'OpenCode Zen • Lightweight fast assistant';
-      case museSpark13Free:
-        return 'OpenCode Zen • Creative reasoning engine';
-      case ling30FlashFree:
-        return 'OpenCode Zen • Multilingual conversational AI';
       default:
         return 'High-Performance Cloud AI';
     }
