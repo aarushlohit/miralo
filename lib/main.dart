@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'app.dart';
 import 'firebase_options.dart';
+import 'providers/auth_provider.dart';
 import 'providers/vault_provider.dart';
 
 void main() async {
@@ -20,6 +21,10 @@ void main() async {
   final vault = VaultProvider();
   await vault.loadFromStorage();
 
+  // Load persisted user authentication session before UI.
+  final auth = AuthProvider();
+  await auth.loadFromStorage();
+
   // Set system UI overlay style for dark-first premium mobile aesthetic
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -30,5 +35,5 @@ void main() async {
     ),
   );
 
-  runApp(MiraloApp(vault: vault));
+  runApp(MiraloApp(vault: vault, auth: auth));
 }

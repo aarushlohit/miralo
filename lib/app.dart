@@ -35,14 +35,17 @@ import 'screens/emergency/emergency_screen.dart';
 
 class MiraloApp extends StatelessWidget {
   final VaultProvider vault;
-  const MiraloApp({super.key, required this.vault});
+  final AuthProvider? auth;
+  const MiraloApp({super.key, required this.vault, this.auth});
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        auth != null
+            ? ChangeNotifierProvider.value(value: auth!)
+            : ChangeNotifierProvider(create: (_) => AuthProvider()),
         // Use the pre-loaded vault so persisted passcode is available immediately
         ChangeNotifierProvider.value(value: vault),
         ChangeNotifierProvider(create: (_) => AiChatProvider()),

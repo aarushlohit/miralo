@@ -6,6 +6,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/vault_provider.dart';
+import '../../providers/private_chat_provider.dart';
 import '../../widgets/common/miralo_logo.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -43,9 +44,15 @@ class _SplashScreenState extends State<SplashScreen>
   Future<void> _proceed() async {
     if (!mounted) return;
     final auth = Provider.of<AuthProvider>(context, listen: false);
+    if (!auth.isInitialized) {
+      await auth.loadFromStorage();
+      if (!mounted) return;
+    }
     if (auth.isAuthenticated && auth.currentUser != null) {
       final vault = Provider.of<VaultProvider>(context, listen: false);
+      final chat = Provider.of<PrivateChatProvider>(context, listen: false);
       await vault.attachUser(auth.currentUser!.id);
+      chat.initUserSession(auth.currentUser!.id);
     }
     if (!mounted) return;
     Navigator.pushReplacementNamed(

@@ -23,20 +23,63 @@ class AuthProvider extends ChangeNotifier {
     return u == 'aarushlohit' || u == 'ashlinmirsha';
   }
 
+  bool _isInitialized = false;
+  bool get isInitialized => _isInitialized;
+
   AuthProvider() {
-    _initUser();
+    loadFromStorage();
   }
 
-  Future<void> _initUser() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_prefUserKey);
-    if (raw != null && raw.isNotEmpty) {
-      try {
+  Future<void> loadFromStorage() async {
+    // 1. Immediately read cached credentials from SharedPreferences
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_prefUserKey);
+      if (raw != null && raw.isNotEmpty) {
         _currentUser = UserModel.fromJson(jsonDecode(raw) as Map<String, dynamic>);
-        notifyListeners();
-        return;
-      } catch (_) {}
+      }
+    } catch (e) {
+      debugPrint('Error loading cached user: $e');
     }
+
+    // 2. Cross-check with active Firebase Auth session
+    try {
+      final fbUser = FirebaseAuth.instance.currentUser;
+      if (fbUser != null) {
+        // If local user is missing or UID mismatch, restore from DB
+        if (_currentUser == null || _currentUser!.id != fbUser.uid) {
+          try {
+            final snap = await FirebaseDatabase.instance.ref('users/${fbUser.uid}').get();
+            if (snap.exists && snap.value != null && snap.value is Map) {
+              final data = Map<String, dynamic>.from(snap.value as Map);
+              _currentUser = UserModel.fromJson(data);
+            }
+          } catch (dbErr) {
+            debugPrint('Error fetching DB user record: $dbErr');
+          }
+
+          if (_currentUser == null) {
+            final uname = fbUser.displayName?.toLowerCase().replaceAll(' ', '_') ??
+                fbUser.email?.split('@').first.toLowerCase() ??
+                'user';
+            _currentUser = UserModel(
+              id: fbUser.uid,
+              displayName: fbUser.displayName ?? fbUser.email?.split('@').first ?? 'User',
+              username: uname,
+              email: fbUser.email ?? '',
+              avatarUrl: fbUser.photoURL,
+              createdAt: DateTime.now(),
+            );
+          }
+          await _saveUser();
+        }
+      }
+    } catch (e) {
+      debugPrint('FirebaseAuth session check notice: $e');
+    }
+
+    _isInitialized = true;
+    notifyListeners();
   }
 
   Future<void> _saveUser() async {
