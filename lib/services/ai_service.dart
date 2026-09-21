@@ -133,7 +133,7 @@ class AiService {
   static const String defaultNvidiaKey =
       'YOUR_NVIDIA_KEY';
   static const String defaultOpenCodeKey =
-      'YOUR_OPENCODE_KEY';
+      'oc-9bf66ab6a0b20d6521e8d2ce5dc9a126da6de22a';
 
   String? _geminiApiKey;
   String? _nvidiaApiKey;
@@ -387,51 +387,47 @@ class AiService {
     required String model,
     String? imageBase64,
   }) async {
-    String endpoint = 'https://opencode.ai/zen/v1/chat/completions';
-    if (model == 'jev-1.13-free') {
-      endpoint = 'https://opencode.ai/zen/v1/systemone';
-    } else if (model == 'muse-spark-1.3-contributor-free') {
-      endpoint = 'https://opencode.ai/zen/v1/responses';
-    }
+    final candidateEndpoints = [
+      'http://10.0.2.2:6446/v1/chat/completions',
+      'http://127.0.0.1:6446/v1/chat/completions',
+      'https://opencode.ai/zen/v1/chat/completions',
+    ];
 
-    final url = Uri.parse(endpoint);
-    final session = 'sess_${DateTime.now().millisecondsSinceEpoch}';
+    for (final endpoint in candidateEndpoints) {
+      try {
+        final url = Uri.parse(endpoint);
+        final response = await http.post(
+          url,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $apiKey',
+            'User-Agent': 'opencode-client/1.0.0',
+          },
+          body: jsonEncode({
+            'model': model,
+            'messages': [
+              {'role': 'user', 'content': prompt}
+            ],
+            'temperature': 0.5,
+            'max_tokens': 1024,
+          }),
+        ).timeout(const Duration(seconds: 8));
 
-    final response = await http.post(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $apiKey',
-        'User-Agent': 'opencode-websearch/1.0.0 (desktop; x64)',
-        'x-opencode-session': session,
-        'x-opencode-client': 'opencode-desktop',
-        'x-opencode-version': '1.0.0',
-      },
-      body: jsonEncode({
-        'model': model,
-        'messages': [
-          {'role': 'user', 'content': prompt}
-        ],
-        'temperature': 0.5,
-        'max_tokens': 1024,
-      }),
-    ).timeout(const Duration(seconds: 15));
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      final text = data['choices']?[0]?['message']?['content'] ??
-          data['output'] ??
-          data['response'];
-      if (text != null && text is String) {
-        return text.trim();
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          final text = data['choices']?[0]?['message']?['content'] ??
+              data['output'] ??
+              data['response'];
+          if (text != null && text is String && text.trim().isNotEmpty) {
+            return text.trim();
+          }
+        }
+      } catch (_) {
+        // Try next candidate endpoint
       }
     }
 
-    if (response.statusCode == 403 || response.body.contains('FreeTierError')) {
-      throw Exception('OpenCode FreeTierError: Free tier requires official client session');
-    }
-
-    throw Exception('OpenCode HTTP ${response.statusCode}: ${response.body}');
+    throw Exception('OpenCode endpoints unreachable or rate-limited');
   }
 
   String _generateContextualResponse(String prompt, String model) {
