@@ -95,52 +95,59 @@ class ReactionSheet extends StatelessWidget {
         ? MiraloColors.darkBorder
         : MiraloColors.lightBorder;
 
-    return SafeArea(
-      child: Center(
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 24),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: bg,
-            borderRadius: BorderRadius.circular(MiraloRadius.bottomSheet),
-            border: Border.all(color: border),
-            boxShadow: MiraloElevation.medium(isDark),
-          ),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ...defaultReactions.map((emoji) {
-                  return InkWell(
-                    onTap: () {
-                      Navigator.pop(context);
-                      onSelectEmoji(emoji);
-                    },
-                    borderRadius: BorderRadius.circular(20),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                      child: Text(
-                        emoji,
-                        style: const TextStyle(fontSize: 24),
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => Navigator.pop(context),
+      child: SafeArea(
+        child: Center(
+          child: GestureDetector(
+            onTap: () {}, // Prevent taps inside the box from closing
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: bg,
+                borderRadius: BorderRadius.circular(MiraloRadius.bottomSheet),
+                border: Border.all(color: border),
+                boxShadow: MiraloElevation.medium(isDark),
+              ),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ...defaultReactions.map((emoji) {
+                      return InkWell(
+                        onTap: () {
+                          Navigator.pop(context);
+                          onSelectEmoji(emoji);
+                        },
+                        borderRadius: BorderRadius.circular(20),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                          child: Text(
+                            emoji,
+                            style: const TextStyle(fontSize: 24),
+                          ),
+                        ),
+                      );
+                    }),
+                    const SizedBox(width: 4),
+                    InkWell(
+                      onTap: () => _showCustomEmojiPicker(context),
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.add_rounded, size: 20),
                       ),
                     ),
-                  );
-                }),
-                const SizedBox(width: 4),
-                InkWell(
-                  onTap: () => _showCustomEmojiPicker(context),
-                  borderRadius: BorderRadius.circular(20),
-                  child: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.add_rounded, size: 20),
-                  ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),

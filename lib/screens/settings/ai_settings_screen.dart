@@ -124,7 +124,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Default backend API keys for NVIDIA NIM and Google Gemini are active. Custom BYOK keys are completely optional.',
+                            'Default backend API keys are active. Custom BYOK keys are completely optional.',
                             style: AppTypography.caption(color: textSecondary),
                           ),
                         ],

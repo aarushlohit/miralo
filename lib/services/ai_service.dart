@@ -71,19 +71,19 @@ class AiModels {
   static String descriptionFor(String model) {
     switch (model) {
       case nemotronSuper120b:
-        return 'NVIDIA NIM • 120B MoE Flagship Architecture';
+        return '120B MoE Flagship Architecture';
       case nemotronOmni30b:
-        return 'NVIDIA NIM • 30B High-Speed Reasoning Engine';
+        return '30B High-Speed Reasoning Engine';
       case llamaVision11b:
-        return 'NVIDIA NIM • Multimodal Vision & Deep Analysis';
+        return 'Multimodal Vision & Deep Analysis';
       case gemma26b:
-        return 'NVIDIA NIM • 26B Instruction Tuned Cloud Model';
+        return '26B Instruction Tuned Cloud Model';
       case gptOss20b:
-        return 'NVIDIA NIM • 20B Conversational Model';
+        return '20B Conversational Model';
       case gemini25Flash:
-        return 'Google Cloud • High-speed multimodal inference';
+        return 'High-speed multimodal inference';
       case gemini25Pro:
-        return 'Google Cloud • Flagship deep reasoning & code';
+        return 'Flagship deep reasoning & code';
       default:
         return 'High-Performance Cloud AI';
     }

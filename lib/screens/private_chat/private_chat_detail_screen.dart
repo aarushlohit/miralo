@@ -171,17 +171,12 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
     final msgDate = DateTime(date.year, date.month, date.day);
     final difference = today.difference(msgDate).inDays;
 
-    if (difference == 0) return 'Today';
-    if (difference == 1) return 'Yesterday';
-    if (difference < 7 && difference > 1) {
-      const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-      return weekdays[date.weekday - 1];
-    }
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    if (date.year == now.year) {
-      return '${months[date.month - 1]} ${date.day}';
-    }
-    return '${months[date.month - 1]} ${date.day}, ${date.year}';
+    final dateStr = '${date.day}, ${months[date.month - 1]} ${date.year}';
+
+    if (difference == 0) return 'Today • $dateStr';
+    if (difference == 1) return 'Yesterday • $dateStr';
+    return dateStr;
   }
 
   void _showStarredMessagesSheet(

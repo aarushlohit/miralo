@@ -455,7 +455,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           _buildPillarTile(
             icon: Icons.chat_bubble_outline_rounded,
             title: 'AI Conversations',
-            subtitle: 'Direct cloud & local reasoning with NVIDIA NIM and Google Gemini.',
+            subtitle: 'Direct cloud & local high-performance intelligence reasoning.',
             surface: surface,
             border: border,
             textPrimary: textPrimary,

@@ -207,7 +207,7 @@ class AiChatProvider extends ChangeNotifier {
           role: 'assistant',
           text:
               'Welcome to MIRALO AI. Your intelligence workspace is ready.\n\n'
-              '• Select from NVIDIA NIM and Google Gemini models.\n'
+              '• Select from high-performance AI reasoning & vision models.\n'
               '• Use voice dictation or attach images for multimodal analysis.\n'
               '• All your conversations are strictly private.',
           timestamp: DateTime.now(),
