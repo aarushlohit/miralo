@@ -21,6 +21,7 @@ class AppColors {
   static const Color darkBackground = Color(0xFF1C1C1C);
   /// Surface: #1C1C1C
   static const Color darkSurfacePrimary = Color(0xFF1C1C1C);
+  static const Color darkSurface = darkSurfacePrimary;
   /// Secondary surface: #101010 (--deep-black)
   static const Color darkSurfaceSecondary = Color(0xFF101010);
   /// Elevated surface: #222222
@@ -47,6 +48,7 @@ class AppColors {
   // ─── LIGHT THEME ──────────────────────────────────────────────
   static const Color lightBackground = Color(0xFFF7F8FA);
   static const Color lightSurfacePrimary = Color(0xFFFFFFFF);
+  static const Color lightSurface = lightSurfacePrimary;
   static const Color lightSurfaceSecondary = Color(0xFFF1F3F6);
   static const Color lightSurfaceElevated = Color(0xFFFFFFFF);
   static const Color lightSurfaceTertiary = Color(0xFFE9EDF2);

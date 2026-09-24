@@ -37,6 +37,7 @@ class AttachmentSheet extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
       backgroundColor: isDark
           ? MiraloColors.darkSurfacePrimary
           : MiraloColors.lightSurfacePrimary,
@@ -170,14 +171,21 @@ class AttachmentSheet extends StatelessWidget {
 
     return SafeArea(
       top: false,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(
-          horizontal: MiraloSpacing.md,
-          vertical: MiraloSpacing.md,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.75,
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          padding: EdgeInsets.fromLTRB(
+            MiraloSpacing.md,
+            MiraloSpacing.md,
+            MiraloSpacing.md,
+            MediaQuery.of(context).viewInsets.bottom + MiraloSpacing.md,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
             // Handle
             Center(
               child: Container(

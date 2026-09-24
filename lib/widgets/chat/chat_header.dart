@@ -19,6 +19,7 @@ class ChatHeader extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback? onModelSelectorTap;
   final VoidCallback? onMoreOptions;
   final VoidCallback? onEditDisplayName;
+  final VoidCallback? onAvatarTap;
   final VoidCallback? onDoubleTapAvatar;
 
   const ChatHeader({
@@ -35,6 +36,7 @@ class ChatHeader extends StatelessWidget implements PreferredSizeWidget {
     this.onModelSelectorTap,
     this.onMoreOptions,
     this.onEditDisplayName,
+    this.onAvatarTap,
     this.onDoubleTapAvatar,
   });
 
@@ -60,7 +62,8 @@ class ChatHeader extends StatelessWidget implements PreferredSizeWidget {
     return AppBar(
       backgroundColor: bg,
       elevation: 0,
-      centerTitle: true,
+      centerTitle: isPrivate ? false : true,
+      titleSpacing: isPrivate ? 0.0 : NavigationToolbar.kMiddleSpacing,
       toolbarHeight: 60,
       bottom: PreferredSize(
         preferredSize: const Size.fromHeight(0.6),
@@ -68,7 +71,7 @@ class ChatHeader extends StatelessWidget implements PreferredSizeWidget {
       ),
       leading: onBack != null
           ? IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 22),
+              icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
               color: textPrimary,
               onPressed: onBack,
               tooltip: 'Back',
@@ -82,18 +85,20 @@ class ChatHeader extends StatelessWidget implements PreferredSizeWidget {
                 )
               : null),
       title: isPrivate
-          ? Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onDoubleTap: onDoubleTapAvatar,
-                  child: _buildAvatar(context, isDark, textPrimary),
-                ),
-                const SizedBox(width: 10),
-                Flexible(
-                  child: GestureDetector(
-                    onTap: onEditDisplayName,
+          ? GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: onAvatarTap,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: onAvatarTap,
+                    onDoubleTap: onDoubleTapAvatar,
+                    child: _buildAvatar(context, isDark, textPrimary),
+                  ),
+                  const SizedBox(width: 10),
+                  Flexible(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -132,13 +137,16 @@ class ChatHeader extends StatelessWidget implements PreferredSizeWidget {
                               Text(
                                 subtitle!,
                                 style: MiraloTypography.bodySmall(
-                                  color: subtitle == 'Online'
-                                      ? const Color(0xFF34C759)
-                                      : textMuted,
+                                  color: subtitle == 'typing...'
+                                      ? MiraloColors.accent
+                                      : (subtitle == 'Online'
+                                          ? const Color(0xFF34C759)
+                                          : textMuted),
                                 ).copyWith(
-                                  fontWeight: subtitle == 'Online'
-                                      ? FontWeight.w500
+                                  fontWeight: (subtitle == 'Online' || subtitle == 'typing...')
+                                      ? FontWeight.w600
                                       : FontWeight.normal,
+                                  fontStyle: subtitle == 'typing...' ? FontStyle.italic : FontStyle.normal,
                                 ),
                               ),
                             ],
@@ -146,8 +154,8 @@ class ChatHeader extends StatelessWidget implements PreferredSizeWidget {
                       ],
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             )
           : (onModelSelectorTap != null
               ? InkWell(

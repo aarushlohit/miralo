@@ -25,6 +25,7 @@ class PrivateImagesScreen extends StatefulWidget {
 class _PrivateImagesScreenState extends State<PrivateImagesScreen> {
   int _selectedTabIndex = 0;
   final List<String> _tabs = ['Chat Images', 'Favorites GIF'];
+  int _chatImagesSubFilter = 0; // 0: All, 1: Sent, 2: Received
   bool _showBanner = true;
 
   @override
@@ -718,40 +719,86 @@ class _PrivateImagesScreenState extends State<PrivateImagesScreen> {
                   const SizedBox(height: AppSpacing.md),
 
                   if (_selectedTabIndex == 0) ...[
-                    if (privateChat.allChatImages.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 40),
-                        child: MiraloEmptyState(
-                          icon: Icons.photo_library_outlined,
-                          title: 'No chat images yet',
-                          subtitle: 'Photos and media shared in your private chats will appear here.',
-                        ),
-                      )
-                    else
-                      GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: AppSpacing.sm + 4,
-                          mainAxisSpacing: AppSpacing.sm + 4,
-                          childAspectRatio: 0.85,
-                        ),
-                        itemCount: privateChat.allChatImages.length,
-                        itemBuilder: (context, index) {
-                          final msg = privateChat.allChatImages[index];
-                          return _buildChatImageCard(
-                            context,
-                            msg,
-                            isDark,
-                            textPrimary,
-                            textMuted,
-                            border,
-                            privateChat,
-                            library,
-                          );
-                        },
+                    // Sub-filter: All, Sent, Received
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                      child: Row(
+                        children: [
+                          _buildSubFilterChip(
+                            label: 'All (${privateChat.allChatImages.length})',
+                            isSelected: _chatImagesSubFilter == 0,
+                            onTap: () => setState(() => _chatImagesSubFilter = 0),
+                            isDark: isDark,
+                          ),
+                          const SizedBox(width: 8),
+                          _buildSubFilterChip(
+                            label: 'Sent (${privateChat.getSentChatImages().length})',
+                            isSelected: _chatImagesSubFilter == 1,
+                            onTap: () => setState(() => _chatImagesSubFilter = 1),
+                            isDark: isDark,
+                          ),
+                          const SizedBox(width: 8),
+                          _buildSubFilterChip(
+                            label: 'Received (${privateChat.getReceivedChatImages().length})',
+                            isSelected: _chatImagesSubFilter == 2,
+                            onTap: () => setState(() => _chatImagesSubFilter = 2),
+                            isDark: isDark,
+                          ),
+                        ],
                       ),
+                    ),
+
+                    Builder(
+                      builder: (context) {
+                        final displayedImages = _chatImagesSubFilter == 1
+                            ? privateChat.getSentChatImages()
+                            : (_chatImagesSubFilter == 2
+                                ? privateChat.getReceivedChatImages()
+                                : privateChat.allChatImages);
+
+                        if (displayedImages.isEmpty) {
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 40),
+                            child: MiraloEmptyState(
+                              icon: Icons.photo_library_outlined,
+                              title: _chatImagesSubFilter == 1
+                                  ? 'No sent images'
+                                  : (_chatImagesSubFilter == 2 ? 'No received images' : 'No chat images yet'),
+                              subtitle: _chatImagesSubFilter == 1
+                                  ? 'Photos and images you sent will appear here.'
+                                  : (_chatImagesSubFilter == 2
+                                      ? 'Photos and images received from others will appear here.'
+                                      : 'Photos and media shared in your private chats will appear here.'),
+                            ),
+                          );
+                        }
+
+                        return GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            crossAxisSpacing: AppSpacing.sm + 4,
+                            mainAxisSpacing: AppSpacing.sm + 4,
+                            childAspectRatio: 0.85,
+                          ),
+                          itemCount: displayedImages.length,
+                          itemBuilder: (context, index) {
+                            final msg = displayedImages[index];
+                            return _buildChatImageCard(
+                              context,
+                              msg,
+                              isDark,
+                              textPrimary,
+                              textMuted,
+                              border,
+                              privateChat,
+                              library,
+                            );
+                          },
+                        );
+                      },
+                    ),
                   ] else ...[
                     if (privateChat.favoriteGifs.isEmpty)
                       const Padding(
@@ -797,4 +844,41 @@ class _PrivateImagesScreenState extends State<PrivateImagesScreen> {
     ),
   );
 }
+
+  Widget _buildSubFilterChip({
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+    required bool isDark,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.accent
+              : (isDark ? AppColors.darkSurfaceSecondary : AppColors.lightSurfaceSecondary),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected
+                ? AppColors.accent
+                : (isDark ? AppColors.darkBorder : AppColors.lightBorder),
+            width: 0.8,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected
+                ? Colors.white
+                : (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
+            fontSize: 12,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+          ),
+        ),
+      ),
+    );
+  }
 }

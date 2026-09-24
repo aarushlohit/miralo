@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
@@ -197,11 +198,24 @@ class _ComposerState extends State<Composer> {
   // Private Voice Note Hold-to-Record (WhatsApp-style)
   final AudioRecorder _audioRecorder = AudioRecorder();
   bool _isVoiceRecording = false;
+  bool _isVoiceLocked = false;
   int _voiceSeconds = 0;
   Timer? _voiceTimer;
   String? _voicePath;
-  double _dragOffset = 0.0;
+  double _dragOffsetX = 0.0;
+  double _dragOffsetY = 0.0;
   bool _isSlideCancelled = false;
+
+  // Typing indicator debounce
+  Timer? _typingDebounce;
+
+  // Voice Note Pre-send Review Stage
+  String? _recordedReviewPath;
+  int _recordedReviewSeconds = 0;
+  AudioPlayer? _reviewAudioPlayer;
+  bool _isReviewPlaying = false;
+  Duration _reviewPosition = Duration.zero;
+  Duration _reviewDuration = Duration.zero;
 
   @override
   void initState() {
@@ -369,9 +383,29 @@ class _ComposerState extends State<Composer> {
       _currentMentionQuery = mentionQuery;
       setState(() => _hasText = has);
     }
+
+    // Typing indicator broadcast (private chat only)
+    if (widget.isPrivate) {
+      final chat = Provider.of<PrivateChatProvider>(context, listen: false);
+      final chatId = chat.activeChatId;
+      if (chatId != null) {
+        if (has) {
+          chat.setTypingStatus(chatId, true);
+          _typingDebounce?.cancel();
+          _typingDebounce = Timer(const Duration(seconds: 2), () {
+            if (mounted) {
+              chat.setTypingStatus(chatId, false);
+            }
+          });
+        } else {
+          _typingDebounce?.cancel();
+          chat.setTypingStatus(chatId, false);
+        }
+      }
+    }
   }
 
-  // ─── WhatsApp-style Voice Recording ───
+  // ─── WhatsApp-style Voice Recording & Review ───
   Future<void> _startVoiceRecording() async {
     try {
       if (await _audioRecorder.hasPermission()) {
@@ -385,9 +419,11 @@ class _ComposerState extends State<Composer> {
 
         setState(() {
           _isVoiceRecording = true;
+          _isVoiceLocked = false;
           _voiceSeconds = 0;
           _voicePath = path;
-          _dragOffset = 0.0;
+          _dragOffsetX = 0.0;
+          _dragOffsetY = 0.0;
           _isSlideCancelled = false;
         });
 
@@ -402,13 +438,16 @@ class _ComposerState extends State<Composer> {
     }
   }
 
-  Future<void> _stopAndSendVoiceNote() async {
+  Future<void> _stopRecordingAndEnterReview() async {
     _voiceTimer?.cancel();
     if (!_isVoiceRecording) return;
 
+    final seconds = _voiceSeconds;
     final wasCancelled = _isSlideCancelled;
+
     setState(() {
       _isVoiceRecording = false;
+      _isVoiceLocked = false;
     });
 
     try {
@@ -423,17 +462,122 @@ class _ComposerState extends State<Composer> {
         return;
       }
 
-      final file = File(finalPath);
+      // If recording was less than 1 second, ignore accidental tap
+      if (seconds < 1) {
+        final file = File(finalPath);
+        if (file.existsSync()) file.deleteSync();
+        return;
+      }
+
+      setState(() {
+        _recordedReviewPath = finalPath;
+        _recordedReviewSeconds = seconds;
+        _reviewDuration = Duration(seconds: seconds);
+        _reviewPosition = Duration.zero;
+      });
+
+      await _initReviewAudioPlayer();
+    } catch (e) {
+      debugPrint('Error stopping voice note: $e');
+    }
+  }
+
+  Future<void> _initReviewAudioPlayer() async {
+    _reviewAudioPlayer?.dispose();
+    _reviewAudioPlayer = AudioPlayer();
+
+    _reviewAudioPlayer!.onPlayerStateChanged.listen((state) {
+      if (mounted) {
+        setState(() => _isReviewPlaying = state == PlayerState.playing);
+      }
+    });
+
+    _reviewAudioPlayer!.onDurationChanged.listen((d) {
+      if (mounted) {
+        setState(() => _reviewDuration = d);
+      }
+    });
+
+    _reviewAudioPlayer!.onPositionChanged.listen((p) {
+      if (mounted) {
+        setState(() => _reviewPosition = p);
+      }
+    });
+
+    _reviewAudioPlayer!.onPlayerComplete.listen((_) {
+      if (mounted) {
+        setState(() {
+          _isReviewPlaying = false;
+          _reviewPosition = Duration.zero;
+        });
+      }
+    });
+  }
+
+  Future<void> _toggleReviewPlayback() async {
+    if (_reviewAudioPlayer == null || _recordedReviewPath == null) return;
+    try {
+      if (_isReviewPlaying) {
+        await _reviewAudioPlayer!.pause();
+      } else {
+        await _reviewAudioPlayer!.play(DeviceFileSource(_recordedReviewPath!));
+      }
+    } catch (e) {
+      debugPrint('Error playing review audio: $e');
+    }
+  }
+
+  Future<void> _seekReviewAudio(Duration position) async {
+    if (_reviewAudioPlayer == null) return;
+    try {
+      await _reviewAudioPlayer!.seek(position);
+    } catch (e) {
+      debugPrint('Error seeking review audio: $e');
+    }
+  }
+
+  void _discardReviewVoiceNote() {
+    _reviewAudioPlayer?.stop();
+    _reviewAudioPlayer?.dispose();
+    _reviewAudioPlayer = null;
+    if (_recordedReviewPath != null) {
+      final f = File(_recordedReviewPath!);
+      if (f.existsSync()) f.deleteSync();
+    }
+    setState(() {
+      _recordedReviewPath = null;
+      _recordedReviewSeconds = 0;
+      _isReviewPlaying = false;
+      _reviewPosition = Duration.zero;
+      _reviewDuration = Duration.zero;
+    });
+  }
+
+  Future<void> _sendReviewVoiceNote() async {
+    if (_recordedReviewPath == null) return;
+    final path = _recordedReviewPath!;
+    final seconds = _recordedReviewSeconds;
+
+    await _reviewAudioPlayer?.stop();
+    await _reviewAudioPlayer?.dispose();
+    _reviewAudioPlayer = null;
+
+    setState(() {
+      _recordedReviewPath = null;
+      _recordedReviewSeconds = 0;
+      _isReviewPlaying = false;
+      _isSendingMedia = true;
+    });
+
+    try {
+      final file = File(path);
       if (file.existsSync()) {
         final bytes = await file.readAsBytes();
-        final minutes = (_voiceSeconds ~/ 60).toString().padLeft(1, '0');
-        final secs = (_voiceSeconds % 60).toString().padLeft(2, '0');
+        final minutes = (seconds ~/ 60).toString().padLeft(1, '0');
+        final secs = (seconds % 60).toString().padLeft(2, '0');
         final durationText = '$minutes:$secs';
         final fileName = 'voice_note_${DateTime.now().millisecondsSinceEpoch}.m4a';
 
-        setState(() => _isSendingMedia = true);
-
-        // Attempt Cloudinary upload first, fallback to base64
         final cloudUrl = await CloudinaryService.uploadFileBytes(
           fileBytes: bytes,
           fileName: fileName,
@@ -452,9 +596,12 @@ class _ComposerState extends State<Composer> {
             fileSize: durationText,
           );
         }
+        if (file.existsSync()) {
+          file.deleteSync();
+        }
       }
     } catch (e) {
-      debugPrint('Error stopping voice note: $e');
+      debugPrint('Error sending voice note: $e');
     } finally {
       if (mounted) {
         setState(() => _isSendingMedia = false);
@@ -474,15 +621,38 @@ class _ComposerState extends State<Composer> {
     });
     setState(() {
       _isVoiceRecording = false;
+      _isVoiceLocked = false;
       _voiceSeconds = 0;
-      _dragOffset = 0.0;
+      _dragOffsetX = 0.0;
+      _dragOffsetY = 0.0;
+      _isSlideCancelled = false;
     });
+  }
+
+  String _formatDuration(Duration d) {
+    final minutes = d.inMinutes.remainder(60).toString().padLeft(1, '0');
+    final seconds = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return '$minutes:$seconds';
   }
 
   @override
   void dispose() {
+    _typingDebounce?.cancel();
+    // Clear typing status when leaving chat
+    if (widget.isPrivate && mounted) {
+      try {
+        final chat = Provider.of<PrivateChatProvider>(context, listen: false);
+        final chatId = chat.activeChatId;
+        if (chatId != null) chat.setTypingStatus(chatId, false);
+      } catch (_) {}
+    }
     _voiceTimer?.cancel();
     _audioRecorder.dispose();
+    _reviewAudioPlayer?.dispose();
+    if (_recordedReviewPath != null) {
+      final f = File(_recordedReviewPath!);
+      if (f.existsSync()) f.deleteSync();
+    }
     if (_isListening) {
       _speech.stop();
     }
@@ -498,6 +668,16 @@ class _ComposerState extends State<Composer> {
     final attachment = _pendingAttachment;
 
     if (text.isEmpty && attachment == null) return;
+
+    // Stop typing indicator immediately on send
+    if (widget.isPrivate) {
+      _typingDebounce?.cancel();
+      try {
+        final chat = Provider.of<PrivateChatProvider>(context, listen: false);
+        final chatId = chat.activeChatId;
+        if (chatId != null) chat.setTypingStatus(chatId, false);
+      } catch (_) {}
+    }
 
     if (!widget.isPrivate) {
       // ─── AI MODE PASSCODE INTERCEPTION ───
@@ -1042,63 +1222,12 @@ class _ComposerState extends State<Composer> {
                 ),
               ),
 
+            // Voice Review Stage (Preview before sending)
+            if (_recordedReviewPath != null)
+              _buildVoiceReviewBar(context, isDark, textPrimary, textMuted)
             // Voice Recording Bar (WhatsApp-style active view)
-            if (_isVoiceRecording)
-              Container(
-                height: 52,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF201515) : const Color(0xFFFDE8E8),
-                  borderRadius: BorderRadius.circular(MiraloRadius.composer),
-                  border: Border.all(
-                    color: Colors.redAccent.withValues(alpha: 0.3),
-                    width: 0.8,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 10,
-                      height: 10,
-                      decoration: const BoxDecoration(
-                        color: Colors.redAccent,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Text(
-                      '${(_voiceSeconds ~/ 60).toString().padLeft(1, '0')}:${(_voiceSeconds % 60).toString().padLeft(2, '0')}',
-                      style: MiraloTypography.bodyMedium(color: Colors.redAccent)
-                          .copyWith(fontWeight: FontWeight.w600),
-                    ),
-                    const Spacer(),
-                    Transform.translate(
-                      offset: Offset(_dragOffset.clamp(-120.0, 0.0), 0),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.chevron_left_rounded,
-                            size: 18,
-                            color: isDark ? Colors.white60 : Colors.black54,
-                          ),
-                          Text(
-                            _isSlideCancelled ? 'Cancelled' : 'Slide to cancel',
-                            style: MiraloTypography.bodySmall(
-                              color: isDark ? Colors.white60 : Colors.black54,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
-                      onPressed: _cancelVoiceRecording,
-                      tooltip: 'Cancel recording',
-                    ),
-                  ],
-                ),
-              )
+            else if (_isVoiceRecording)
+              _buildVoiceRecordingBar(context, isDark)
             else
               // Standard Input Row
               Container(
@@ -1232,18 +1361,39 @@ class _ComposerState extends State<Composer> {
                                     onPressed: canSend ? _handleSend : null,
                                   ),
                                 )
-                              // Private mode hold-to-record voice note
+                              // Private mode hold-to-record voice note (WhatsApp-style)
                               : GestureDetector(
+                                  onTap: () {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Hold to record voice note. Slide up to lock, slide left to cancel.'),
+                                        duration: Duration(seconds: 2),
+                                      ),
+                                    );
+                                  },
                                   onLongPressStart: (_) => _startVoiceRecording(),
                                   onLongPressMoveUpdate: (details) {
                                     setState(() {
-                                      _dragOffset = details.localPosition.dx;
-                                      if (_dragOffset < -80) {
+                                      _dragOffsetX = details.localPosition.dx;
+                                      _dragOffsetY = details.localPosition.dy;
+                                      if (_dragOffsetX < -70) {
                                         _isSlideCancelled = true;
+                                      }
+                                      if (_dragOffsetY < -50 && !_isSlideCancelled) {
+                                        _isVoiceLocked = true;
                                       }
                                     });
                                   },
-                                  onLongPressEnd: (_) => _stopAndSendVoiceNote(),
+                                  onLongPressEnd: (_) {
+                                    if (_isSlideCancelled) {
+                                      _cancelVoiceRecording();
+                                    } else if (_isVoiceLocked) {
+                                      // User locked recording; keep recording hands-free!
+                                    } else {
+                                      // Released without locking: stop holding = stop talking, enter review stage!
+                                      _stopRecordingAndEnterReview();
+                                    }
+                                  },
                                   child: Container(
                                     width: 36,
                                     height: 36,
@@ -1268,6 +1418,231 @@ class _ComposerState extends State<Composer> {
               ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildVoiceRecordingBar(BuildContext context, bool isDark) {
+    final minutes = (_voiceSeconds ~/ 60).toString().padLeft(1, '0');
+    final secs = (_voiceSeconds % 60).toString().padLeft(2, '0');
+
+    return Container(
+      height: 52,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF201515) : const Color(0xFFFDE8E8),
+        borderRadius: BorderRadius.circular(MiraloRadius.composer),
+        border: Border.all(
+          color: Colors.redAccent.withValues(alpha: 0.3),
+          width: 0.8,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 10,
+            height: 10,
+            decoration: const BoxDecoration(
+              color: Colors.redAccent,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            '$minutes:$secs',
+            style: MiraloTypography.bodyMedium(color: Colors.redAccent)
+                .copyWith(fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _isVoiceLocked
+                ? Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.lock_outline_rounded, size: 16, color: Colors.redAccent),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Recording locked (Hands-free)',
+                        style: MiraloTypography.bodySmall(color: Colors.redAccent)
+                            .copyWith(fontWeight: FontWeight.w500),
+                      ),
+                    ],
+                  )
+                : Transform.translate(
+                    offset: Offset(_dragOffsetX.clamp(-100.0, 0.0), 0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.chevron_left_rounded,
+                          size: 18,
+                          color: isDark ? Colors.white60 : Colors.black54,
+                        ),
+                        Text(
+                          _isSlideCancelled
+                              ? 'Release to cancel'
+                              : (_dragOffsetY < -30 ? 'Locking...' : '< Slide to cancel | ^ Lock'),
+                          style: MiraloTypography.bodySmall(
+                            color: _isSlideCancelled
+                                ? Colors.redAccent
+                                : (isDark ? Colors.white60 : Colors.black54),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
+            onPressed: _cancelVoiceRecording,
+            tooltip: 'Cancel recording',
+          ),
+          if (_isVoiceLocked)
+            IconButton(
+              icon: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: const BoxDecoration(
+                  color: MiraloColors.accent,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.stop_rounded, color: Colors.white, size: 16),
+              ),
+              onPressed: _stopRecordingAndEnterReview,
+              tooltip: 'Stop & review',
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVoiceReviewBar(
+    BuildContext context,
+    bool isDark,
+    Color textPrimary,
+    Color textMuted,
+  ) {
+    final maxMs = (_reviewDuration.inMilliseconds > 0
+            ? _reviewDuration.inMilliseconds
+            : (_recordedReviewSeconds * 1000))
+        .toDouble();
+    final currentMs = _reviewPosition.inMilliseconds.clamp(0, maxMs.toInt()).toDouble();
+
+    return Container(
+      height: 54,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: isDark ? MiraloColors.darkSurface : MiraloColors.lightSurface,
+        borderRadius: BorderRadius.circular(MiraloRadius.composer),
+        border: Border.all(
+          color: isDark ? const Color(0x1AFFFFFF) : const Color(0x1A000000),
+          width: 0.8,
+        ),
+      ),
+      child: Row(
+        children: [
+          // Discard / Trash button
+          IconButton(
+            icon: const Icon(Icons.delete_outline_rounded, color: MiraloColors.danger, size: 22),
+            onPressed: _discardReviewVoiceNote,
+            tooltip: 'Discard voice note',
+          ),
+          // Play / Pause preview
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: MiraloColors.accent.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: IconButton(
+              padding: EdgeInsets.zero,
+              icon: Icon(
+                _isReviewPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                color: MiraloColors.accent,
+                size: 22,
+              ),
+              onPressed: _toggleReviewPlayback,
+              tooltip: _isReviewPlaying ? 'Pause' : 'Play preview',
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Audio Scrubber & Timers
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SliderTheme(
+                  data: SliderTheme.of(context).copyWith(
+                    trackHeight: 2.5,
+                    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
+                    overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
+                    activeTrackColor: MiraloColors.accent,
+                    inactiveTrackColor: isDark ? Colors.white24 : Colors.black12,
+                    thumbColor: MiraloColors.accent,
+                  ),
+                  child: Slider(
+                    min: 0.0,
+                    max: maxMs > 0 ? maxMs : 1000.0,
+                    value: currentMs <= (maxMs > 0 ? maxMs : 1000.0) ? currentMs : 0.0,
+                    onChanged: (val) {
+                      _seekReviewAudio(Duration(milliseconds: val.toInt()));
+                    },
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        _formatDuration(_reviewPosition),
+                        style: MiraloTypography.labelSmall(color: textMuted).copyWith(fontSize: 10),
+                      ),
+                      Text(
+                        _formatDuration(
+                          _reviewDuration.inSeconds > 0
+                              ? _reviewDuration
+                              : Duration(seconds: _recordedReviewSeconds),
+                        ),
+                        style: MiraloTypography.labelSmall(color: textMuted).copyWith(fontSize: 10),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 6),
+          // Send button
+          _isSendingMedia
+              ? const SizedBox(
+                  width: 34,
+                  height: 34,
+                  child: Padding(
+                    padding: EdgeInsets.all(8.0),
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                )
+              : Container(
+                  width: 36,
+                  height: 36,
+                  decoration: const BoxDecoration(
+                    color: MiraloColors.accent,
+                    shape: BoxShape.circle,
+                  ),
+                  child: IconButton(
+                    padding: EdgeInsets.zero,
+                    icon: const Icon(
+                      Icons.arrow_upward_rounded,
+                      size: 20,
+                      color: Colors.white,
+                    ),
+                    onPressed: _sendReviewVoiceNote,
+                    tooltip: 'Send voice note',
+                  ),
+                ),
+        ],
       ),
     );
   }

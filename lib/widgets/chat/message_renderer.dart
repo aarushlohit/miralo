@@ -29,7 +29,9 @@ class MessageRenderer extends StatelessWidget {
   final VoidCallback? onDelete;
   final VoidCallback? onDownload;
   final bool isPinned;
+  final bool isStarred;
   final bool isHighlighted;
+  final String? dateHeader;
 
   const MessageRenderer({
     super.key,
@@ -53,7 +55,9 @@ class MessageRenderer extends StatelessWidget {
     this.onDelete,
     this.onDownload,
     this.isPinned = false,
+    this.isStarred = false,
     this.isHighlighted = false,
+    this.dateHeader,
   });
 
   @override
@@ -93,7 +97,7 @@ class MessageRenderer extends StatelessWidget {
                 fileName?.toLowerCase().endsWith('.webp') == true));
     final isDocument = (type == 'document' || fileName != null) && !isVoiceNote && !isImage;
 
-    return Padding(
+    final bubble = Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: MiraloSpacing.md,
         vertical: MiraloSpacing.xs,
@@ -264,6 +268,14 @@ class MessageRenderer extends StatelessWidget {
                                 color: MiraloColors.accent,
                               ),
                             ],
+                            if (isStarred) ...[
+                              const SizedBox(width: 4),
+                              const Icon(
+                                Icons.star_rounded,
+                                size: 13,
+                                color: Color(0xFFF59E0B),
+                              ),
+                            ],
                             if (isMe && status != null) ...[
                               const SizedBox(width: 4),
                               Icon(
@@ -294,6 +306,35 @@ class MessageRenderer extends StatelessWidget {
         ],
       ),
     );
+
+    if (dateHeader != null && dateHeader!.isNotEmpty) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Center(
+            child: Container(
+              margin: const EdgeInsets.only(top: 14, bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                dateHeader!,
+                style: MiraloTypography.caption(color: textMuted).copyWith(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 11,
+                ),
+              ),
+            ),
+          ),
+          bubble,
+        ],
+      );
+    }
+
+    return bubble;
   }
 
   Widget _buildImageAttachment(BuildContext context) {

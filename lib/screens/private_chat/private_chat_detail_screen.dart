@@ -24,6 +24,9 @@ import '../../widgets/chat/message_renderer.dart';
 import '../../widgets/chat/pinned_messages_banner.dart';
 import '../../widgets/chat/pinned_messages_sheet.dart';
 import '../../widgets/chat/reaction_sheet.dart';
+import '../../widgets/chat/typing_indicator.dart';
+import '../../widgets/common/miralo_avatar.dart';
+import 'group_profile_screen.dart';
 
 /// Private Chat Screen
 /// Uses the exact same Chat UI components as AI Chat:
@@ -47,8 +50,14 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
   String? _highlightedMessageId;
   Timer? _highlightTimer;
 
+  bool _isSearching = false;
+  final TextEditingController _searchController = TextEditingController();
+  List<int> _searchMatchIndices = [];
+  int _currentMatchIndex = 0;
+
   @override
   void dispose() {
+    _searchController.dispose();
     _highlightTimer?.cancel();
     _scrollController.dispose();
     super.dispose();
@@ -81,6 +90,345 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
     });
   }
 
+  void _performSearch(String query, List<PrivateMessageModel> messages) {
+    if (query.trim().isEmpty) {
+      setState(() {
+        _searchMatchIndices = [];
+        _currentMatchIndex = 0;
+        _highlightedMessageId = null;
+      });
+      return;
+    }
+    final q = query.toLowerCase();
+    final matches = <int>[];
+    for (int i = 0; i < messages.length; i++) {
+      if (messages[i].text.toLowerCase().contains(q) ||
+          (messages[i].fileName?.toLowerCase().contains(q) ?? false)) {
+        matches.add(i);
+      }
+    }
+    setState(() {
+      _searchMatchIndices = matches;
+      _currentMatchIndex = matches.isNotEmpty ? matches.length - 1 : 0;
+    });
+    if (matches.isNotEmpty) {
+      _jumpToSearchMatch(messages);
+    }
+  }
+
+  void _jumpToSearchMatch(List<PrivateMessageModel> messages) {
+    if (_searchMatchIndices.isEmpty) return;
+    final matchMsgIndex = _searchMatchIndices[_currentMatchIndex];
+    final msg = messages[matchMsgIndex];
+    _scrollToMessage(msg.id);
+  }
+
+  void _previousSearchMatch(List<PrivateMessageModel> messages) {
+    if (_searchMatchIndices.isEmpty) return;
+    setState(() {
+      _currentMatchIndex = (_currentMatchIndex - 1 + _searchMatchIndices.length) % _searchMatchIndices.length;
+    });
+    _jumpToSearchMatch(messages);
+  }
+
+  void _nextSearchMatch(List<PrivateMessageModel> messages) {
+    if (_searchMatchIndices.isEmpty) return;
+    setState(() {
+      _currentMatchIndex = (_currentMatchIndex + 1) % _searchMatchIndices.length;
+    });
+    _jumpToSearchMatch(messages);
+  }
+
+  void _closeSearch() {
+    setState(() {
+      _isSearching = false;
+      _searchController.clear();
+      _searchMatchIndices = [];
+      _currentMatchIndex = 0;
+      _highlightedMessageId = null;
+    });
+  }
+
+  String? _getDateHeader(int index, List<PrivateMessageModel> messages) {
+    if (index >= messages.length) return null;
+    final currentMsg = messages[index];
+    if (index == 0) {
+      return _formatDateLabel(currentMsg.createdAt);
+    }
+    final prevMsg = messages[index - 1];
+    final isSameDay = currentMsg.createdAt.year == prevMsg.createdAt.year &&
+        currentMsg.createdAt.month == prevMsg.createdAt.month &&
+        currentMsg.createdAt.day == prevMsg.createdAt.day;
+    if (!isSameDay) {
+      return _formatDateLabel(currentMsg.createdAt);
+    }
+    return null;
+  }
+
+  String _formatDateLabel(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final msgDate = DateTime(date.year, date.month, date.day);
+    final difference = today.difference(msgDate).inDays;
+
+    if (difference == 0) return 'Today';
+    if (difference == 1) return 'Yesterday';
+    if (difference < 7 && difference > 1) {
+      const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+      return weekdays[date.weekday - 1];
+    }
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    if (date.year == now.year) {
+      return '${months[date.month - 1]} ${date.day}';
+    }
+    return '${months[date.month - 1]} ${date.day}, ${date.year}';
+  }
+
+  void _showStarredMessagesSheet(
+    BuildContext context,
+    PrivateChatProvider chat,
+    PrivateContactModel? contact,
+  ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final starred = chat.getStarredMessages(contact?.id);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          height: MediaQuery.of(ctx).size.height * 0.75,
+          padding: const EdgeInsets.all(MiraloSpacing.md),
+          decoration: BoxDecoration(
+            color: isDark ? MiraloColors.darkSurfacePrimary : MiraloColors.lightSurfacePrimary,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: MiraloSpacing.md),
+                  decoration: BoxDecoration(
+                    color: isDark ? MiraloColors.darkBorder : MiraloColors.lightBorder,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.star_rounded, color: Color(0xFFF59E0B), size: 22),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Starred Messages (${starred.length})',
+                        style: MiraloTypography.titleMedium(
+                          color: isDark ? MiraloColors.darkTextPrimary : MiraloColors.lightTextPrimary,
+                        ).copyWith(fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded, size: 20),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+              const Divider(),
+              if (starred.isEmpty)
+                Expanded(
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.star_outline_rounded, size: 48, color: Colors.grey),
+                        const SizedBox(height: 12),
+                        Text(
+                          'No starred messages yet',
+                          style: MiraloTypography.bodyMedium(
+                            color: isDark ? MiraloColors.darkTextPrimary : MiraloColors.lightTextPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Long press any message and tap "Star Message"',
+                          style: MiraloTypography.caption(
+                            color: isDark ? MiraloColors.darkTextMuted : MiraloColors.lightTextMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                Expanded(
+                  child: ListView.separated(
+                    itemCount: starred.length,
+                    separatorBuilder: (_, index) => const Divider(height: 1),
+                    itemBuilder: (ctx, i) {
+                      final msg = starred[i];
+                      final isMe = chat.isMyMessage(msg);
+                      return ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        title: Text(
+                          isMe ? 'You' : (msg.senderName ?? contact?.displayName ?? 'Contact'),
+                          style: MiraloTypography.caption(color: MiraloColors.accent).copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text(
+                          msg.text.isNotEmpty
+                              ? msg.text
+                              : (msg.fileName ?? '[Attachment]'),
+                          style: MiraloTypography.bodyMedium(
+                            color: isDark ? MiraloColors.darkTextPrimary : MiraloColors.lightTextPrimary,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.star_rounded, color: Color(0xFFF59E0B), size: 20),
+                          tooltip: 'Unstar',
+                          onPressed: () {
+                            chat.toggleStarMessage(msg);
+                            Navigator.pop(ctx);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Message unstarred'), duration: Duration(seconds: 1)),
+                            );
+                          },
+                        ),
+                        onTap: () {
+                          Navigator.pop(ctx);
+                          _scrollToMessage(msg.id);
+                        },
+                      );
+                    },
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showContactProfileSheet(
+    BuildContext context,
+    PrivateChatProvider chat,
+    PrivateContactModel contact,
+  ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark ? MiraloColors.darkTextPrimary : MiraloColors.lightTextPrimary;
+    final textMuted = isDark ? MiraloColors.darkTextMuted : MiraloColors.lightTextMuted;
+    final isFriend = chat.contacts.any((c) => c.id == contact.id);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(MiraloSpacing.lg),
+        decoration: BoxDecoration(
+          color: isDark ? MiraloColors.darkSurfacePrimary : MiraloColors.lightSurfacePrimary,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: MiraloSpacing.md),
+                  decoration: BoxDecoration(
+                    color: isDark ? MiraloColors.darkBorder : MiraloColors.lightBorder,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              MiraloAvatar(
+                name: contact.displayName,
+                imageUrl: contact.avatarUrl,
+                size: 80,
+                note: contact.note,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                contact.displayName,
+                style: MiraloTypography.titleMedium(color: textPrimary).copyWith(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              if (contact.username.isNotEmpty)
+                Text('@${contact.username}', style: MiraloTypography.caption(color: textMuted)),
+              if (contact.phoneNumber != null)
+                Text(contact.phoneNumber!, style: MiraloTypography.caption(color: textMuted)),
+              if (contact.note != null && contact.note!.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.04),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text('💭 "${contact.note}"', style: MiraloTypography.bodySmall(color: textPrimary).copyWith(fontStyle: FontStyle.italic)),
+                ),
+              ],
+              const SizedBox(height: MiraloSpacing.md),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.star_rounded, color: Color(0xFFF59E0B)),
+                title: const Text('Starred Messages'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showStarredMessagesSheet(context, chat, contact);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.search_rounded, color: MiraloColors.accent),
+                title: const Text('Search in Chat'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  setState(() => _isSearching = true);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.edit_outlined),
+                title: const Text('Edit Display Name'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showEditDisplayNameDialog(context, chat, contact);
+                },
+              ),
+              if (!isFriend)
+                ListTile(
+                  leading: const Icon(Icons.person_add_alt_1_outlined, color: Colors.green),
+                  title: const Text('Send Friend Request'),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    final auth = Provider.of<AuthProvider>(context, listen: false);
+                    await chat.sendFriendRequest(
+                      senderId: auth.currentUser?.id ?? 'me',
+                      senderName: auth.currentUser?.displayName ?? 'User',
+                      senderUsername: auth.currentUser?.username ?? 'user',
+                      targetUsernameOrEmail: contact.username,
+                    );
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Friend request sent to ${contact.displayName}')),
+                      );
+                    }
+                  },
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _quickExit(BuildContext context) {
     final vault = Provider.of<VaultProvider>(context, listen: false);
     final ai = Provider.of<AiChatProvider>(context, listen: false);
@@ -88,20 +436,16 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
     // Lock private access & clear private state
     vault.lockAll();
 
-    // Return to last AI conversation, or prefill 'What is an API?' if no active chat
-    if (ai.activeChat == null) {
-      ai.prefillPrompt('What is an API?');
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        AppRoutes.home,
-        (route) => false,
-      );
+    // Return to last AI conversation safely with home as root
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      AppRoutes.home,
+      (route) => false,
+    );
+    if (ai.activeChat != null) {
+      Navigator.pushNamed(context, AppRoutes.aiChat);
     } else {
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        AppRoutes.aiChat,
-        (route) => false,
-      );
+      ai.prefillPrompt('What is an API?');
     }
   }
 
@@ -166,6 +510,64 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                   _quickExit(context);
                 },
               ),
+
+              // Search in Chat
+              ListTile(
+                leading: const Icon(Icons.search_rounded,
+                    color: MiraloColors.accent, size: 22),
+                title: Text(
+                  'Search in Chat',
+                  style: MiraloTypography.bodyMedium(color: textPrimary),
+                ),
+                dense: true,
+                onTap: () {
+                  Navigator.pop(ctx);
+                  setState(() => _isSearching = true);
+                },
+              ),
+
+              // Starred Messages
+              ListTile(
+                leading: const Icon(Icons.star_rounded,
+                    color: Color(0xFFF59E0B), size: 22),
+                title: Text(
+                  'Starred Messages',
+                  style: MiraloTypography.bodyMedium(color: textPrimary),
+                ),
+                dense: true,
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showStarredMessagesSheet(context, chat, contact);
+                },
+              ),
+
+              // Group / Contact Info
+              if (contact != null)
+                ListTile(
+                  leading: Icon(
+                    contact.isGroup ? Icons.group_outlined : Icons.person_outline_rounded,
+                    color: textPrimary,
+                    size: 22,
+                  ),
+                  title: Text(
+                    contact.isGroup ? 'Group Info' : 'Contact Info',
+                    style: MiraloTypography.bodyMedium(color: textPrimary),
+                  ),
+                  dense: true,
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    if (contact.isGroup) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => GroupProfileScreen(groupId: contact.id),
+                        ),
+                      );
+                    } else {
+                      _showContactProfileSheet(context, chat, contact);
+                    }
+                  },
+                ),
 
               // Edit display name
               if (contact != null)
@@ -434,6 +836,17 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
             }
           : null,
       isFavorite: chat.isMessageFavorite(msg.id),
+      onStar: () {
+        chat.toggleStarMessage(msg);
+        final isStarred = chat.isMessageStarred(msg.id);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(isStarred ? 'Message starred ⭐' : 'Message unstarred'),
+            duration: const Duration(seconds: 1),
+          ),
+        );
+      },
+      isStarred: chat.isMessageStarred(msg.id),
       onPin: () async {
         final ok = await chat.togglePinMessage(msg);
         if (!context.mounted) return;
@@ -534,11 +947,14 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
     final messages = chat.activeMessages;
 
     final displayName = contact?.displayName ?? 'Mira';
-    final subtitle = contact?.isGroup == true
-        ? '${contact?.memberIds.length ?? 0} members'
-        : (contact?.isOnline == true
-            ? 'Online'
-            : (contact?.lastSeenText ?? 'Active recently'));
+    final isTyping = contact != null && chat.isContactTyping(contact.id);
+    final subtitle = isTyping
+        ? 'typing...'
+        : (contact?.isGroup == true
+            ? '${contact?.memberIds.length ?? 0} members'
+            : (contact?.isOnline == true
+                ? 'Online'
+                : (contact?.lastSeenText ?? 'Active recently')));
 
     final pinnedMessages = chat.getPinnedMessages(contact?.id);
 
@@ -550,14 +966,85 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
         avatarUrl: contact?.avatarUrl,
         isGroup: contact?.isGroup == true,
         onBack: () => Navigator.pop(context),
+        onAvatarTap: contact != null
+            ? () {
+                if (contact.isGroup) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => GroupProfileScreen(groupId: contact.id),
+                    ),
+                  );
+                } else {
+                  _showContactProfileSheet(context, chat, contact);
+                }
+              }
+            : null,
         onDoubleTapAvatar: () => _panicExitToAiChat(context),
         onEditDisplayName: contact != null
-            ? () => _showEditDisplayNameDialog(context, chat, contact)
+            ? () {
+                if (contact.isGroup) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => GroupProfileScreen(groupId: contact.id),
+                    ),
+                  );
+                } else {
+                  _showEditDisplayNameDialog(context, chat, contact);
+                }
+              }
             : null,
         onMoreOptions: () => _showMoreMenu(context, chat, contact),
       ),
       body: Column(
         children: [
+          if (_isSearching)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: isDark ? MiraloColors.darkSurfaceSecondary : MiraloColors.lightSurfaceSecondary,
+                border: Border(bottom: BorderSide(color: isDark ? MiraloColors.darkBorder : MiraloColors.lightBorder, width: 0.6)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.search_rounded, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      autofocus: true,
+                      decoration: const InputDecoration(
+                        hintText: 'Search chat...',
+                        border: InputBorder.none,
+                        isDense: true,
+                      ),
+                      onChanged: (query) => _performSearch(query, messages),
+                    ),
+                  ),
+                  if (_searchMatchIndices.isNotEmpty) ...[
+                    Text(
+                      '${_currentMatchIndex + 1} of ${_searchMatchIndices.length}',
+                      style: MiraloTypography.caption(color: isDark ? MiraloColors.darkTextMuted : MiraloColors.lightTextMuted),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.keyboard_arrow_up_rounded, size: 20),
+                      onPressed: () => _previousSearchMatch(messages),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 20),
+                      onPressed: () => _nextSearchMatch(messages),
+                    ),
+                  ] else if (_searchController.text.isNotEmpty) ...[
+                    Text('0 matches', style: MiraloTypography.caption(color: isDark ? MiraloColors.darkTextMuted : MiraloColors.lightTextMuted)),
+                  ],
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded, size: 20),
+                    onPressed: _closeSearch,
+                  ),
+                ],
+              ),
+            ),
           if (pinnedMessages.isNotEmpty)
             PinnedMessagesBanner(
               pinnedMessages: pinnedMessages,
@@ -581,6 +1068,14 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                 onUnpinAll: () => chat.clearAllPinnedMessages(contact?.id ?? chat.activeChatId ?? ''),
               ),
             ),
+          if (isTyping)
+            Padding(
+              padding: const EdgeInsets.only(left: 12, bottom: 4),
+              child: MiraloTypingIndicator(
+                showBubble: true,
+                userName: contact.displayName,
+              ),
+            ),
           Expanded(
             child: MessageList(
               controller: _scrollController,
@@ -594,6 +1089,8 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                   text: msg.text,
                   isMe: isMe,
                   isPinned: msg.isPinned,
+                  isStarred: msg.isStarred,
+                  dateHeader: _getDateHeader(index, messages),
                   isHighlighted: _highlightedMessageId == msg.id,
                   senderName: isMe ? null : (msg.senderName ?? displayName),
                   createdAt: msg.createdAt,
@@ -924,20 +1421,16 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
     // Instantly lock all secret vaults & conversations
     vault.lockAll();
 
-    // Immediately route to last used AI conversation or innocent dummy prompt
-    if (ai.activeChat == null) {
-      ai.prefillPrompt('Can you explain quantum computing simply?');
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        AppRoutes.home,
-        (route) => false,
-      );
+    // Immediately route to home with clean stack, then optionally push active AI chat
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      AppRoutes.home,
+      (route) => false,
+    );
+    if (ai.activeChat != null) {
+      Navigator.pushNamed(context, AppRoutes.aiChat);
     } else {
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        AppRoutes.aiChat,
-        (route) => false,
-      );
+      ai.prefillPrompt('Can you explain quantum computing simply?');
     }
 
     ScaffoldMessenger.of(context).showSnackBar(

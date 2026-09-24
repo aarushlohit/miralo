@@ -481,7 +481,7 @@ class _AppSidebarDrawerState extends State<AppSidebarDrawer> {
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          if (privateChat.allChatImages.isNotEmpty) ...[
+                          if (privateChat.receivedChatImagesCount > 0) ...[
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
@@ -489,7 +489,7 @@ class _AppSidebarDrawerState extends State<AppSidebarDrawer> {
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Text(
-                                '${privateChat.allChatImages.length}',
+                                '${privateChat.receivedChatImagesCount}',
                                 style: const TextStyle(
                                   color: AppColors.accent,
                                   fontSize: 11,
@@ -610,14 +610,14 @@ class _AppSidebarDrawerState extends State<AppSidebarDrawer> {
                 if (vault.isPrivateUnlocked &&
                     (privateChat.allConversations.isNotEmpty ||
                         privateChat.pendingFriendRequests.isNotEmpty)) ...[
-                  const SizedBox(height: AppSpacing.md),
-                  Padding(
-                    padding: const EdgeInsets.only(right: AppSpacing.sm),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _SectionLabel('CHATS & DMS', textMuted),
-                        if (privateChat.pendingFriendRequests.isNotEmpty)
+                  if (privateChat.pendingFriendRequests.isNotEmpty) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    Padding(
+                      padding: const EdgeInsets.only(right: AppSpacing.sm),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _SectionLabel('INVITATIONS', textMuted),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
@@ -629,10 +629,9 @@ class _AppSidebarDrawerState extends State<AppSidebarDrawer> {
                               style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
                             ),
                           ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  if (privateChat.pendingFriendRequests.isNotEmpty)
                     InkWell(
                       onTap: () {
                         _close(context);
@@ -666,36 +665,76 @@ class _AppSidebarDrawerState extends State<AppSidebarDrawer> {
                         ),
                       ),
                     ),
-                  ...privateChat.allConversations.map((contact) {
-                    final isFriend = privateChat.contacts.any((c) => c.id == contact.id);
-                    final displayName =
-                        vault.hideMode.isEnabled &&
-                                vault.hideMode.hidePrivateChatNames
-                            ? 'Contact'
-                            : contact.displayName;
+                  ],
 
-                    final lastMsg = privateChat.getLastMessageForContact(contact.id);
-                    final subtitle = !isFriend
-                        ? 'Pending request'
-                        : (contact.isOnline
-                            ? 'Online'
-                            : (lastMsg != null && lastMsg.text.isNotEmpty
-                                ? lastMsg.text
-                                : 'Encrypted chat'));
+                  // ── Groups Section ──
+                  if (privateChat.allConversations.any((c) => c.isGroup)) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    _SectionLabel('GROUPS', textMuted),
+                    ...privateChat.allConversations.where((c) => c.isGroup).map((contact) {
+                      final displayName =
+                          vault.hideMode.isEnabled &&
+                                  vault.hideMode.hidePrivateChatNames
+                              ? 'Group'
+                              : contact.displayName;
+                      final lastMsg = privateChat.getLastMessageForContact(contact.id);
+                      final memberCount = contact.memberIds.length;
+                      final subtitle = lastMsg != null && lastMsg.text.isNotEmpty
+                          ? lastMsg.text
+                          : '$memberCount member${memberCount == 1 ? '' : 's'}';
 
-                    return _ContactItem(
-                      name: displayName,
-                      isOnline: contact.isOnline,
-                      unread: contact.unreadCount,
-                      subtitle: subtitle,
-                      onTap: () {
-                        privateChat.setActiveChat(contact.id);
-                        _close(context);
-                        Navigator.pushNamed(context, AppRoutes.privateChat);
-                      },
-                      onOptionsTap: () => _showPrivateChatOptions(context, privateChat, contact),
-                    );
-                  }),
+                      return _ContactItem(
+                        name: displayName,
+                        avatarUrl: contact.avatarUrl,
+                        isOnline: false,
+                        unread: contact.unreadCount,
+                        subtitle: subtitle,
+                        onTap: () {
+                          privateChat.setActiveChat(contact.id);
+                          _close(context);
+                          Navigator.pushNamed(context, AppRoutes.privateChat);
+                        },
+                        onOptionsTap: () => _showPrivateChatOptions(context, privateChat, contact),
+                      );
+                    }),
+                  ],
+
+                  // ── Direct Messages Section ──
+                  if (privateChat.allConversations.any((c) => !c.isGroup)) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    _SectionLabel('DIRECT MESSAGES', textMuted),
+                    ...privateChat.allConversations.where((c) => !c.isGroup).map((contact) {
+                      final isFriend = privateChat.contacts.any((c) => c.id == contact.id);
+                      final displayName =
+                          vault.hideMode.isEnabled &&
+                                  vault.hideMode.hidePrivateChatNames
+                              ? 'Contact'
+                              : contact.displayName;
+
+                      final lastMsg = privateChat.getLastMessageForContact(contact.id);
+                      final subtitle = !isFriend
+                          ? 'Pending request'
+                          : (contact.isOnline
+                              ? 'Online'
+                              : (lastMsg != null && lastMsg.text.isNotEmpty
+                                  ? lastMsg.text
+                                  : 'Encrypted chat'));
+
+                      return _ContactItem(
+                        name: displayName,
+                        avatarUrl: contact.avatarUrl,
+                        isOnline: contact.isOnline,
+                        unread: contact.unreadCount,
+                        subtitle: subtitle,
+                        onTap: () {
+                          privateChat.setActiveChat(contact.id);
+                          _close(context);
+                          Navigator.pushNamed(context, AppRoutes.privateChat);
+                        },
+                        onOptionsTap: () => _showPrivateChatOptions(context, privateChat, contact),
+                      );
+                    }),
+                  ],
                 ],
 
                 const SizedBox(height: AppSpacing.lg),
@@ -962,6 +1001,7 @@ class _ConvItem extends StatelessWidget {
 
 class _ContactItem extends StatelessWidget {
   final String name;
+  final String? avatarUrl;
   final bool isOnline;
   final int unread;
   final String? subtitle;
@@ -970,6 +1010,7 @@ class _ContactItem extends StatelessWidget {
 
   const _ContactItem({
     required this.name,
+    this.avatarUrl,
     required this.isOnline,
     required this.unread,
     this.subtitle,
@@ -994,7 +1035,12 @@ class _ContactItem extends StatelessWidget {
             horizontal: AppSpacing.sm, vertical: 8),
         child: Row(
           children: [
-            MiraloAvatar(name: name, size: 28, isOnline: isOnline),
+            MiraloAvatar(
+              name: name,
+              size: 28,
+              isOnline: isOnline,
+              imageUrl: avatarUrl,
+            ),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: Column(

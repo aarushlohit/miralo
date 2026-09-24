@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../models/library_item_model.dart';
 import '../../providers/library_provider.dart';
+import '../media/universal_file_viewer.dart';
 import 'library_thumbnail.dart';
 
 class FilePreviewDialog extends StatelessWidget {
@@ -170,7 +171,20 @@ class FilePreviewDialog extends StatelessWidget {
             const SizedBox(height: 16),
 
             // Preview Box
-            Container(
+            GestureDetector(
+              onTap: () {
+                Navigator.pop(context);
+                UniversalFileViewer.show(
+                  context,
+                  fileUrl: item.cloudUrl ?? (item.thumbnailUrl?.startsWith('http') == true ? item.thumbnailUrl : null),
+                  fileBase64: (item.thumbnailUrl != null && !item.thumbnailUrl!.startsWith('http')) ? item.thumbnailUrl : null,
+                  fileName: item.name,
+                  fileType: item.type,
+                  fileSize: item.size,
+                  onDelete: onDelete,
+                );
+              },
+              child: Container(
               height: 190,
               width: double.infinity,
               decoration: BoxDecoration(
@@ -279,6 +293,7 @@ class FilePreviewDialog extends StatelessWidget {
                       ),
               ),
             ),
+            ),
 
             const SizedBox(height: 20),
 
@@ -286,6 +301,23 @@ class FilePreviewDialog extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
+                _buildAction(
+                  context,
+                  icon: Icons.open_in_new_rounded,
+                  label: 'Open',
+                  onTap: () {
+                    Navigator.pop(context);
+                    UniversalFileViewer.show(
+                      context,
+                      fileUrl: item.cloudUrl ?? (item.thumbnailUrl?.startsWith('http') == true ? item.thumbnailUrl : null),
+                      fileBase64: (item.thumbnailUrl != null && !item.thumbnailUrl!.startsWith('http')) ? item.thumbnailUrl : null,
+                      fileName: item.name,
+                      fileType: item.type,
+                      fileSize: item.size,
+                      onDelete: onDelete,
+                    );
+                  },
+                ),
                 _buildAction(
                   context,
                   icon: Icons.download_outlined,

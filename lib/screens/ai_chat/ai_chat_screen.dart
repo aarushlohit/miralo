@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/routes/app_routes.dart';
 import '../../core/theme/miralo_tokens.dart';
 import '../../providers/ai_chat_provider.dart';
 import '../../providers/auth_provider.dart';
@@ -8,6 +9,7 @@ import '../../widgets/chat/chat_header.dart';
 import '../../widgets/chat/chat_scaffold.dart';
 import '../../widgets/chat/composer.dart';
 import '../../widgets/chat/message_list.dart';
+import '../../widgets/common/app_sidebar_drawer.dart';
 import '../../widgets/common/miralo_empty_state.dart';
 
 class AiChatScreen extends StatefulWidget {
@@ -18,6 +20,7 @@ class AiChatScreen extends StatefulWidget {
 }
 
 class _AiChatScreenState extends State<AiChatScreen> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final TextEditingController _composerController = TextEditingController();
   final FocusNode _composerFocusNode = FocusNode();
 
@@ -227,10 +230,19 @@ class _AiChatScreenState extends State<AiChatScreen> {
     final chat = ai.activeChat;
 
     return ChatScaffold(
+      scaffoldKey: _scaffoldKey,
+      drawer: const AppSidebarDrawer(),
       header: ChatHeader(
         isPrivate: false,
         modelName: ai.selectedModel,
-        onBack: () => Navigator.pop(context),
+        onBack: () {
+          if (Navigator.canPop(context)) {
+            Navigator.pop(context);
+          } else {
+            Navigator.pushReplacementNamed(context, AppRoutes.home);
+          }
+        },
+        onMenu: () => _scaffoldKey.currentState?.openDrawer(),
         onModelSelectorTap: () => _showModelSelector(context, ai),
         onMoreOptions: () => _showMoreMenu(context, ai),
       ),

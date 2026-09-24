@@ -9,6 +9,8 @@ class MiraloAvatar extends StatelessWidget {
   final double size;
   final bool isOnline;
   final Color? backgroundColor;
+  final String? note;
+  final bool showNote;
 
   const MiraloAvatar({
     super.key,
@@ -17,6 +19,8 @@ class MiraloAvatar extends StatelessWidget {
     this.size = 40,
     this.isOnline = false,
     this.backgroundColor,
+    this.note,
+    this.showNote = true,
   });
 
   String get _initials {
@@ -46,7 +50,10 @@ class MiraloAvatar extends StatelessWidget {
     final bg = backgroundColor ?? _avatarColor(name);
     final radius = size / 2;
 
+    final hasNote = showNote && note != null && note!.trim().isNotEmpty;
+
     return Stack(
+      clipBehavior: Clip.none,
       children: [
         Container(
           width: size,
@@ -78,6 +85,44 @@ class MiraloAvatar extends StatelessWidget {
                 border: Border.all(
                   color: isDark ? AppColors.darkBackground : AppColors.lightBackground,
                   width: 1.5,
+                ),
+              ),
+            ),
+          ),
+        if (hasNote)
+          Positioned(
+            top: -20,
+            left: -16,
+            right: -16,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                constraints: const BoxConstraints(maxWidth: 88),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF242426) : Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isDark ? const Color(0xFF38383A) : const Color(0xFFE5E7EB),
+                    width: 0.8,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.08),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1.5),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  note!.trim(),
+                  style: TextStyle(
+                    color: isDark ? Colors.white : Colors.black87,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
                 ),
               ),
             ),

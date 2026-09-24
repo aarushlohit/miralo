@@ -144,4 +144,16 @@ class MiraloTypography {
         fontWeight: FontWeight.w500,
         color: color,
       );
+
+  static TextStyle labelSmall({required Color color}) => GoogleFonts.inter(
+        fontSize: 11,
+        fontWeight: FontWeight.w500,
+        color: color,
+      );
+
+  static TextStyle caption({required Color color}) => GoogleFonts.inter(
+        fontSize: 11,
+        fontWeight: FontWeight.w400,
+        color: color,
+      );
 }

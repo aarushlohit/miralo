@@ -18,6 +18,7 @@ import '../../widgets/common/miralo_logo.dart';
 import '../../widgets/common/miralo_segmented_tabs.dart';
 
 import '../../widgets/private_chat/add_friend_sheet.dart';
+import 'group_profile_screen.dart';
 
 /// Private Chat List Screen with Chats and Images tabs.
 class PrivateChatListScreen extends StatefulWidget {
@@ -290,7 +291,7 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
             // Content Area
             Expanded(
               child: _selectedTabIndex == 0
-                  ? _buildChatsTab(context, chat, vault, contacts, bg, textPrimary, textSecondary, textMuted, borderColor, iconBg, surface)
+                  ? _buildChatsTab(context, chat, vault, auth, contacts, isDark, bg, textPrimary, textSecondary, textMuted, borderColor, iconBg, surface)
                   : _buildChatImagesTab(context, chat, isDark, textPrimary, textSecondary, textMuted, borderColor, surface),
             ),
           ],
@@ -303,7 +304,9 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
     BuildContext context,
     PrivateChatProvider chat,
     VaultProvider vault,
+    AuthProvider auth,
     List<dynamic> contacts,
+    bool isDark,
     Color bg,
     Color textPrimary,
     Color textSecondary,
@@ -414,6 +417,10 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
             ),
           ),
 
+        // Notes Tray
+        if (_query.isEmpty)
+          _buildNotesTray(context, chat, auth, isDark, textPrimary, textMuted, surface, borderColor),
+
         // Contact list
         Expanded(
           child: contacts.isEmpty
@@ -464,20 +471,27 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
                                      child: const Icon(Icons.shield_outlined, size: 22, color: AppColors.accent),
                                    )
                                  : contact.isGroup
-                                     ? Container(
-                                         width: 50,
-                                         height: 50,
-                                         decoration: BoxDecoration(
-                                           color: AppColors.accent.withValues(alpha: 0.15),
-                                           shape: BoxShape.circle,
+                                     ? GestureDetector(
+                                         onTap: () {
+                                           Navigator.push(
+                                             context,
+                                             MaterialPageRoute(
+                                               builder: (_) => GroupProfileScreen(groupId: contact.id),
+                                             ),
+                                           );
+                                         },
+                                         child: MiraloAvatar(
+                                           name: contact.displayName,
+                                           imageUrl: contact.avatarUrl,
+                                           size: 50,
                                          ),
-                                         child: const Icon(Icons.group_rounded, color: AppColors.accent, size: 26),
                                        )
                                      : MiraloAvatar(
                                          name: contact.displayName,
                                          imageUrl: contact.avatarUrl,
                                          size: 50,
                                          isOnline: contact.isOnline,
+                                         note: contact.note,
                                        ),
                             const SizedBox(width: AppSpacing.md),
                             Expanded(
@@ -565,6 +579,166 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
                 ),
         ),
       ],
+    );
+  }
+
+  Widget _buildNotesTray(
+    BuildContext context,
+    PrivateChatProvider chat,
+    AuthProvider auth,
+    bool isDark,
+    Color textPrimary,
+    Color textMuted,
+    Color surface,
+    Color borderColor,
+  ) {
+    final contactsWithNotes = chat.contacts.where((c) => c.note != null && c.note!.trim().isNotEmpty).toList();
+
+    return Container(
+      height: 96,
+      margin: const EdgeInsets.only(bottom: AppSpacing.xs),
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+        children: [
+          // Current User's Note
+          GestureDetector(
+            onTap: () => _showEditNoteDialog(context, chat),
+            child: SizedBox(
+              width: 72,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      MiraloAvatar(
+                        name: auth.currentUser?.displayName ?? 'You',
+                        imageUrl: auth.currentUser?.avatarUrl,
+                        size: 50,
+                        note: chat.currentUserNote,
+                      ),
+                      Positioned(
+                        right: 0,
+                        bottom: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            color: AppColors.accent,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: surface, width: 2),
+                          ),
+                          child: Icon(
+                            chat.currentUserNote != null && chat.currentUserNote!.isNotEmpty
+                                ? Icons.edit_rounded
+                                : Icons.add_rounded,
+                            size: 10,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Your note',
+                    style: AppTypography.caption(color: textMuted).copyWith(fontSize: 11),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+
+          // Friends Notes
+          ...contactsWithNotes.map((c) {
+            return GestureDetector(
+              onTap: () {
+                chat.setActiveChat(c.id);
+                Navigator.pushNamed(context, AppRoutes.privateChat);
+              },
+              child: Container(
+                width: 72,
+                margin: const EdgeInsets.only(right: AppSpacing.sm),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    MiraloAvatar(
+                      name: c.displayName,
+                      imageUrl: c.avatarUrl,
+                      size: 50,
+                      isOnline: c.isOnline,
+                      note: c.note,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      c.displayName,
+                      style: AppTypography.caption(color: textPrimary).copyWith(fontSize: 11),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  void _showEditNoteDialog(BuildContext context, PrivateChatProvider chat) {
+    final controller = TextEditingController(text: chat.currentUserNote ?? '');
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Share a note'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Your note will float near your avatar for your contacts to see.',
+              style: TextStyle(fontSize: 13, color: Colors.grey),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              autofocus: true,
+              maxLength: 60,
+              decoration: const InputDecoration(
+                hintText: 'Share what\'s on your mind...',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          if (chat.currentUserNote != null && chat.currentUserNote!.isNotEmpty)
+            TextButton(
+              onPressed: () async {
+                await chat.updateCurrentUserNote(null);
+                if (ctx.mounted) Navigator.pop(ctx);
+              },
+              child: const Text('Clear', style: TextStyle(color: AppColors.danger)),
+            ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              await chat.updateCurrentUserNote(controller.text.trim());
+              if (ctx.mounted) Navigator.pop(ctx);
+            },
+            child: const Text('Share'),
+          ),
+        ],
+      ),
     );
   }
 

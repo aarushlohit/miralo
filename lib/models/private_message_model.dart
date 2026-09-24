@@ -16,6 +16,7 @@ class PrivateMessageModel {
   final bool isFavorite;
   final bool isPinned;
   final DateTime? pinnedAt;
+  final bool isStarred;
 
   PrivateMessageModel({
     required this.id,
@@ -35,6 +36,7 @@ class PrivateMessageModel {
     this.isFavorite = false,
     this.isPinned = false,
     this.pinnedAt,
+    this.isStarred = false,
   }) : reactions = reactions ?? {};
 
   bool get isMe => senderId == 'me';
@@ -65,6 +67,7 @@ class PrivateMessageModel {
     bool? isFavorite,
     bool? isPinned,
     DateTime? pinnedAt,
+    bool? isStarred,
   }) {
     return PrivateMessageModel(
       id: id ?? this.id,
@@ -84,6 +87,7 @@ class PrivateMessageModel {
       isFavorite: isFavorite ?? this.isFavorite,
       isPinned: isPinned ?? this.isPinned,
       pinnedAt: pinnedAt ?? this.pinnedAt,
+      isStarred: isStarred ?? this.isStarred,
     );
   }
 
@@ -106,6 +110,7 @@ class PrivateMessageModel {
       'isFavorite': isFavorite,
       'isPinned': isPinned,
       if (pinnedAt != null) 'pinnedAt': pinnedAt!.toIso8601String(),
+      'isStarred': isStarred,
     };
   }
 
@@ -139,6 +144,7 @@ class PrivateMessageModel {
       pinnedAt: json['pinnedAt'] != null
           ? DateTime.tryParse(json['pinnedAt'].toString())
           : null,
+      isStarred: json['isStarred'] == true,
     );
   }
 }

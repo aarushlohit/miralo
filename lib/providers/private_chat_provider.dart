@@ -43,6 +43,12 @@ class PrivateChatProvider extends ChangeNotifier {
   StreamSubscription<DatabaseEvent>? _recentChatsSubscription;
   StreamSubscription<DatabaseEvent>? _infoConnectedSubscription;
   final Map<String, StreamSubscription<DatabaseEvent>> _contactPresenceSubs = {};
+  final Map<String, bool> _typingUsers = {};
+  final Map<String, String> _typingUserNames = {};
+  final Map<String, StreamSubscription<DatabaseEvent>> _typingSubscriptions = {};
+
+  bool isContactTyping(String? chatId) => chatId != null && _typingUsers[chatId] == true;
+  String? getTypingUserName(String? chatId) => chatId != null ? _typingUserNames[chatId] : null;
 
   String? _currentUsername;
   String? get currentUsername => _currentUsername;
@@ -50,6 +56,8 @@ class PrivateChatProvider extends ChangeNotifier {
   String? get currentUserEmail => _currentUserEmail;
   String? _currentDisplayName;
   String? get currentDisplayName => _currentDisplayName;
+  String? _currentUserNote;
+  String? get currentUserNote => _currentUserNote;
 
   static String sanitizeDbKey(String key) {
     return key
@@ -69,7 +77,24 @@ class PrivateChatProvider extends ChangeNotifier {
 
   List<PrivateContactModel> get contacts => _contacts;
 
-  /// Combined list of all DM conversations (accepted friends + active non-friend DMs), sorted by latest message
+  /// Merges messages from oldKey into canonicalKey (e.g. username -> uid)
+  void _mergeMessageKeys(String oldKey, String canonicalKey) {
+    if (oldKey == canonicalKey || oldKey.isEmpty || canonicalKey.isEmpty) return;
+    if (_messages.containsKey(oldKey)) {
+      final oldList = _messages.remove(oldKey) ?? [];
+      final canonicalList = _messages[canonicalKey] ?? [];
+      final existingIds = canonicalList.map((m) => m.id).toSet();
+      for (final msg in oldList) {
+        if (!existingIds.contains(msg.id)) {
+          canonicalList.add(msg.copyWith(chatId: canonicalKey));
+        }
+      }
+      canonicalList.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+      _messages[canonicalKey] = canonicalList;
+    }
+  }
+
+  /// Combined list of all DM conversations (accepted friends + active non-friend DMs + pending invitations), sorted by latest message
   List<PrivateContactModel> get allConversations {
     final Map<String, PrivateContactModel> map = {};
     for (var c in _contacts) {
@@ -80,6 +105,37 @@ class PrivateChatProvider extends ChangeNotifier {
         map[temp.id] = temp;
       }
     }
+
+    // Seamlessly include pending friend invitations directly into conversation list
+    for (var req in _pendingFriendRequests) {
+      final senderId = req.senderId;
+      final senderUsername = req.senderUsername;
+      final existingKey = map.keys.firstWhere(
+        (k) => k == senderId || map[k]?.username.toLowerCase() == senderUsername.toLowerCase(),
+        orElse: () => '',
+      );
+      if (existingKey.isEmpty) {
+        map[senderId] = PrivateContactModel(
+          id: senderId,
+          displayName: req.senderName,
+          username: senderUsername,
+          isOnline: true,
+          unreadCount: 1,
+          isPendingInvitation: true,
+        );
+      } else {
+        map[existingKey] = map[existingKey]!.copyWith(isPendingInvitation: true);
+      }
+      _mergeMessageKeys(senderUsername, senderId);
+    }
+
+    // Merge message keys where username is used instead of UID
+    for (var c in map.values.toList()) {
+      if (c.username.isNotEmpty && c.username != c.id) {
+        _mergeMessageKeys(c.username, c.id);
+      }
+    }
+
     for (var chatId in _messages.keys) {
       if (!map.containsKey(chatId)) {
         map[chatId] = PrivateContactModel(
@@ -95,13 +151,31 @@ class PrivateChatProvider extends ChangeNotifier {
     final curId = (_currentUserId ?? '').toLowerCase().trim();
     final curUname = (_currentUsername ?? '').toLowerCase().trim();
 
-    final list = map.values.where((c) {
+    final list = <PrivateContactModel>[];
+    final seenUsernames = <String>{};
+    final seenIds = <String>{};
+
+    for (var c in map.values) {
       final cleanId = c.id.toLowerCase().trim();
       final cleanUname = c.username.toLowerCase().trim();
-      if (curId.isNotEmpty && cleanId == curId) return false;
-      if (curUname.isNotEmpty && (cleanUname == curUname || cleanId == curUname)) return false;
-      return true;
-    }).map((c) => c.copyWith(unreadCount: getUnreadCount(c.id))).toList();
+      if (curId.isNotEmpty && cleanId == curId) continue;
+      if (curUname.isNotEmpty && (cleanUname == curUname || cleanId == curUname)) continue;
+
+      if (c.isGroup) {
+        if (seenIds.add(cleanId)) {
+          list.add(c.copyWith(unreadCount: getUnreadCount(c.id)));
+        }
+      } else {
+        final idKey = cleanId;
+        final unameKey = cleanUname.isNotEmpty ? cleanUname : cleanId;
+        if (seenIds.contains(idKey) || seenUsernames.contains(unameKey)) {
+          continue;
+        }
+        seenIds.add(idKey);
+        if (cleanUname.isNotEmpty) seenUsernames.add(unameKey);
+        list.add(c.copyWith(unreadCount: getUnreadCount(c.id)));
+      }
+    }
 
     list.sort((a, b) {
       final lastA = getLastMessageForContact(a.id)?.createdAt;
@@ -185,6 +259,14 @@ class PrivateChatProvider extends ChangeNotifier {
     }
   }
 
+  PrivateContactModel? getContact(String id) {
+    try {
+      return _contacts.firstWhere((c) => c.id == id);
+    } catch (_) {
+      return _tempContacts[id];
+    }
+  }
+
   List<PrivateMessageModel> get activeMessages {
     if (_activeChatId == null) return [];
     return _messages[_activeChatId] ?? [];
@@ -218,6 +300,21 @@ class PrivateChatProvider extends ChangeNotifier {
     images.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return images;
   }
+
+  /// Returns chat images sent by the current user
+  List<PrivateMessageModel> getSentChatImages([String? chatId]) {
+    final list = chatId != null ? allChatImages.where((m) => m.chatId == chatId) : allChatImages;
+    return list.where((m) => m.senderId == 'me' || m.isMe).toList();
+  }
+
+  /// Returns chat images received from others
+  List<PrivateMessageModel> getReceivedChatImages([String? chatId]) {
+    final list = chatId != null ? allChatImages.where((m) => m.chatId == chatId) : allChatImages;
+    return list.where((m) => m.senderId != 'me' && !m.isMe).toList();
+  }
+
+  /// Count of received chat images only (sent images do NOT trigger notification badges)
+  int get receivedChatImagesCount => getReceivedChatImages().length;
 
   List<PrivateMessageModel> _savedFavoriteGifs = [];
   static const String _favoriteGifsPrefsKey = 'saved_favorite_gifs_list';
@@ -317,6 +414,57 @@ class PrivateChatProvider extends ChangeNotifier {
       final raw = _savedFavoriteGifs.map((m) => jsonEncode(m.toJson())).toList();
       await prefs.setStringList(_favoriteGifsPrefsKey, raw);
     } catch (_) {}
+  }
+
+  /// Returns all starred messages for a specific chat, or from all chats if chatId is null.
+  List<PrivateMessageModel> getStarredMessages([String? chatId]) {
+    final targetId = chatId ?? _activeChatId;
+    if (targetId == null) {
+      final all = <PrivateMessageModel>[];
+      for (var l in _messages.values) {
+        all.addAll(l.where((m) => m.isStarred));
+      }
+      all.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return all;
+    }
+    final list = _messages[targetId] ?? [];
+    final starred = list.where((m) => m.isStarred).toList();
+    starred.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return starred;
+  }
+
+  bool isMessageStarred(String messageId) {
+    for (var list in _messages.values) {
+      final idx = list.indexWhere((m) => m.id == messageId);
+      if (idx != -1) return list[idx].isStarred;
+    }
+    return false;
+  }
+
+  /// Toggles the starred status of a message.
+  Future<bool> toggleStarMessage(PrivateMessageModel msg) async {
+    final targetChatId = _activeChatId ?? msg.chatId;
+    final list = _messages[targetChatId] ?? _messages.values.firstWhere(
+      (l) => l.any((m) => m.id == msg.id),
+      orElse: () => [],
+    );
+
+    final idx = list.indexWhere((m) => m.id == msg.id);
+    final currentlyStarred = idx != -1 ? list[idx].isStarred : msg.isStarred;
+    final newStarred = !currentlyStarred;
+
+    final updatedMsg = (idx != -1 ? list[idx] : msg).copyWith(isStarred: newStarred);
+    if (idx != -1) {
+      list[idx] = updatedMsg;
+    } else if (targetChatId.isNotEmpty) {
+      _messages.putIfAbsent(targetChatId, () => []).add(updatedMsg);
+    }
+
+    notifyListeners();
+
+    final channelId = getConversationChannelId(targetChatId.isNotEmpty ? targetChatId : msg.chatId);
+    _syncMessageToFirebase(updatedMsg, channelId);
+    return newStarred;
   }
 
   /// Maximum number of messages that can be pinned per conversation (like WhatsApp).
@@ -540,6 +688,7 @@ class PrivateChatProvider extends ChangeNotifier {
     _currentDisplayName = displayName;
 
     _loadPrivacySettings();
+    _loadUserNote(cleanUserId);
     _initPresenceSystem(cleanUserId);
 
     _listenToFirebaseUserContacts(userId);
@@ -548,6 +697,48 @@ class PrivateChatProvider extends ChangeNotifier {
     _listenToFirebaseSentRequests(userId);
     _listenToFirebaseBlockedUsers(userId);
     notifyListeners();
+  }
+
+  Future<void> _loadUserNote(String userId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _currentUserNote = prefs.getString('floating_note_$userId');
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  Future<void> updateCurrentUserNote(String? note) async {
+    _currentUserNote = (note != null && note.trim().isNotEmpty) ? note.trim() : null;
+    notifyListeners();
+    if (_currentUserId != null) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        if (_currentUserNote != null) {
+          await prefs.setString('floating_note_$_currentUserId', _currentUserNote!);
+        } else {
+          await prefs.remove('floating_note_$_currentUserId');
+        }
+        await FirebaseDatabase.instance
+            .ref('users/$_currentUserId/note')
+            .set(_currentUserNote);
+      } catch (_) {}
+    }
+  }
+
+  Future<void> updateContactNote(String contactId, String? note) async {
+    final cleanNote = (note != null && note.trim().isNotEmpty) ? note.trim() : null;
+    final idx = _contacts.indexWhere((c) => c.id == contactId);
+    if (idx != -1) {
+      _contacts[idx] = _contacts[idx].copyWith(note: cleanNote);
+      notifyListeners();
+    }
+    if (_currentUserId != null) {
+      try {
+        await FirebaseDatabase.instance
+            .ref('users/$_currentUserId/contacts/$contactId/note')
+            .set(cleanNote);
+      } catch (_) {}
+    }
   }
 
   Future<void> _loadPrivacySettings() async {
@@ -988,9 +1179,27 @@ class PrivateChatProvider extends ChangeNotifier {
       return contactId;
     }
     if (_currentUserId == null || _currentUserId!.isEmpty) return contactId;
-    return _currentUserId!.compareTo(contactId) < 0
-        ? 'chat_${_currentUserId}_$contactId'
-        : 'chat_${contactId}_$_currentUserId';
+
+    // Resolve username to real ID if contactId was passed as a username
+    String canonicalTarget = contactId;
+    for (var c in _contacts) {
+      if (c.username.toLowerCase() == contactId.toLowerCase()) {
+        canonicalTarget = c.id;
+        break;
+      }
+    }
+    if (canonicalTarget == contactId) {
+      for (var req in _pendingFriendRequests) {
+        if (req.senderUsername.toLowerCase() == contactId.toLowerCase()) {
+          canonicalTarget = req.senderId;
+          break;
+        }
+      }
+    }
+
+    return _currentUserId!.compareTo(canonicalTarget) < 0
+        ? 'chat_${_currentUserId}_$canonicalTarget'
+        : 'chat_${canonicalTarget}_$_currentUserId';
   }
 
   bool isMyMessage(PrivateMessageModel msg) {
@@ -1016,13 +1225,31 @@ class PrivateChatProvider extends ChangeNotifier {
       return;
     }
 
-    _activeChatId = chatId;
-    final contactIndex = _contacts.indexWhere((c) => c.id == chatId);
+    // Resolve chatId to canonical contact ID if username was passed
+    String canonicalId = chatId;
+    for (var c in _contacts) {
+      if (c.username.toLowerCase() == chatId.toLowerCase()) {
+        canonicalId = c.id;
+        break;
+      }
+    }
+    if (canonicalId == chatId) {
+      for (var req in _pendingFriendRequests) {
+        if (req.senderUsername.toLowerCase() == chatId.toLowerCase()) {
+          canonicalId = req.senderId;
+          break;
+        }
+      }
+    }
+    _mergeMessageKeys(chatId, canonicalId);
+
+    _activeChatId = canonicalId;
+    final contactIndex = _contacts.indexWhere((c) => c.id == canonicalId);
     if (contactIndex != -1) {
       _contacts[contactIndex] = _contacts[contactIndex].copyWith(unreadCount: 0);
     } else if (displayName != null || username != null) {
-      _tempContacts[chatId] = PrivateContactModel(
-        id: chatId,
+      _tempContacts[canonicalId] = PrivateContactModel(
+        id: canonicalId,
         displayName: displayName ?? username ?? 'User',
         username: username ?? 'user',
         isOnline: false,
@@ -1030,13 +1257,74 @@ class PrivateChatProvider extends ChangeNotifier {
         unreadCount: 0,
       );
     } else {
-      _fetchUserForChatIfMissing(chatId);
+      _fetchUserForChatIfMissing(canonicalId);
     }
-    final channelId = getConversationChannelId(chatId);
-    _listenToFirebaseChat(chatId, channelId);
-    _subscribeToContactPresence(chatId);
-    markMessagesAsSeen(chatId);
+    final channelId = getConversationChannelId(canonicalId);
+    _listenToFirebaseChat(canonicalId, channelId);
+    _subscribeToContactPresence(canonicalId);
+    _listenToTyping(canonicalId);
+    markMessagesAsSeen(canonicalId);
     notifyListeners();
+  }
+
+  void setTypingStatus(String contactId, bool isTyping) {
+    if (_currentUserId == null || _currentUserId!.isEmpty) return;
+    final channelId = getConversationChannelId(contactId);
+    try {
+      final ref = FirebaseDatabase.instance.ref('typing/$channelId/$_currentUserId');
+      if (isTyping) {
+        ref.set({
+          'isTyping': true,
+          'username': _currentUsername ?? 'User',
+          'displayName': _currentDisplayName ?? 'User',
+          'timestamp': ServerValue.timestamp,
+        });
+      } else {
+        ref.remove();
+      }
+    } catch (e) {
+      debugPrint('Firebase typing update notice: $e');
+    }
+  }
+
+  void _listenToTyping(String contactId) {
+    final channelId = getConversationChannelId(contactId);
+    if (_typingSubscriptions.containsKey(channelId)) return;
+    try {
+      final ref = FirebaseDatabase.instance.ref('typing/$channelId');
+      _typingSubscriptions[channelId] = ref.onValue.listen((event) {
+        if (!event.snapshot.exists || event.snapshot.value == null) {
+          _typingUsers[contactId] = false;
+          _typingUserNames.remove(contactId);
+          notifyListeners();
+          return;
+        }
+        bool anyoneElseTyping = false;
+        String? typingName;
+        if (event.snapshot.value is Map) {
+          final data = Map<String, dynamic>.from(event.snapshot.value as Map);
+          for (final entry in data.entries) {
+            if (entry.key != _currentUserId && entry.value is Map) {
+              final val = Map<String, dynamic>.from(entry.value as Map);
+              if (val['isTyping'] == true) {
+                anyoneElseTyping = true;
+                typingName = val['displayName']?.toString() ?? val['username']?.toString();
+                break;
+              }
+            }
+          }
+        }
+        _typingUsers[contactId] = anyoneElseTyping;
+        if (typingName != null) {
+          _typingUserNames[contactId] = typingName;
+        } else {
+          _typingUserNames.remove(contactId);
+        }
+        notifyListeners();
+      });
+    } catch (e) {
+      debugPrint('Firebase typing listener notice: $e');
+    }
   }
 
   Future<void> _fetchUserForChatIfMissing(String chatId) async {
@@ -1314,9 +1602,23 @@ class PrivateChatProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> _syncGroupToAllMembers(PrivateContactModel group) async {
+    try {
+      for (final mId in group.memberIds) {
+        await FirebaseDatabase.instance
+            .ref('users/$mId/contacts/${group.id}')
+            .set(group.toJson());
+      }
+    } catch (e) {
+      debugPrint('Error syncing group chat to Firebase: $e');
+    }
+  }
+
   Future<String?> createGroupChat({
     required String groupName,
     required List<String> memberIds,
+    String? groupBio,
+    String? avatarUrl,
   }) async {
     if (_currentUserId == null) return null;
     final groupId = 'group_${DateTime.now().millisecondsSinceEpoch}';
@@ -1327,7 +1629,12 @@ class PrivateChatProvider extends ChangeNotifier {
       displayName: groupName.trim(),
       username: 'group_$groupId',
       isGroup: true,
+      avatarUrl: avatarUrl,
+      groupBio: groupBio?.trim(),
       memberIds: allMembers,
+      ownerId: _currentUserId,
+      adminIds: [_currentUserId!],
+      settingsPermission: 'admins_only',
     );
 
     _contacts.add(groupContact);
@@ -1335,17 +1642,224 @@ class PrivateChatProvider extends ChangeNotifier {
     setActiveChat(groupId, displayName: groupName.trim(), username: 'group_$groupId');
     notifyListeners();
 
-    try {
-      for (final mId in allMembers) {
-        FirebaseDatabase.instance
-            .ref('users/$mId/contacts/$groupId')
-            .set(groupContact.toJson());
-      }
-    } catch (e) {
-      debugPrint('Error syncing group chat to Firebase: $e');
+    await _syncGroupToAllMembers(groupContact);
+    return groupId;
+  }
+
+  Future<void> updateGroupDetails({
+    required String groupId,
+    String? groupName,
+    String? groupBio,
+    String? avatarUrl,
+  }) async {
+    final idx = _contacts.indexWhere((c) => c.id == groupId && c.isGroup);
+    if (idx == -1) return;
+
+    final current = _contacts[idx];
+    final updated = current.copyWith(
+      displayName: groupName != null && groupName.trim().isNotEmpty ? groupName.trim() : current.displayName,
+      groupBio: groupBio ?? current.groupBio,
+      avatarUrl: avatarUrl ?? current.avatarUrl,
+    );
+    _contacts[idx] = updated;
+    notifyListeners();
+    await _syncGroupToAllMembers(updated);
+  }
+
+  Future<void> updateGroupSettingsPermission({
+    required String groupId,
+    required String permission,
+  }) async {
+    final idx = _contacts.indexWhere((c) => c.id == groupId && c.isGroup);
+    if (idx == -1) return;
+
+    final updated = _contacts[idx].copyWith(settingsPermission: permission);
+    _contacts[idx] = updated;
+    notifyListeners();
+    await _syncGroupToAllMembers(updated);
+  }
+
+  Future<void> setGroupAdmin({
+    required String groupId,
+    required String memberId,
+    required bool isAdmin,
+  }) async {
+    final idx = _contacts.indexWhere((c) => c.id == groupId && c.isGroup);
+    if (idx == -1) return;
+
+    final current = _contacts[idx];
+    final currentAdmins = List<String>.from(current.adminIds);
+    if (isAdmin && !currentAdmins.contains(memberId)) {
+      currentAdmins.add(memberId);
+    } else if (!isAdmin) {
+      currentAdmins.remove(memberId);
     }
 
-    return groupId;
+    final updated = current.copyWith(adminIds: currentAdmins);
+    _contacts[idx] = updated;
+    notifyListeners();
+    await _syncGroupToAllMembers(updated);
+  }
+
+  Future<void> transferGroupOwnership({
+    required String groupId,
+    required String newOwnerId,
+  }) async {
+    final idx = _contacts.indexWhere((c) => c.id == groupId && c.isGroup);
+    if (idx == -1) return;
+
+    final current = _contacts[idx];
+    final currentAdmins = List<String>.from(current.adminIds);
+    if (!currentAdmins.contains(newOwnerId)) {
+      currentAdmins.add(newOwnerId);
+    }
+
+    final updated = current.copyWith(
+      ownerId: newOwnerId,
+      adminIds: currentAdmins,
+    );
+    _contacts[idx] = updated;
+    notifyListeners();
+    await _syncGroupToAllMembers(updated);
+  }
+
+  Future<void> assignMemberRole({
+    required String groupId,
+    required String memberId,
+    String? role,
+  }) async {
+    final idx = _contacts.indexWhere((c) => c.id == groupId && c.isGroup);
+    if (idx == -1) return;
+
+    final current = _contacts[idx];
+    final currentRoles = Map<String, String>.from(current.memberRoles);
+    if (role != null && role.trim().isNotEmpty) {
+      currentRoles[memberId] = role.trim();
+    } else {
+      currentRoles.remove(memberId);
+    }
+
+    final updated = current.copyWith(memberRoles: currentRoles);
+    _contacts[idx] = updated;
+    notifyListeners();
+    await _syncGroupToAllMembers(updated);
+  }
+
+  Future<void> addMembersToGroup({
+    required String groupId,
+    required List<String> memberIds,
+  }) async {
+    final idx = _contacts.indexWhere((c) => c.id == groupId && c.isGroup);
+    if (idx == -1) return;
+
+    final current = _contacts[idx];
+    final mergedMembers = <String>{...current.memberIds, ...memberIds}.toList();
+    final updated = current.copyWith(memberIds: mergedMembers);
+    _contacts[idx] = updated;
+    notifyListeners();
+    await _syncGroupToAllMembers(updated);
+  }
+
+  Future<void> removeMemberFromGroup({
+    required String groupId,
+    required String memberId,
+  }) async {
+    final idx = _contacts.indexWhere((c) => c.id == groupId && c.isGroup);
+    if (idx == -1) return;
+
+    final current = _contacts[idx];
+    final currentMembers = List<String>.from(current.memberIds)..remove(memberId);
+    final currentAdmins = List<String>.from(current.adminIds)..remove(memberId);
+    final currentRoles = Map<String, String>.from(current.memberRoles)..remove(memberId);
+
+    final updated = current.copyWith(
+      memberIds: currentMembers,
+      adminIds: currentAdmins,
+      memberRoles: currentRoles,
+    );
+    _contacts[idx] = updated;
+    notifyListeners();
+
+    try {
+      await FirebaseDatabase.instance
+          .ref('users/$memberId/contacts/$groupId')
+          .remove();
+    } catch (_) {}
+
+    await _syncGroupToAllMembers(updated);
+  }
+
+  Future<void> leaveGroup({required String groupId}) async {
+    if (_currentUserId == null) return;
+    final idx = _contacts.indexWhere((c) => c.id == groupId && c.isGroup);
+    if (idx == -1) return;
+
+    final current = _contacts[idx];
+    final remainingMembers = List<String>.from(current.memberIds)..remove(_currentUserId);
+
+    if (remainingMembers.isEmpty) {
+      await deleteGroup(groupId: groupId);
+      return;
+    }
+
+    String? newOwner = current.ownerId;
+    if (current.isOwner(_currentUserId)) {
+      newOwner = current.adminIds.firstWhere(
+        (id) => id != _currentUserId,
+        orElse: () => remainingMembers.first,
+      );
+    }
+
+    final updatedAdmins = List<String>.from(current.adminIds)..remove(_currentUserId);
+    if (newOwner != null && !updatedAdmins.contains(newOwner)) {
+      updatedAdmins.add(newOwner);
+    }
+    final updatedRoles = Map<String, String>.from(current.memberRoles)..remove(_currentUserId);
+
+    final updated = current.copyWith(
+      memberIds: remainingMembers,
+      ownerId: newOwner,
+      adminIds: updatedAdmins,
+      memberRoles: updatedRoles,
+    );
+
+    _contacts.removeAt(idx);
+    if (_activeChatId == groupId) {
+      _activeChatId = null;
+    }
+    notifyListeners();
+
+    try {
+      await FirebaseDatabase.instance
+          .ref('users/$_currentUserId/contacts/$groupId')
+          .remove();
+    } catch (_) {}
+
+    await _syncGroupToAllMembers(updated);
+  }
+
+  Future<void> deleteGroup({required String groupId}) async {
+    final idx = _contacts.indexWhere((c) => c.id == groupId && c.isGroup);
+    final members = idx != -1 ? List<String>.from(_contacts[idx].memberIds) : <String>[];
+
+    _contacts.removeWhere((c) => c.id == groupId);
+    _messages.remove(groupId);
+    if (_activeChatId == groupId) {
+      _activeChatId = null;
+    }
+    notifyListeners();
+
+    final channelId = getConversationChannelId(groupId);
+    try {
+      await FirebaseDatabase.instance.ref('chats/$channelId').remove();
+      for (final mId in members) {
+        await FirebaseDatabase.instance
+            .ref('users/$mId/contacts/$groupId')
+            .remove();
+      }
+    } catch (e) {
+      debugPrint('Error deleting group: $e');
+    }
   }
 
   /// Returns known members of a group chat for @mentions.

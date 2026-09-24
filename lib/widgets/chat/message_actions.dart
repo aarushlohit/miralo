@@ -10,6 +10,8 @@ class MessageActionsSheet extends StatelessWidget {
   final VoidCallback? onDownload;
   final VoidCallback? onFavorite;
   final bool isFavorite;
+  final VoidCallback? onStar;
+  final bool isStarred;
   final VoidCallback? onPin;
   final bool isPinned;
   final VoidCallback? onSaveToLibrary;
@@ -24,6 +26,8 @@ class MessageActionsSheet extends StatelessWidget {
     this.onDownload,
     this.onFavorite,
     this.isFavorite = false,
+    this.onStar,
+    this.isStarred = false,
     this.onPin,
     this.isPinned = false,
     this.onSaveToLibrary,
@@ -39,6 +43,8 @@ class MessageActionsSheet extends StatelessWidget {
     VoidCallback? onDownload,
     VoidCallback? onFavorite,
     bool isFavorite = false,
+    VoidCallback? onStar,
+    bool isStarred = false,
     VoidCallback? onPin,
     bool isPinned = false,
     VoidCallback? onSaveToLibrary,
@@ -63,6 +69,8 @@ class MessageActionsSheet extends StatelessWidget {
         onDownload: onDownload,
         onFavorite: onFavorite,
         isFavorite: isFavorite,
+        onStar: onStar,
+        isStarred: isStarred,
         onPin: onPin,
         isPinned: isPinned,
         onSaveToLibrary: onSaveToLibrary,
@@ -166,6 +174,16 @@ class MessageActionsSheet extends StatelessWidget {
                 onTap: () {
                   Navigator.pop(context);
                   onPin?.call();
+                },
+              ),
+            if (onStar != null)
+              _ActionRow(
+                icon: isStarred ? Icons.star_rounded : Icons.star_outline_rounded,
+                title: isStarred ? 'Unstar Message' : 'Star Message',
+                textColor: isStarred ? const Color(0xFFF59E0B) : textColor,
+                onTap: () {
+                  Navigator.pop(context);
+                  onStar?.call();
                 },
               ),
             if (onSaveToLibrary != null)

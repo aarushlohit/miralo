@@ -32,12 +32,22 @@ class AppTypography {
         color: color,
       );
 
+  static TextStyle h2({Color? color}) => heading2(color: color);
+
   /// Section heading: 16–18 px (Spec section 5)
   static TextStyle heading3({Color? color}) => GoogleFonts.inter(
         fontSize: 17,
         fontWeight: FontWeight.w600,
         letterSpacing: -0.1,
         height: 1.35,
+        color: color,
+      );
+
+  static TextStyle h3({Color? color}) => heading3(color: color);
+
+  static TextStyle labelMedium({Color? color}) => GoogleFonts.inter(
+        fontSize: 13,
+        fontWeight: FontWeight.w500,
         color: color,
       );
 

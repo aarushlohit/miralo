@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../core/theme/miralo_tokens.dart';
+import '../media/universal_file_viewer.dart';
 
 /// Fullscreen Image Viewer supporting Base64, network, and asset images.
 class ImageViewer extends StatelessWidget {
@@ -30,12 +31,12 @@ class ImageViewer extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => ImageViewer(
-          imageBase64: imageBase64,
-          imageUrl: imageUrl,
-          title: title,
-          onMoveToVault: onMoveToVault,
-          onSaveToLibrary: onSaveToLibrary,
+        builder: (_) => UniversalFileViewer(
+          fileBase64: imageBase64,
+          fileUrl: imageUrl,
+          fileName: title,
+          fileType: 'image',
+          onSaveToVault: onSaveToLibrary,
         ),
       ),
     );
