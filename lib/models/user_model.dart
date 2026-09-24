@@ -4,6 +4,8 @@ class UserModel {
   final String username;
   final String email;
   final String? avatarUrl;
+  final String? bio;
+  final String? note;
   final DateTime createdAt;
 
   UserModel({
@@ -12,6 +14,8 @@ class UserModel {
     required this.username,
     required this.email,
     this.avatarUrl,
+    this.bio,
+    this.note,
     required this.createdAt,
   });
 
@@ -21,6 +25,8 @@ class UserModel {
     String? username,
     String? email,
     String? avatarUrl,
+    String? bio,
+    String? note,
     DateTime? createdAt,
   }) {
     return UserModel(
@@ -29,6 +35,8 @@ class UserModel {
       username: username ?? this.username,
       email: email ?? this.email,
       avatarUrl: avatarUrl ?? this.avatarUrl,
+      bio: bio ?? this.bio,
+      note: note ?? this.note,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -40,6 +48,8 @@ class UserModel {
       'username': username,
       'email': email,
       'avatarUrl': avatarUrl,
+      'bio': bio,
+      'note': note,
       'createdAt': createdAt.toIso8601String(),
     };
   }
@@ -51,6 +61,8 @@ class UserModel {
       username: json['username'] as String,
       email: json['email'] as String,
       avatarUrl: json['avatarUrl'] as String?,
+      bio: json['bio'] as String?,
+      note: json['note'] as String?,
       createdAt: DateTime.parse(json['createdAt'] as String),
     );
   }

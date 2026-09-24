@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../core/theme/miralo_tokens.dart';
 import 'image_viewer.dart';
 import 'voice_note_player.dart';
@@ -24,7 +25,11 @@ class MessageRenderer extends StatelessWidget {
   final Function(String emoji)? onReactionTap;
   final VoidCallback? onLongPress;
   final VoidCallback? onSaveToLibrary;
+  final VoidCallback? onMoveToVault;
   final VoidCallback? onDelete;
+  final VoidCallback? onDownload;
+  final bool isPinned;
+  final bool isHighlighted;
 
   const MessageRenderer({
     super.key,
@@ -44,7 +49,11 @@ class MessageRenderer extends StatelessWidget {
     this.onReactionTap,
     this.onLongPress,
     this.onSaveToLibrary,
+    this.onMoveToVault,
     this.onDelete,
+    this.onDownload,
+    this.isPinned = false,
+    this.isHighlighted = false,
   });
 
   @override
@@ -69,7 +78,20 @@ class MessageRenderer extends StatelessWidget {
         : MiraloColors.lightTextMuted;
 
     final isVoiceNote = type == 'voice' || (fileName != null && fileName!.contains('Voice Note'));
-    final isDocument = type == 'document' || (fileName != null && !isVoiceNote);
+    final isImage = type == 'image' ||
+        type == 'gif' ||
+        (imageBase64 != null && imageBase64!.isNotEmpty) ||
+        (imageUrl != null &&
+            imageUrl!.isNotEmpty &&
+            (imageUrl!.contains('/image/') ||
+                imageUrl!.contains('.gif') ||
+                imageUrl!.contains('giphy.com') ||
+                fileName?.toLowerCase().endsWith('.jpg') == true ||
+                fileName?.toLowerCase().endsWith('.png') == true ||
+                fileName?.toLowerCase().endsWith('.jpeg') == true ||
+                fileName?.toLowerCase().endsWith('.gif') == true ||
+                fileName?.toLowerCase().endsWith('.webp') == true));
+    final isDocument = (type == 'document' || fileName != null) && !isVoiceNote && !isImage;
 
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -81,10 +103,13 @@ class MessageRenderer extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Flexible(
-            child: Container(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
               constraints: const BoxConstraints(maxWidth: 520),
               decoration: BoxDecoration(
-                color: bg,
+                color: isHighlighted
+                    ? (isDark ? MiraloColors.accent.withValues(alpha: 0.18) : MiraloColors.accent.withValues(alpha: 0.12))
+                    : bg,
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(20),
                   topRight: const Radius.circular(20),
@@ -92,11 +117,22 @@ class MessageRenderer extends StatelessWidget {
                   bottomRight: Radius.circular(isMe ? 6 : 20),
                 ),
                 border: Border.all(
-                  color: isDark
-                      ? (isMe ? const Color(0x12FFFFFF) : const Color(0x0CFFFFFF))
-                      : border,
-                  width: 0.6,
+                  color: isHighlighted
+                      ? MiraloColors.accent
+                      : (isDark
+                          ? (isMe ? const Color(0x12FFFFFF) : const Color(0x0CFFFFFF))
+                          : border),
+                  width: isHighlighted ? 1.4 : 0.6,
                 ),
+                boxShadow: isHighlighted
+                    ? [
+                        BoxShadow(
+                          color: MiraloColors.accent.withValues(alpha: 0.25),
+                          blurRadius: 10,
+                          spreadRadius: 1,
+                        ),
+                      ]
+                    : null,
               ),
               child: Material(
                 color: Colors.transparent,
@@ -153,56 +189,66 @@ class MessageRenderer extends StatelessWidget {
                               durationText: fileSize,
                             ),
                           )
+                        // Render Image if present
+                        else if (isImage)
+                          _buildImageAttachment(context)
                         // Render Document if document file
                         else if (isDocument)
-                          Container(
-                            margin: const EdgeInsets.only(bottom: MiraloSpacing.xs),
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.04),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.insert_drive_file_rounded, color: MiraloColors.accent, size: 28),
-                                const SizedBox(width: 8),
-                                Flexible(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        fileName ?? 'Attached Document',
-                                        style: MiraloTypography.bodyMedium(color: textPrimary),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      if (fileSize != null)
-                                        Text(
-                                          fileSize!,
-                                          style: MiraloTypography.bodySmall(color: textMuted),
-                                        ),
-                                    ],
-                                  ),
+                          InkWell(
+                            borderRadius: BorderRadius.circular(12),
+                            onTap: () => _showDocumentActions(context),
+                            child: Container(
+                              margin: const EdgeInsets.only(bottom: MiraloSpacing.xs),
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.04),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: isDark ? Colors.white12 : Colors.black12,
+                                  width: 0.5,
                                 ),
-                              ],
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.insert_drive_file_rounded, color: MiraloColors.accent, size: 28),
+                                  const SizedBox(width: 8),
+                                  Flexible(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          fileName ?? 'Attached Document',
+                                          style: MiraloTypography.bodyMedium(color: textPrimary),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        if (fileSize != null)
+                                          Text(
+                                            fileSize!,
+                                            style: MiraloTypography.bodySmall(color: textMuted),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Icon(Icons.download_rounded, size: 16, color: textMuted),
+                                ],
+                              ),
                             ),
-                          )
-                        // Render Image if present
-                        else if (imageBase64 != null || imageUrl != null)
-                          _buildImageAttachment(context),
+                          ),
 
-                        // Render text
+                        // Render text with styled @ mentions and @all highlights
                         if (text.isNotEmpty)
-                          SelectableText(
+                          _buildMessageText(
                             text,
-                            style: MiraloTypography.bodyLarge(color: textPrimary)
-                                .copyWith(height: 1.45),
+                            MiraloTypography.bodyLarge(color: textPrimary).copyWith(height: 1.45),
+                            isDark,
                           ),
 
                         const SizedBox(height: MiraloSpacing.xxs),
 
-                        // Timestamp and status
+                        // Timestamp, status, and pin indicator
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -210,14 +256,24 @@ class MessageRenderer extends StatelessWidget {
                               _formatTime(createdAt),
                               style: MiraloTypography.bodySmall(color: textMuted),
                             ),
+                            if (isPinned) ...[
+                              const SizedBox(width: 4),
+                              const Icon(
+                                Icons.push_pin_rounded,
+                                size: 12,
+                                color: MiraloColors.accent,
+                              ),
+                            ],
                             if (isMe && status != null) ...[
                               const SizedBox(width: 4),
                               Icon(
-                                status == 'read'
+                                (status == 'seen' || status == 'read')
                                     ? Icons.done_all_rounded
-                                    : Icons.done_rounded,
+                                    : (status == 'delivered'
+                                        ? Icons.done_all_rounded
+                                        : Icons.done_rounded),
                                 size: 14,
-                                color: status == 'read'
+                                color: (status == 'seen' || status == 'read')
                                     ? MiraloColors.accent
                                     : textMuted,
                               ),
@@ -251,7 +307,9 @@ class MessageRenderer extends StatelessWidget {
               context,
               imageBase64: imageBase64,
               imageUrl: imageUrl,
-              title: 'Image',
+              title: fileName ?? 'Image',
+              onMoveToVault: onMoveToVault,
+              onSaveToLibrary: onSaveToLibrary,
             );
           },
           child: _renderImage(),
@@ -346,5 +404,162 @@ class MessageRenderer extends StatelessWidget {
     final h = dt.hour.toString().padLeft(2, '0');
     final m = dt.minute.toString().padLeft(2, '0');
     return '$h:$m';
+  }
+
+  void _showDocumentActions(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? MiraloColors.darkSurfacePrimary : MiraloColors.lightSurfacePrimary;
+    final textColor = isDark ? MiraloColors.darkTextPrimary : MiraloColors.lightTextPrimary;
+    final subColor = isDark ? MiraloColors.darkTextSecondary : MiraloColors.lightTextSecondary;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: bg,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(MiraloRadius.bottomSheet)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(MiraloSpacing.md),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: MiraloSpacing.md),
+                  decoration: BoxDecoration(
+                    color: isDark ? MiraloColors.darkBorder : MiraloColors.lightBorder,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Row(
+                children: [
+                  const Icon(Icons.insert_drive_file_rounded, color: MiraloColors.accent, size: 36),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          fileName ?? 'Attached Document',
+                          style: MiraloTypography.titleMedium(color: textColor),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          '${fileSize ?? ''} • ${imageUrl != null && imageUrl!.startsWith('http') ? 'Cloudinary Hosted' : 'Encrypted Storage'}',
+                          style: MiraloTypography.bodySmall(color: subColor),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: MiraloSpacing.md),
+              const Divider(height: 1),
+              if (imageUrl != null && imageUrl!.startsWith('http'))
+                ListTile(
+                  leading: const Icon(Icons.link_rounded, color: MiraloColors.accent),
+                  title: Text('Copy Cloudinary Download Link', style: MiraloTypography.bodyMedium(color: textColor)),
+                  onTap: () {
+                    Clipboard.setData(ClipboardData(text: imageUrl!));
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Cloud link copied to clipboard.')),
+                    );
+                  },
+                ),
+              if (onSaveToLibrary != null)
+                ListTile(
+                  leading: const Icon(Icons.bookmark_add_outlined, color: MiraloColors.accent),
+                  title: Text('Save to Library Vault', style: MiraloTypography.bodyMedium(color: textColor)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    onSaveToLibrary?.call();
+                  },
+                ),
+              if (onMoveToVault != null)
+                ListTile(
+                  leading: const Icon(Icons.lock_outline_rounded, color: MiraloColors.accent),
+                  title: Text('Move to Library Vault (Delete from chat)', style: MiraloTypography.bodyMedium(color: textColor)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    onMoveToVault?.call();
+                  },
+                ),
+              ListTile(
+                leading: const Icon(Icons.download_rounded, color: MiraloColors.accent),
+                title: Text('Download Document', style: MiraloTypography.bodyMedium(color: textColor)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  if (onDownload != null) {
+                    onDownload!();
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Downloading ${fileName ?? "document"}...')),
+                    );
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMessageText(String messageText, TextStyle baseStyle, bool isDark) {
+    final mentionRegex = RegExp(r'(@[a-zA-Z0-9_]+)');
+    final matches = mentionRegex.allMatches(messageText);
+
+    if (matches.isEmpty) {
+      return SelectableText(
+        messageText,
+        style: baseStyle,
+      );
+    }
+
+    final spans = <InlineSpan>[];
+    int lastEnd = 0;
+
+    for (final match in matches) {
+      if (match.start > lastEnd) {
+        spans.add(TextSpan(
+          text: messageText.substring(lastEnd, match.start),
+          style: baseStyle,
+        ));
+      }
+
+      final mention = match.group(0)!;
+      final isAll = mention.toLowerCase() == '@all';
+
+      spans.add(TextSpan(
+        text: mention,
+        style: baseStyle.copyWith(
+          color: MiraloColors.accent,
+          fontWeight: isAll ? FontWeight.w800 : FontWeight.w700,
+          backgroundColor: MiraloColors.accent.withValues(
+            alpha: isAll ? (isDark ? 0.28 : 0.16) : (isDark ? 0.15 : 0.08),
+          ),
+        ),
+      ));
+
+      lastEnd = match.end;
+    }
+
+    if (lastEnd < messageText.length) {
+      spans.add(TextSpan(
+        text: messageText.substring(lastEnd),
+        style: baseStyle,
+      ));
+    }
+
+    return SelectableText.rich(
+      TextSpan(children: spans),
+      style: baseStyle,
+    );
   }
 }

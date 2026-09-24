@@ -1,23 +1,30 @@
 import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../core/theme/miralo_tokens.dart';
 import '../../services/cloudinary_service.dart';
+import '../../services/file_security_service.dart';
 import 'voice_note_recorder_sheet.dart';
 
-/// Attachment sheet supporting Images (Camera & Photos), Documents (Any non-executable file), and Voice Notes.
+import 'giphy_picker_sheet.dart';
+
+/// Attachment sheet supporting Images (Camera & Photos), Documents (Any non-executable file), Voice Notes, and GIPHY GIFs.
 /// Attempts Cloudinary upload first, falling back directly to Base64 string for offline/free operation.
 class AttachmentSheet extends StatelessWidget {
   final Function(String mediaUrlOrBase64, String fileName)? onImageSelected;
   final Function(String documentUrlOrBase64, String fileName, String fileSize)? onDocumentSelected;
   final Function(String audioUrlOrBase64, String durationText)? onVoiceNoteRecorded;
+  final Function(String gifUrl, String title)? onGifSelected;
 
   const AttachmentSheet({
     super.key,
     this.onImageSelected,
     this.onDocumentSelected,
     this.onVoiceNoteRecorded,
+    this.onGifSelected,
   });
 
   static Future<void> show(
@@ -25,6 +32,7 @@ class AttachmentSheet extends StatelessWidget {
     Function(String mediaUrlOrBase64, String fileName)? onImageSelected,
     Function(String documentUrlOrBase64, String fileName, String fileSize)? onDocumentSelected,
     Function(String audioUrlOrBase64, String durationText)? onVoiceNoteRecorded,
+    Function(String gifUrl, String title)? onGifSelected,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return showModalBottomSheet<void>(
@@ -41,6 +49,7 @@ class AttachmentSheet extends StatelessWidget {
         onImageSelected: onImageSelected,
         onDocumentSelected: onDocumentSelected,
         onVoiceNoteRecorded: onVoiceNoteRecorded,
+        onGifSelected: onGifSelected,
       ),
     );
   }
@@ -89,28 +98,35 @@ class AttachmentSheet extends StatelessWidget {
       if (result != null && result.files.isNotEmpty) {
         final pickedFile = result.files.first;
         final fileName = pickedFile.name;
-        final bytes = pickedFile.bytes;
+        Uint8List? bytes = pickedFile.bytes;
+        if (bytes == null && pickedFile.path != null) {
+          try {
+            bytes = await File(pickedFile.path!).readAsBytes();
+          } catch (e) {
+            debugPrint('Error reading file bytes from path: $e');
+          }
+        }
 
-        // Block Executables / Potentially Harmful Files
-        const blockedExts = {
-          'exe', 'bat', 'cmd', 'sh', 'vbs', 'scr', 'msi', 'apk', 'com', 'pif', 
-          'application', 'gadget', 'cpl', 'wsf', 'jar', 'ps1', 'reg', 'hta', 'inf', 'sys'
-        };
+        // Comprehensive Anti-Spoofing & Binary Header Validation
+        final validation = FileSecurityService.validateFile(
+          rawFileName: fileName,
+          fileBytes: bytes,
+        );
 
-        final ext = fileName.contains('.') ? fileName.split('.').last.toLowerCase() : '';
-        if (blockedExts.contains(ext)) {
+        if (!validation.isValid) {
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Harmful/Executable file format (.$ext) is blocked for security.'),
+                content: Text(validation.errorMessage ?? 'File blocked for security.'),
                 backgroundColor: Colors.redAccent,
-                duration: const Duration(seconds: 3),
+                duration: const Duration(seconds: 4),
               ),
             );
           }
           return;
         }
 
+        final safeFileName = validation.sanitizedFileName;
         final sizeKb = (pickedFile.size / 1024).toStringAsFixed(1);
         final sizeText = pickedFile.size > 1024 * 1024
             ? '${(pickedFile.size / (1024 * 1024)).toStringAsFixed(1)} MB'
@@ -119,15 +135,15 @@ class AttachmentSheet extends StatelessWidget {
         if (bytes != null) {
           final cloudUrl = await CloudinaryService.uploadFileBytes(
             fileBytes: bytes,
-            fileName: fileName,
+            fileName: safeFileName,
             resourceType: 'raw',
           );
 
           if (cloudUrl != null && cloudUrl.isNotEmpty) {
-            onDocumentSelected?.call(cloudUrl, fileName, sizeText);
+            onDocumentSelected?.call(cloudUrl, safeFileName, sizeText);
           } else {
             final base64String = base64Encode(bytes);
-            onDocumentSelected?.call(base64String, fileName, sizeText);
+            onDocumentSelected?.call(base64String, safeFileName, sizeText);
           }
         }
       }
@@ -154,9 +170,9 @@ class AttachmentSheet extends StatelessWidget {
 
     return SafeArea(
       top: false,
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(
-          horizontal: MiraloSpacing.lg,
+          horizontal: MiraloSpacing.md,
           vertical: MiraloSpacing.md,
         ),
         child: Column(
@@ -185,9 +201,11 @@ class AttachmentSheet extends StatelessWidget {
             ),
             const SizedBox(height: MiraloSpacing.lg),
 
-            // Camera, Photos, Document & Voice Note options
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            // Camera, Photos, Document, Voice Note & GIPHY GIF options
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              alignment: WrapAlignment.center,
               children: [
                 _ImageActionTile(
                   icon: Icons.camera_alt_outlined,
@@ -221,6 +239,21 @@ class AttachmentSheet extends StatelessWidget {
                       context,
                       onVoiceNoteRecorded: onVoiceNoteRecorded,
                     );
+                  },
+                ),
+                _ImageActionTile(
+                  icon: Icons.gif_box_outlined,
+                  label: 'GIF',
+                  bgColor: iconBg,
+                  textColor: textColor,
+                  onTap: () {
+                    Navigator.pop(context);
+                    if (onGifSelected != null) {
+                      GiphyPickerSheet.show(
+                        context,
+                        onGifSelected: onGifSelected!,
+                      );
+                    }
                   },
                 ),
               ],
@@ -263,13 +296,18 @@ class _ImageActionTile extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       borderRadius: MiraloRadius.r16,
-      child: Padding(
-        padding: const EdgeInsets.all(MiraloSpacing.md),
+      child: Container(
+        width: 62,
+        padding: const EdgeInsets.symmetric(
+          horizontal: 2,
+          vertical: MiraloSpacing.sm,
+        ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 56,
-              height: 56,
+              width: 52,
+              height: 52,
               decoration: BoxDecoration(
                 color: bgColor,
                 shape: BoxShape.circle,
@@ -277,7 +315,13 @@ class _ImageActionTile extends StatelessWidget {
               child: Icon(icon, color: MiraloColors.accent, size: 24),
             ),
             const SizedBox(height: MiraloSpacing.xs),
-            Text(label, style: MiraloTypography.labelMedium(color: textColor)),
+            Text(
+              label,
+              style: MiraloTypography.labelMedium(color: textColor),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
       ),

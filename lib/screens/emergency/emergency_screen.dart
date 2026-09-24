@@ -223,10 +223,16 @@ class EmergencyScreen extends StatelessWidget {
                         title: 'Full Reset',
                         message: 'This will wipe all chats, vault data, and restore app to initial state.',
                         onConfirm: () {
+                          final ai = Provider.of<AiChatProvider>(context, listen: false);
                           chat.emergencyWipeAllChats();
                           library.emergencyWipeLibrary();
                           vault.lockAll();
-                          auth.logout();
+                          auth.logout(
+                            onClearChatSession: chat.clearSession,
+                            onClearVaultSession: vault.clearSession,
+                            onClearAiChatSession: ai.clearSession,
+                            onClearLibrarySession: library.clearSession,
+                          );
                           Navigator.pushNamedAndRemoveUntil(
                             context,
                             AppRoutes.login,

@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
+import '../../providers/ai_chat_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/library_provider.dart';
+import '../../providers/private_chat_provider.dart';
 import '../../providers/vault_provider.dart';
 import '../../widgets/common/miralo_app_bar.dart';
 import '../../widgets/common/miralo_button.dart';
@@ -21,8 +25,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   String? _errorMessage;
-
   int _failedAttempts = 0;
+  String? _lastAttemptedTarget;
 
   @override
   void dispose() {
@@ -32,6 +36,10 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleLogin() async {
+    FocusManager.instance.primaryFocus?.unfocus();
+    FocusScope.of(context).unfocus();
+    SystemChannels.textInput.invokeMethod('TextInput.hide');
+
     final identifier = _emailController.text.trim();
     final pass = _passwordController.text;
 
@@ -44,20 +52,75 @@ class _LoginScreenState extends State<LoginScreen> {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final success = await auth.login(identifier, pass);
     if (success && mounted) {
+      FocusManager.instance.primaryFocus?.unfocus();
+      FocusScope.of(context).unfocus();
+      SystemChannels.textInput.invokeMethod('TextInput.hide');
+
       _failedAttempts = 0;
+      _lastAttemptedTarget = null;
       if (auth.currentUser != null) {
+        final uid = auth.currentUser!.id;
+        final uname = auth.currentUser!.username;
+        final uemail = auth.currentUser!.email;
         final vault = Provider.of<VaultProvider>(context, listen: false);
-        await vault.attachUser(auth.currentUser!.id);
+        final aiChat = Provider.of<AiChatProvider>(context, listen: false);
+        final chat = Provider.of<PrivateChatProvider>(context, listen: false);
+        final library = Provider.of<LibraryProvider>(context, listen: false);
+
+        // Register automatic logout cleanup
+        auth.addLogoutListener(chat.clearSession);
+        auth.addLogoutListener(vault.clearSession);
+        auth.addLogoutListener(aiChat.clearSession);
+        auth.addLogoutListener(library.clearSession);
+
+        // Pre-wipe any residual memory state
+        chat.clearSession();
+        vault.clearSession();
+        aiChat.clearSession();
+        library.clearSession();
+
+        await vault.attachUser(uid);
+        await aiChat.initUserSession(uid);
+        chat.initUserSession(uid, username: uname, email: uemail);
+        await library.initUserSession(uid);
       }
       if (mounted) {
-        Navigator.pushReplacementNamed(context, AppRoutes.home);
+        final vault = Provider.of<VaultProvider>(context, listen: false);
+        if (!vault.hasPrivateSecret || !vault.hasLibraryPin) {
+          Navigator.pushReplacementNamed(context, AppRoutes.securitySetup);
+        } else {
+          Navigator.pushReplacementNamed(context, AppRoutes.home);
+        }
       }
     } else if (mounted) {
+      final cleanTarget = identifier.trim().toLowerCase();
+      if (_lastAttemptedTarget != cleanTarget) {
+        _failedAttempts = 0;
+        _lastAttemptedTarget = cleanTarget;
+      }
+
+      final targetUserId = auth.lastFailedTargetUserId;
+      final targetUsername = auth.lastFailedTargetUsername;
+
+      // If user does NOT exist in database (wrong username), DROP IT to eliminate false positives!
+      if (targetUserId == null || targetUserId.isEmpty) {
+        _failedAttempts = 0;
+        setState(() {
+          _errorMessage = auth.errorMessage ?? 'Incorrect email, username or password. Please try again.';
+        });
+        return;
+      }
+
+      // Valid existing user entered with wrong password:
       _failedAttempts++;
       final vault = Provider.of<VaultProvider>(context, listen: false);
 
       if (_failedAttempts >= 2) {
-        vault.recordLoginIntruderAttempt(_failedAttempts);
+        vault.recordLoginIntruderAttempt(
+          _failedAttempts,
+          targetUserId: targetUserId,
+          targetUsername: targetUsername,
+        );
         setState(() {
           _errorMessage = auth.errorMessage ??
               'Incorrect credentials. Security photo captured after $_failedAttempts failed attempts.';
@@ -95,18 +158,28 @@ class _LoginScreenState extends State<LoginScreen> {
               title: '',
             ),
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(AppSpacing.screenH,
-                    AppSpacing.sm, AppSpacing.screenH, AppSpacing.xl),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text('Welcome back',
-                  style: AppTypography.display(color: textPrimary)),
-              const SizedBox(height: AppSpacing.sm),
-              Text('Sign in to MIRALO AI',
-                  style: AppTypography.body(color: textSecondary)),
-              const SizedBox(height: AppSpacing.xl),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenH),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: constraints.maxHeight,
+                      ),
+                      child: IntrinsicHeight(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const SizedBox(height: AppSpacing.sm),
+                            Text('Welcome back',
+                                style: AppTypography.display(color: textPrimary)),
+                            const SizedBox(height: AppSpacing.sm),
+                            Text('Sign in to MIRALO AI',
+                                style: AppTypography.body(color: textSecondary)),
+                            const SizedBox(height: AppSpacing.xl),
 
               // Error banner
               if (_errorMessage != null) ...[
@@ -228,13 +301,18 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ),
+              const SizedBox(height: AppSpacing.sm),
             ],
           ),
         ),
       ),
-    ],
-  ),
+    );
+  },
 ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -1,4 +1,8 @@
+import 'dart:async';
+import 'dart:convert';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/library_item_model.dart';
 
 class LibraryProvider extends ChangeNotifier {
@@ -7,12 +11,15 @@ class LibraryProvider extends ChangeNotifier {
   String? _selectedFolderId;
   String _currentTab = 'All'; // 'All', 'Images', 'Files', 'Videos'
   String _searchQuery = '';
+  String? _currentUserId;
+  StreamSubscription<DatabaseEvent>? _librarySubscription;
 
   List<LibraryFolderModel> get folders => _folders;
   List<LibraryItemModel> get items => _items;
   String? get selectedFolderId => _selectedFolderId;
   String get currentTab => _currentTab;
   String get searchQuery => _searchQuery;
+  String? get currentUserId => _currentUserId;
 
   LibraryFolderModel? get currentFolder {
     if (_selectedFolderId == null) return null;
@@ -47,109 +54,158 @@ class LibraryProvider extends ChangeNotifier {
   }
 
   LibraryProvider() {
-    _seedLibrary();
+    _initDefaultFolders();
   }
 
-  void _seedLibrary() {
-    final docsFolder = LibraryFolderModel(
-      id: 'folder_docs',
-      name: 'Documents',
-      itemCount: 12,
-      createdAt: DateTime.now().subtract(const Duration(days: 20)),
-    );
-
-    final memoriesFolder = LibraryFolderModel(
-      id: 'folder_memories',
-      name: 'Memories',
-      itemCount: 8,
-      createdAt: DateTime.now().subtract(const Duration(days: 15)),
-    );
-
-    final importantFolder = LibraryFolderModel(
-      id: 'folder_important',
-      name: 'Important',
-      itemCount: 6,
-      createdAt: DateTime.now().subtract(const Duration(days: 10)),
-    );
-
-    final imagesFolder = LibraryFolderModel(
-      id: 'folder_images',
-      name: 'Images',
-      itemCount: 24,
-      createdAt: DateTime.now().subtract(const Duration(days: 8)),
-    );
-
-    final videosFolder = LibraryFolderModel(
-      id: 'folder_videos',
-      name: 'Videos',
-      itemCount: 17,
-      createdAt: DateTime.now().subtract(const Duration(days: 5)),
-    );
-
-    _folders.addAll([docsFolder, memoriesFolder, importantFolder, imagesFolder, videosFolder]);
-
-    _items.addAll([
-      LibraryItemModel(
-        id: 'item_1',
-        name: 'photo.jpg',
-        type: 'image',
-        mimeType: 'image/jpeg',
-        size: '2.4 MB',
-        folderId: 'folder_images',
-        createdAt: DateTime.now().subtract(const Duration(days: 2)),
-        updatedAt: DateTime.now().subtract(const Duration(days: 2)),
-      ),
-      LibraryItemModel(
-        id: 'item_2',
-        name: 'video.mp4',
-        type: 'video',
-        mimeType: 'video/mp4',
-        size: '18.6 MB',
-        folderId: 'folder_videos',
-        createdAt: DateTime.now().subtract(const Duration(days: 3)),
-        updatedAt: DateTime.now().subtract(const Duration(days: 3)),
-      ),
-      LibraryItemModel(
-        id: 'item_3',
-        name: 'notes.pdf',
-        type: 'document',
-        mimeType: 'application/pdf',
-        size: '1.2 MB',
-        folderId: 'folder_docs',
-        createdAt: DateTime.now().subtract(const Duration(days: 1)),
-        updatedAt: DateTime.now().subtract(const Duration(days: 1)),
-      ),
-      LibraryItemModel(
-        id: 'item_4',
-        name: 'Project_Specification.docx',
-        type: 'document',
-        mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        size: '480 KB',
-        folderId: 'folder_important',
-        createdAt: DateTime.now().subtract(const Duration(days: 4)),
-        updatedAt: DateTime.now().subtract(const Duration(days: 4)),
-      ),
-      LibraryItemModel(
-        id: 'item_5',
-        name: 'Architecture_Diagram.png',
-        type: 'image',
-        mimeType: 'image/png',
-        size: '3.1 MB',
-        folderId: 'folder_images',
-        createdAt: DateTime.now().subtract(const Duration(days: 5)),
-        updatedAt: DateTime.now().subtract(const Duration(days: 5)),
-      ),
-      LibraryItemModel(
-        id: 'item_6',
-        name: 'Private_Backup.zip',
-        type: 'zip',
-        mimeType: 'application/zip',
-        size: '14.2 MB',
-        folderId: 'folder_important',
-        createdAt: DateTime.now().subtract(const Duration(days: 7)),
-        updatedAt: DateTime.now().subtract(const Duration(days: 7)),
-      ),
+  void _initDefaultFolders() {
+    _folders.clear();
+    _folders.addAll([
+      LibraryFolderModel(id: 'folder_images', name: 'Images', itemCount: 0, createdAt: DateTime.now()),
+      LibraryFolderModel(id: 'folder_videos', name: 'Videos', itemCount: 0, createdAt: DateTime.now()),
+      LibraryFolderModel(id: 'folder_docs', name: 'Documents', itemCount: 0, createdAt: DateTime.now()),
+      LibraryFolderModel(id: 'folder_important', name: 'Important', itemCount: 0, createdAt: DateTime.now()),
+      LibraryFolderModel(id: 'folder_memories', name: 'Memories', itemCount: 0, createdAt: DateTime.now()),
     ]);
+  }
+
+  String _getItemsKey(String uid) => 'miralo_library_items_$uid';
+  String _getFoldersKey(String uid) => 'miralo_library_folders_$uid';
+
+  /// Initializes session for the specific user. Strictly isolates data between accounts.
+  Future<void> initUserSession(String userId) async {
+    if (_currentUserId == userId) return;
+    _librarySubscription?.cancel();
+    _librarySubscription = null;
+    _currentUserId = userId;
+    _selectedFolderId = null;
+    _items.clear();
+    _initDefaultFolders();
+
+    // 1. Load cached items & custom folders from SharedPreferences
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final foldersRaw = prefs.getString(_getFoldersKey(userId));
+      if (foldersRaw != null && foldersRaw.isNotEmpty) {
+        final List list = jsonDecode(foldersRaw);
+        for (var item in list) {
+          final f = LibraryFolderModel.fromJson(Map<String, dynamic>.from(item as Map));
+          if (!_folders.any((existing) => existing.id == f.id)) {
+            _folders.add(f);
+          }
+        }
+      }
+
+      final itemsRaw = prefs.getString(_getItemsKey(userId));
+      if (itemsRaw != null && itemsRaw.isNotEmpty) {
+        final List list = jsonDecode(itemsRaw);
+        _items.clear();
+        for (var item in list) {
+          _items.add(LibraryItemModel.fromJson(Map<String, dynamic>.from(item as Map)));
+        }
+      }
+      _recalculateFolderCounts();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error loading cached library: $e');
+    }
+
+    // 2. Real-time Firebase RTDB Sync
+    try {
+      final ref = FirebaseDatabase.instance.ref('users/$userId/library');
+      _librarySubscription = ref.onValue.listen((event) {
+        if (event.snapshot.exists && event.snapshot.value is Map) {
+          final data = Map<String, dynamic>.from(event.snapshot.value as Map);
+          if (data['items'] is Map) {
+            final itemsMap = Map<String, dynamic>.from(data['items'] as Map);
+            final List<LibraryItemModel> loadedItems = [];
+            itemsMap.forEach((k, v) {
+              if (v is Map) {
+                try {
+                  loadedItems.add(LibraryItemModel.fromJson(Map<String, dynamic>.from(v)));
+                } catch (_) {}
+              }
+            });
+            loadedItems.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+            _items.clear();
+            _items.addAll(loadedItems);
+          }
+
+          if (data['folders'] is Map) {
+            final foldersMap = Map<String, dynamic>.from(data['folders'] as Map);
+            foldersMap.forEach((k, v) {
+              if (v is Map) {
+                try {
+                  final f = LibraryFolderModel.fromJson(Map<String, dynamic>.from(v));
+                  final idx = _folders.indexWhere((existing) => existing.id == f.id);
+                  if (idx != -1) {
+                    _folders[idx] = f;
+                  } else {
+                    _folders.add(f);
+                  }
+                } catch (_) {}
+              }
+            });
+          }
+
+          _recalculateFolderCounts();
+          notifyListeners();
+        }
+      });
+    } catch (e) {
+      debugPrint('Firebase library sync listener error: $e');
+    }
+  }
+
+  void _recalculateFolderCounts() {
+    for (int i = 0; i < _folders.length; i++) {
+      final fid = _folders[i].id;
+      final count = _items.where((it) => it.folderId == fid).length;
+      _folders[i] = _folders[i].copyWith(itemCount: count);
+    }
+  }
+
+  Future<void> _saveToStorageAndCloud() async {
+    final uid = _currentUserId;
+    if (uid == null || uid.isEmpty) return;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final itemsJson = jsonEncode(_items.map((i) => i.toJson()).toList());
+      await prefs.setString(_getItemsKey(uid), itemsJson);
+
+      // Only custom folders or folders with updated counts
+      final foldersJson = jsonEncode(_folders.map((f) => f.toJson()).toList());
+      await prefs.setString(_getFoldersKey(uid), foldersJson);
+
+      // Sync to Firebase
+      final ref = FirebaseDatabase.instance.ref('users/$uid/library');
+      final Map<String, dynamic> itemsMap = {};
+      for (var it in _items) {
+        itemsMap[it.id] = it.toJson();
+      }
+      final Map<String, dynamic> foldersMap = {};
+      for (var f in _folders) {
+        foldersMap[f.id] = f.toJson();
+      }
+      await ref.set({
+        'items': itemsMap,
+        'folders': foldersMap,
+        'updatedAt': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      debugPrint('Library save error: $e');
+    }
+  }
+
+  /// Clears active user library session on logout
+  void clearSession() {
+    _librarySubscription?.cancel();
+    _librarySubscription = null;
+    _currentUserId = null;
+    _selectedFolderId = null;
+    _items.clear();
+    _initDefaultFolders();
+    notifyListeners();
   }
 
   void setCurrentTab(String tab) {
@@ -176,6 +232,7 @@ class LibraryProvider extends ChangeNotifier {
       createdAt: DateTime.now(),
     );
     _folders.add(newFolder);
+    _saveToStorageAndCloud();
     notifyListeners();
   }
 
@@ -197,33 +254,36 @@ class LibraryProvider extends ChangeNotifier {
               : 'application/octet-stream',
       size: size,
       thumbnailUrl: mediaUrl,
+      cloudUrl: (mediaUrl != null && mediaUrl.startsWith('http')) ? mediaUrl : null,
       folderId: folderId ?? _selectedFolderId,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
       source: 'upload',
     );
     _items.insert(0, newItem);
-
-    // Increment item count if uploaded inside a folder
-    final targetFolderId = folderId ?? _selectedFolderId;
-    if (targetFolderId != null) {
-      final fIndex = _folders.indexWhere((f) => f.id == targetFolderId);
-      if (fIndex != -1) {
-        _folders[fIndex] = _folders[fIndex].copyWith(itemCount: _folders[fIndex].itemCount + 1);
-      }
-    }
+    _recalculateFolderCounts();
+    _saveToStorageAndCloud();
     notifyListeners();
   }
 
-  void deleteItem(String itemId) {
-    final item = _items.firstWhere((i) => i.id == itemId, orElse: () => _items.first);
-    if (item.folderId != null) {
-      final fIndex = _folders.indexWhere((f) => f.id == item.folderId);
-      if (fIndex != -1 && _folders[fIndex].itemCount > 0) {
-        _folders[fIndex] = _folders[fIndex].copyWith(itemCount: _folders[fIndex].itemCount - 1);
-      }
+  void moveItem(String itemId, String? targetFolderId) {
+    final index = _items.indexWhere((i) => i.id == itemId);
+    if (index != -1) {
+      _items[index] = _items[index].copyWith(
+        folderId: targetFolderId,
+        clearFolderId: targetFolderId == null,
+        updatedAt: DateTime.now(),
+      );
+      _recalculateFolderCounts();
+      _saveToStorageAndCloud();
+      notifyListeners();
     }
+  }
+
+  void deleteItem(String itemId) {
     _items.removeWhere((i) => i.id == itemId);
+    _recalculateFolderCounts();
+    _saveToStorageAndCloud();
     notifyListeners();
   }
 
@@ -231,6 +291,7 @@ class LibraryProvider extends ChangeNotifier {
     final index = _items.indexWhere((i) => i.id == itemId);
     if (index != -1 && newName.trim().isNotEmpty) {
       _items[index] = _items[index].copyWith(name: newName.trim(), updatedAt: DateTime.now());
+      _saveToStorageAndCloud();
       notifyListeners();
     }
   }
@@ -241,12 +302,24 @@ class LibraryProvider extends ChangeNotifier {
     if (_selectedFolderId == folderId) {
       _selectedFolderId = null;
     }
+    _recalculateFolderCounts();
+    _saveToStorageAndCloud();
     notifyListeners();
   }
 
   void emergencyWipeLibrary() {
+    final uid = _currentUserId;
+    if (uid != null && uid.isNotEmpty) {
+      SharedPreferences.getInstance().then((prefs) {
+        prefs.remove(_getItemsKey(uid));
+        prefs.remove(_getFoldersKey(uid));
+      });
+      try {
+        FirebaseDatabase.instance.ref('users/$uid/library').remove();
+      } catch (_) {}
+    }
     _items.clear();
-    _folders.clear();
+    _initDefaultFolders();
     _selectedFolderId = null;
     notifyListeners();
   }

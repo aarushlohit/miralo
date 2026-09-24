@@ -12,7 +12,8 @@ import '../../widgets/common/miralo_pin_pad.dart';
 /// Library Locked Screen — PIN entry for library vault.
 /// Uses SEPARATE vault.unlockLibrary() — independent from private chat.
 class LibraryLockedScreen extends StatefulWidget {
-  const LibraryLockedScreen({super.key});
+  final String? targetRoute;
+  const LibraryLockedScreen({super.key, this.targetRoute});
 
   @override
   State<LibraryLockedScreen> createState() => _LibraryLockedScreenState();
@@ -25,10 +26,23 @@ class _LibraryLockedScreenState extends State<LibraryLockedScreen> {
   bool _isVerifying = false;
   bool _useTextField = false;
 
+  bool _obscureText = true;
+
   @override
   void dispose() {
     _passcodeCtrl.dispose();
     super.dispose();
+  }
+
+  String _getTargetRoute(BuildContext context) {
+    if (widget.targetRoute != null && widget.targetRoute!.isNotEmpty) {
+      return widget.targetRoute!;
+    }
+    final routeArgs = ModalRoute.of(context)?.settings.arguments;
+    if (routeArgs is String && routeArgs.isNotEmpty) {
+      return routeArgs;
+    }
+    return AppRoutes.library;
   }
 
   void _onVerifyPasscode(String code) async {
@@ -50,10 +64,13 @@ class _LibraryLockedScreenState extends State<LibraryLockedScreen> {
     await Future.delayed(const Duration(milliseconds: 300));
     if (!mounted) return;
 
-    final ok = vault.unlockLibrary(code);
+    final ok = await vault.unlockLibraryAsync(code);
+
+    if (!mounted) return;
 
     if (ok) {
-      Navigator.pushReplacementNamed(context, AppRoutes.library);
+      final target = _getTargetRoute(context);
+      Navigator.pushReplacementNamed(context, target);
     } else {
       if (vault.isLibraryLockedOut) {
         _error = 'Too many failed attempts. Account locked out for 30s.';
@@ -70,13 +87,21 @@ class _LibraryLockedScreenState extends State<LibraryLockedScreen> {
   void _simulateBiometric() {
     final vault = Provider.of<VaultProvider>(context, listen: false);
     vault.unlockLibrary('1234');
-    Navigator.pushReplacementNamed(context, AppRoutes.library);
+    final target = _getTargetRoute(context);
+    Navigator.pushReplacementNamed(context, target);
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final vault = Provider.of<VaultProvider>(context);
+    final target = _getTargetRoute(context);
+    final isImages = target == AppRoutes.images;
+    final vaultTitle = isImages ? 'Images Vault' : 'Library Vault';
+    final vaultSubtitle = isImages
+        ? 'Enter library passcode or PIN to unlock images'
+        : 'Enter your passcode or PIN to unlock';
+
     final bg = isDark ? AppColors.darkBackground : AppColors.lightBackground;
     final textPrimary =
         isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
@@ -110,11 +135,11 @@ class _LibraryLockedScreenState extends State<LibraryLockedScreen> {
 
                 const SizedBox(height: AppSpacing.lg),
 
-                Text('Library Vault',
+                Text(vaultTitle,
                     style: AppTypography.heading2(color: textPrimary)),
                 const SizedBox(height: 4),
                 Text(
-                  'Enter your passcode or PIN to unlock',
+                  vaultSubtitle,
                   style: AppTypography.body(color: textSecondary),
                 ),
 
@@ -140,26 +165,101 @@ class _LibraryLockedScreenState extends State<LibraryLockedScreen> {
 
                 const SizedBox(height: AppSpacing.lg),
 
-                // Toggle between Alphanumeric & Numeric Keypad
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    TextButton.icon(
-                      icon: Icon(
-                        _useTextField ? Icons.pin_outlined : Icons.keyboard_outlined,
-                        size: 16,
-                        color: AppColors.accent,
+                // Segmented Toggle between Numeric PIN and Alphanumeric Passcode
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: AppSpacing.screenH),
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppColors.darkSurfaceSecondary : AppColors.lightSurfaceSecondary,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() => _useTextField = false),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            decoration: BoxDecoration(
+                              color: !_useTextField
+                                  ? (isDark ? AppColors.darkSurfacePrimary : AppColors.lightSurfacePrimary)
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(9),
+                              boxShadow: !_useTextField
+                                  ? [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.08),
+                                        blurRadius: 4,
+                                        offset: const Offset(0, 1),
+                                      ),
+                                    ]
+                                  : null,
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.pin_outlined,
+                                  size: 16,
+                                  color: !_useTextField ? AppColors.accent : textSecondary,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Numeric PIN',
+                                  style: AppTypography.caption(
+                                    color: !_useTextField ? textPrimary : textSecondary,
+                                  ).copyWith(fontWeight: !_useTextField ? FontWeight.w600 : FontWeight.normal),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
-                      label: Text(
-                        _useTextField ? 'Use Numeric Keypad' : 'Use Any Text Passcode',
-                        style: AppTypography.caption(color: AppColors.accent),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() => _useTextField = true),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            decoration: BoxDecoration(
+                              color: _useTextField
+                                  ? (isDark ? AppColors.darkSurfacePrimary : AppColors.lightSurfacePrimary)
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(9),
+                              boxShadow: _useTextField
+                                  ? [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.08),
+                                        blurRadius: 4,
+                                        offset: const Offset(0, 1),
+                                      ),
+                                    ]
+                                  : null,
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.password_outlined,
+                                  size: 16,
+                                  color: _useTextField ? AppColors.accent : textSecondary,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Text Passcode',
+                                  style: AppTypography.caption(
+                                    color: _useTextField ? textPrimary : textSecondary,
+                                  ).copyWith(fontWeight: _useTextField ? FontWeight.w600 : FontWeight.normal),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
-                      onPressed: () => setState(() => _useTextField = !_useTextField),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
 
-                const SizedBox(height: AppSpacing.md),
+                const SizedBox(height: AppSpacing.lg),
 
                 if (_useTextField) ...[
                   Padding(
@@ -168,18 +268,42 @@ class _LibraryLockedScreenState extends State<LibraryLockedScreen> {
                       children: [
                         TextField(
                           controller: _passcodeCtrl,
-                          obscureText: true,
+                          obscureText: _obscureText,
                           autofocus: true,
-                          decoration: const InputDecoration(
-                            hintText: 'Enter passcode (any phrase or pin)',
-                            prefixIcon: Icon(Icons.lock_outline, size: 18),
+                          keyboardType: TextInputType.text,
+                          style: AppTypography.body(color: textPrimary),
+                          decoration: InputDecoration(
+                            hintText: 'Enter passcode (letters, words, phrase)',
+                            prefixIcon: const Icon(Icons.lock_outline, size: 18),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscureText ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                size: 18,
+                              ),
+                              onPressed: () => setState(() => _obscureText = !_obscureText),
+                            ),
                           ),
                           onSubmitted: _onVerifyPasscode,
                         ),
-                        const SizedBox(height: AppSpacing.md),
-                        ElevatedButton(
-                          onPressed: () => _onVerifyPasscode(_passcodeCtrl.text),
-                          child: const Text('Unlock Library'),
+                        const SizedBox(height: AppSpacing.lg),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 48,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.accent,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            onPressed: _isVerifying ? null : () => _onVerifyPasscode(_passcodeCtrl.text),
+                            child: _isVerifying
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                  )
+                                : Text(isImages ? 'Unlock Images' : 'Unlock Library Vault', style: const TextStyle(fontWeight: FontWeight.bold)),
+                          ),
                         ),
                       ],
                     ),

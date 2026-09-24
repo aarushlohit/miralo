@@ -4,7 +4,9 @@ import 'package:provider/provider.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
+import '../../providers/ai_chat_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/library_provider.dart';
 import '../../providers/vault_provider.dart';
 import '../../providers/private_chat_provider.dart';
 import '../../widgets/common/miralo_logo.dart';
@@ -49,15 +51,42 @@ class _SplashScreenState extends State<SplashScreen>
       if (!mounted) return;
     }
     if (auth.isAuthenticated && auth.currentUser != null) {
+      final uid = auth.currentUser!.id;
+      final uname = auth.currentUser?.username;
+      final uemail = auth.currentUser?.email;
       final vault = Provider.of<VaultProvider>(context, listen: false);
       final chat = Provider.of<PrivateChatProvider>(context, listen: false);
-      await vault.attachUser(auth.currentUser!.id);
-      chat.initUserSession(auth.currentUser!.id);
+      final aiChat = Provider.of<AiChatProvider>(context, listen: false);
+      final library = Provider.of<LibraryProvider>(context, listen: false);
+
+      auth.addLogoutListener(chat.clearSession);
+      auth.addLogoutListener(vault.clearSession);
+      auth.addLogoutListener(aiChat.clearSession);
+      auth.addLogoutListener(library.clearSession);
+
+      chat.clearSession();
+      vault.clearSession();
+      aiChat.clearSession();
+      library.clearSession();
+
+      await vault.attachUser(uid);
+      await aiChat.initUserSession(uid);
+      chat.initUserSession(uid, username: uname, email: uemail);
+      await library.initUserSession(uid);
     }
     if (!mounted) return;
+    String targetRoute = AppRoutes.onboarding;
+    if (auth.isAuthenticated) {
+      final vault = Provider.of<VaultProvider>(context, listen: false);
+      if (!vault.hasPrivateSecret || !vault.hasLibraryPin) {
+        targetRoute = AppRoutes.securitySetup;
+      } else {
+        targetRoute = AppRoutes.home;
+      }
+    }
     Navigator.pushReplacementNamed(
       context,
-      auth.isAuthenticated ? AppRoutes.home : AppRoutes.onboarding,
+      targetRoute,
     );
   }
 

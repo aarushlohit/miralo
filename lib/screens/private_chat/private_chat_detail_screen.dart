@@ -1,7 +1,12 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/theme/miralo_tokens.dart';
+import '../../models/friend_request_model.dart';
 import '../../models/private_contact_model.dart';
 import '../../models/private_message_model.dart';
 import '../../providers/ai_chat_provider.dart';
@@ -9,12 +14,15 @@ import '../../providers/auth_provider.dart';
 import '../../providers/library_provider.dart';
 import '../../providers/private_chat_provider.dart';
 import '../../providers/vault_provider.dart';
+import '../../services/download_service.dart';
 import '../../widgets/chat/chat_header.dart';
 import '../../widgets/chat/chat_scaffold.dart';
 import '../../widgets/chat/composer.dart';
 import '../../widgets/chat/message_actions.dart';
 import '../../widgets/chat/message_list.dart';
 import '../../widgets/chat/message_renderer.dart';
+import '../../widgets/chat/pinned_messages_banner.dart';
+import '../../widgets/chat/pinned_messages_sheet.dart';
 import '../../widgets/chat/reaction_sheet.dart';
 
 /// Private Chat Screen
@@ -34,6 +42,44 @@ class PrivateChatDetailScreen extends StatefulWidget {
 
 class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
   String? _replyToText;
+  final ScrollController _scrollController = ScrollController();
+  final Map<String, GlobalKey> _messageKeys = {};
+  String? _highlightedMessageId;
+  Timer? _highlightTimer;
+
+  @override
+  void dispose() {
+    _highlightTimer?.cancel();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  GlobalKey _getMessageKey(String messageId) {
+    return _messageKeys.putIfAbsent(messageId, () => GlobalKey());
+  }
+
+  void _scrollToMessage(String messageId) {
+    final key = _messageKeys[messageId];
+    if (key?.currentContext != null) {
+      Scrollable.ensureVisible(
+        key!.currentContext!,
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeInOut,
+        alignment: 0.3,
+      );
+    }
+    setState(() {
+      _highlightedMessageId = messageId;
+    });
+    _highlightTimer?.cancel();
+    _highlightTimer = Timer(const Duration(seconds: 2), () {
+      if (mounted) {
+        setState(() {
+          _highlightedMessageId = null;
+        });
+      }
+    });
+  }
 
   void _quickExit(BuildContext context) {
     final vault = Provider.of<VaultProvider>(context, listen: false);
@@ -175,38 +221,40 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                 },
               ),
 
-              // Block contact
-              if (contact != null)
+              // Block / Unblock contact
+              if (contact != null && !contact.isGroup)
                 ListTile(
-                  leading: const Icon(Icons.block_rounded,
-                      color: MiraloColors.danger, size: 22),
+                  leading: Icon(
+                    chat.isBlocked(contact.id) ? Icons.lock_open_rounded : Icons.block_rounded,
+                    color: chat.isBlocked(contact.id) ? textPrimary : MiraloColors.danger,
+                    size: 22,
+                  ),
                   title: Text(
-                    'Block contact',
+                    chat.isBlocked(contact.id) ? 'Unblock contact' : 'Block contact',
                     style: MiraloTypography.bodyMedium(
-                        color: MiraloColors.danger),
+                      color: chat.isBlocked(contact.id) ? textPrimary : MiraloColors.danger,
+                    ),
                   ),
                   dense: true,
                   onTap: () {
                     Navigator.pop(ctx);
-                    final auth = Provider.of<AuthProvider>(context, listen: false);
-                    final cur = auth.currentUser?.username.toLowerCase().trim() ?? '';
-                    final target = contact.username.toLowerCase().trim();
-
-                    if (cur == 'ashlinmirsha' && target == 'aarushlohit') {
+                    if (chat.isBlocked(contact.id)) {
+                      chat.unblockUser(contact.id);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('how u can block your future hubby !!! chat with him !!!! babe'),
-                          backgroundColor: MiraloColors.accent,
-                          duration: Duration(seconds: 4),
-                        ),
+                        SnackBar(content: Text('@${contact.username} has been unblocked.')),
                       );
                       return;
                     }
 
-                    if (cur == 'aarushlohit' && target == 'ashlinmirsha') {
+                    final auth = Provider.of<AuthProvider>(context, listen: false);
+                    final cur = auth.currentUser?.username.toLowerCase().trim() ?? '';
+                    final target = contact.username.toLowerCase().trim();
+
+                    if ((cur == 'ashlinmirsha' && target == 'aarushlohit') ||
+                        (cur == 'aarushlohit' && target == 'ashlinmirsha')) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('how u can block your future wifey !!! chat with her !!!! babe'),
+                          content: Text("how you can block your babe' go cuddle him !!!!"),
                           backgroundColor: MiraloColors.accent,
                           duration: Duration(seconds: 4),
                         ),
@@ -222,18 +270,32 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                         actions: [
                           TextButton(onPressed: () => Navigator.pop(dCtx), child: const Text('Cancel')),
                           TextButton(
-                            onPressed: () {
+                            onPressed: () async {
                               Navigator.pop(dCtx);
-                              chat.blockUser(
+                              final ok = await chat.blockUser(
                                 targetId: contact.id,
                                 targetUsername: contact.username,
                                 targetDisplayName: contact.displayName,
                                 currentUsername: cur,
                               );
-                              Navigator.pop(context);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('@${contact.username} has been blocked.')),
-                              );
+                              if (!ok) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text("how you can block your babe' go cuddle him !!!!"),
+                                      backgroundColor: MiraloColors.accent,
+                                      duration: Duration(seconds: 4),
+                                    ),
+                                  );
+                                }
+                                return;
+                              }
+                              if (context.mounted) {
+                                Navigator.pop(context);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('@${contact.username} has been blocked.')),
+                                );
+                              }
                             },
                             style: TextButton.styleFrom(foregroundColor: Colors.red),
                             child: const Text('Block'),
@@ -356,6 +418,46 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
               : (msg.type == 'image' ? '[Photo Attachment]' : '[Media]');
         });
       },
+      onDownload: (msg.mediaUrl != null || msg.imageBase64 != null)
+          ? () => _downloadMessageMedia(context, msg)
+          : null,
+      onFavorite: msg.isGif
+          ? () {
+              chat.toggleFavoriteMessage(msg);
+              final isFav = chat.isMessageFavorite(msg.id);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(isFav ? 'Added to Favorites GIF ⭐' : 'Removed from Favorites'),
+                  duration: const Duration(seconds: 1),
+                ),
+              );
+            }
+          : null,
+      isFavorite: chat.isMessageFavorite(msg.id),
+      onPin: () async {
+        final ok = await chat.togglePinMessage(msg);
+        if (!context.mounted) return;
+        if (!ok) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('You can only pin up to 6 messages. Unpin a message first.'),
+              backgroundColor: Colors.redAccent,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        } else {
+          final isPinned = chat.isMessagePinned(msg.id);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(isPinned
+                  ? 'Message pinned 📌 (${chat.getPinnedMessageCount()}/6)'
+                  : 'Message unpinned'),
+              duration: const Duration(seconds: 1),
+            ),
+          );
+        }
+      },
+      isPinned: msg.isPinned,
       onSaveToLibrary: () {
         chat.saveMessageToLibrary(msg, library);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -378,51 +480,153 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
     );
   }
 
+  Future<void> _downloadMessageMedia(BuildContext context, PrivateMessageModel msg) async {
+    try {
+      Uint8List? fileBytes;
+      if (msg.imageBase64 != null && msg.imageBase64!.isNotEmpty) {
+        fileBytes = base64Decode(msg.imageBase64!);
+      } else if (msg.mediaUrl != null && msg.mediaUrl!.startsWith('http')) {
+        final resp = await http.get(Uri.parse(msg.mediaUrl!));
+        if (resp.statusCode == 200) {
+          fileBytes = resp.bodyBytes;
+        }
+      }
+
+      if (fileBytes != null && context.mounted) {
+        final ext = msg.type == 'image'
+            ? 'jpg'
+            : (msg.type == 'voice' ? 'm4a' : 'bin');
+        final fname = msg.fileName ?? 'file_${DateTime.now().millisecondsSinceEpoch}.$ext';
+        await DownloadService.downloadAndPrompt(
+          context,
+          fileName: fname,
+          bytes: fileBytes,
+          type: msg.type,
+        );
+      }
+    } catch (e) {
+      debugPrint('Error downloading media: $e');
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    if (auth.currentUser != null) {
+      final chat = Provider.of<PrivateChatProvider>(context, listen: false);
+      chat.initUserSession(
+        auth.currentUser!.id,
+        username: auth.currentUser?.username,
+        email: auth.currentUser?.email,
+        displayName: auth.currentUser?.displayName,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final auth = Provider.of<AuthProvider>(context, listen: false);
     final chat = Provider.of<PrivateChatProvider>(context);
     final library = Provider.of<LibraryProvider>(context, listen: false);
     final contact = chat.activeContact;
     final messages = chat.activeMessages;
 
     final displayName = contact?.displayName ?? 'Mira';
-    final subtitle = contact?.isOnline == true ? 'Active recently' : (contact?.lastSeenText ?? '');
+    final subtitle = contact?.isGroup == true
+        ? '${contact?.memberIds.length ?? 0} members'
+        : (contact?.isOnline == true
+            ? 'Online'
+            : (contact?.lastSeenText ?? 'Active recently'));
+
+    final pinnedMessages = chat.getPinnedMessages(contact?.id);
 
     return ChatScaffold(
       header: ChatHeader(
         isPrivate: true,
         title: displayName,
         subtitle: subtitle,
+        avatarUrl: contact?.avatarUrl,
+        isGroup: contact?.isGroup == true,
         onBack: () => Navigator.pop(context),
+        onDoubleTapAvatar: () => _panicExitToAiChat(context),
         onEditDisplayName: contact != null
             ? () => _showEditDisplayNameDialog(context, chat, contact)
             : null,
         onMoreOptions: () => _showMoreMenu(context, chat, contact),
       ),
-      body: MessageList(
-        itemCount: messages.length,
-        itemBuilder: (context, index) {
-          final msg = messages[index];
-          final isMe = chat.isMyMessage(msg);
-          return MessageRenderer(
-            id: msg.id,
-            text: msg.text,
-            isMe: isMe,
-            senderName: isMe ? null : displayName,
-            createdAt: msg.createdAt,
-            imageBase64: msg.imageBase64,
-            imageUrl: msg.mediaUrl,
-            type: msg.type,
-            fileName: msg.fileName,
-            fileSize: msg.fileSize,
-            status: msg.status,
-            replyToText: msg.replyToText,
-            reactions: msg.reactions,
-            onReactionTap: (emoji) => chat.toggleReaction(msg.id, emoji),
-            onLongPress: () => _showMessageOptions(context, msg, chat, library),
-          );
-        },
+      body: Column(
+        children: [
+          if (pinnedMessages.isNotEmpty)
+            PinnedMessagesBanner(
+              pinnedMessages: pinnedMessages,
+              currentUserId: auth.currentUser?.id,
+              onTapMessage: (msg) => _scrollToMessage(msg.id),
+              onUnpinMessage: (msg) async {
+                await chat.togglePinMessage(msg);
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Message unpinned'),
+                    duration: Duration(seconds: 1),
+                  ),
+                );
+              },
+              onViewAll: () => PinnedMessagesSheet.show(
+                context,
+                pinnedMessages: pinnedMessages,
+                onTapMessage: (msg) => _scrollToMessage(msg.id),
+                onUnpinMessage: (msg) => chat.togglePinMessage(msg),
+                onUnpinAll: () => chat.clearAllPinnedMessages(contact?.id ?? chat.activeChatId ?? ''),
+              ),
+            ),
+          Expanded(
+            child: MessageList(
+              controller: _scrollController,
+              itemCount: messages.length,
+              itemBuilder: (context, index) {
+                final msg = messages[index];
+                final isMe = chat.isMyMessage(msg);
+                return MessageRenderer(
+                  key: _getMessageKey(msg.id),
+                  id: msg.id,
+                  text: msg.text,
+                  isMe: isMe,
+                  isPinned: msg.isPinned,
+                  isHighlighted: _highlightedMessageId == msg.id,
+                  senderName: isMe ? null : (msg.senderName ?? displayName),
+                  createdAt: msg.createdAt,
+                  imageBase64: msg.imageBase64,
+                  imageUrl: msg.mediaUrl,
+                  type: msg.type,
+                  fileName: msg.fileName,
+                  fileSize: msg.fileSize,
+                  status: msg.status,
+                  replyToText: msg.replyToText,
+                  reactions: msg.reactions,
+                  onReactionTap: (emoji) => chat.toggleReaction(msg.id, emoji),
+                  onDownload: (msg.mediaUrl != null || msg.imageBase64 != null)
+                      ? () => _downloadMessageMedia(context, msg)
+                      : null,
+                  onSaveToLibrary: () {
+                    chat.saveMessageToLibrary(msg, library);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Saved to Library Vault.')),
+                    );
+                  },
+                  onMoveToVault: () {
+                    chat.moveMessageToPrivateVault(msg, library);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Moved to Library Vault (Removed from chat).')),
+                    );
+                  },
+                  onLongPress: () => _showMessageOptions(context, msg, chat, library),
+                );
+              },
+            ),
+          ),
+        ],
       ),
       composer: Column(
         mainAxisSize: MainAxisSize.min,
@@ -458,24 +662,288 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                 ],
               ),
             ),
+          // Blocked Contact Banner
+          if (contact != null && chat.isBlocked(contact.id))
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              color: Colors.red.withValues(alpha: 0.12),
+              child: Row(
+                children: [
+                  const Icon(Icons.block_rounded, size: 16, color: Colors.red),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'You have blocked @${contact.username}.',
+                      style: MiraloTypography.bodySmall(
+                        color: isDark ? Colors.red.shade200 : Colors.red.shade800,
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.red,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    onPressed: () {
+                      chat.unblockUser(contact.id);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('@${contact.username} has been unblocked.')),
+                      );
+                    },
+                    child: const Text('Unblock', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                  ),
+                ],
+              ),
+            ),
+
+          // Cold DM / Non-contact Relationship Banner
+          if (contact != null && !chat.isBlocked(contact.id) && !chat.isContact(contact.id, contact.username))
+            Builder(
+              builder: (ctx) {
+                FriendRequestModel? incomingReq;
+                try {
+                  incomingReq = chat.pendingFriendRequests.firstWhere(
+                    (r) => r.senderId == contact.id || r.senderUsername.toLowerCase() == contact.username.toLowerCase(),
+                  );
+                } catch (_) {}
+
+                final sentStatus = chat.getSentRequestStatus(contact.username) ?? chat.getSentRequestStatus(contact.id);
+
+                if (incomingReq != null) {
+                  return Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    color: MiraloColors.accent.withValues(alpha: 0.12),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.person_add_outlined, size: 16, color: MiraloColors.accent),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '@${contact.username} sent you a friend request.',
+                            style: MiraloTypography.bodySmall(
+                              color: isDark ? MiraloColors.darkTextPrimary : MiraloColors.lightTextPrimary,
+                            ),
+                          ),
+                        ),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: MiraloColors.accent,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          onPressed: () {
+                            chat.respondToFriendRequest(incomingReq!, true);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Accepted friend request from @${contact.username}')),
+                            );
+                          },
+                          child: const Text('Accept', style: TextStyle(fontSize: 12)),
+                        ),
+                        const SizedBox(width: 6),
+                        OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: isDark ? MiraloColors.darkTextMuted : MiraloColors.lightTextMuted,
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          onPressed: () {
+                            chat.respondToFriendRequest(incomingReq!, false);
+                          },
+                          child: const Text('Decline', style: TextStyle(fontSize: 12)),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                if (sentStatus == 'pending') {
+                  return Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    color: isDark ? const Color(0xFF222222) : const Color(0xFFE5E7EB),
+                    child: Row(
+                      children: [
+                        Icon(Icons.hourglass_top_rounded, size: 16, color: isDark ? Colors.white70 : Colors.black54),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Friend request sent to @${contact.username} (Pending acceptance).',
+                            style: MiraloTypography.bodySmall(
+                              color: isDark ? MiraloColors.darkTextSecondary : MiraloColors.lightTextSecondary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  color: MiraloColors.accent.withValues(alpha: 0.1),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.person_add_alt_1_outlined, size: 16, color: MiraloColors.accent),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '@${contact.username} is not in your contacts.',
+                          style: MiraloTypography.bodySmall(
+                            color: isDark ? MiraloColors.darkTextPrimary : MiraloColors.lightTextPrimary,
+                          ),
+                        ),
+                      ),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: MiraloColors.accent,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        onPressed: () {
+                          final auth = Provider.of<AuthProvider>(context, listen: false);
+                          chat.sendFriendRequest(
+                            senderId: auth.currentUser?.id ?? 'me',
+                            senderName: auth.currentUser?.displayName ?? 'User',
+                            senderUsername: auth.currentUser?.username ?? 'user',
+                            targetUsernameOrEmail: contact.username,
+                          );
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Friend request sent to @${contact.username}')),
+                          );
+                        },
+                        child: const Text('Add Friend', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+
+          if (chat.coldDmLimitReached)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF3F4F6),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline, size: 16, color: MiraloColors.accent),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Direct message limit reached (1 message). Further messages require an accepted friend request.',
+                      style: MiraloTypography.bodySmall(
+                        color: isDark ? MiraloColors.darkTextSecondary : MiraloColors.lightTextSecondary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           Composer(
             isPrivate: true,
-            hintText: 'Message $displayName...',
+            isGroup: contact?.isGroup == true,
+            groupMembers: contact != null ? chat.getGroupMembers(contact) : const [],
+            onJumpToMessage: (id) => _scrollToMessage(id),
+            onOpenPinnedMessages: () => PinnedMessagesSheet.show(
+              context,
+              pinnedMessages: pinnedMessages,
+              onTapMessage: (msg) => _scrollToMessage(msg.id),
+              onUnpinMessage: (msg) => chat.togglePinMessage(msg),
+              onUnpinAll: () => chat.clearAllPinnedMessages(contact?.id ?? chat.activeChatId ?? ''),
+            ),
+            hintText: contact != null && chat.isBlocked(contact.id)
+                ? 'User is blocked. Unblock to message.'
+                : (chat.coldDmLimitReached
+                    ? 'Friend request pending acceptance...'
+                    : 'Message $displayName...'),
             onSubmitted: (text) {
+              if (contact != null && chat.isBlocked(contact.id)) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Unblock @${contact.username} to send messages.')),
+                );
+                return;
+              }
+              if (chat.coldDmLimitReached) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Cannot send more messages until friend request is accepted.'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+                return;
+              }
               chat.sendTextMessage(text, replyToText: _replyToText);
               if (_replyToText != null) setState(() => _replyToText = null);
             },
-            onImageAttached: (base64OrUrl, fileName) {
+            onMediaSubmitted: (type, urlOrBase64, fileName, fileSize, captionText) {
+              if (contact != null && chat.isBlocked(contact.id)) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Unblock @${contact.username} to send files.')),
+                );
+                return;
+              }
+              if (chat.coldDmLimitReached) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Cannot send files until friend request is accepted.'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+                return;
+              }
               chat.sendMediaMessage(
-                type: 'image',
-                mediaUrl: base64OrUrl.startsWith('http') ? base64OrUrl : null,
-                imageBase64: base64OrUrl.startsWith('http') ? null : base64OrUrl,
+                type: type,
+                mediaUrl: urlOrBase64.startsWith('http') ? urlOrBase64 : null,
+                imageBase64: urlOrBase64.startsWith('http') ? null : urlOrBase64,
+                text: captionText,
                 fileName: fileName,
-                fileSize: '1.2 MB',
+                fileSize: fileSize,
               );
+              if (_replyToText != null) setState(() => _replyToText = null);
             },
           ),
         ],
+      ),
+    );
+  }
+
+  void _panicExitToAiChat(BuildContext context) {
+    final vault = Provider.of<VaultProvider>(context, listen: false);
+    final ai = Provider.of<AiChatProvider>(context, listen: false);
+
+    // Instantly lock all secret vaults & conversations
+    vault.lockAll();
+
+    // Immediately route to last used AI conversation or innocent dummy prompt
+    if (ai.activeChat == null) {
+      ai.prefillPrompt('Can you explain quantum computing simply?');
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        AppRoutes.home,
+        (route) => false,
+      );
+    } else {
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        AppRoutes.aiChat,
+        (route) => false,
+      );
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Workspace locked. Switched to AI chat.'),
+        duration: Duration(seconds: 1),
       ),
     );
   }

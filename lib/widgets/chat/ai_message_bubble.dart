@@ -43,45 +43,6 @@ class _UserMessage extends StatelessWidget {
   final Function(String editedText)? onEdit;
   const _UserMessage({required this.message, this.onEdit});
 
-  void _showEditDialog(BuildContext context) {
-    final controller = TextEditingController(text: message.text);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? AppColors.darkSurfacePrimary : AppColors.lightSurfacePrimary;
-    final textColor = isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: bg,
-        title: Text('Edit Prompt', style: AppTypography.heading3(color: textColor)),
-        content: TextField(
-          controller: controller,
-          maxLines: 4,
-          style: AppTypography.body(color: textColor),
-          decoration: const InputDecoration(
-            hintText: 'Edit your prompt...',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final newText = controller.text.trim();
-              Navigator.pop(ctx);
-              if (newText.isNotEmpty && newText != message.text) {
-                onEdit?.call(newText);
-              }
-            },
-            child: const Text('Save & Send'),
-          ),
-        ],
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -135,7 +96,7 @@ class _UserMessage extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(top: 2, right: 4),
                   child: InkWell(
-                    onTap: () => _showEditDialog(context),
+                    onTap: () => onEdit?.call(message.text),
                     borderRadius: BorderRadius.circular(4),
                     child: Padding(
                       padding: const EdgeInsets.all(4.0),

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/routes/app_routes.dart';
@@ -6,6 +7,8 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../providers/ai_chat_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/library_provider.dart';
+import '../../providers/private_chat_provider.dart';
 import '../../providers/vault_provider.dart';
 import '../../services/ai_service.dart';
 import '../../widgets/chat/composer.dart';
@@ -59,12 +62,38 @@ class _AiHomeScreenState extends State<AiHomeScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkIntruderLogs();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       final auth = Provider.of<AuthProvider>(context, listen: false);
       if (auth.currentUser != null) {
+        final uid = auth.currentUser!.id;
         final vault = Provider.of<VaultProvider>(context, listen: false);
-        vault.attachUser(auth.currentUser!.id);
+        final aiChat = Provider.of<AiChatProvider>(context, listen: false);
+        final chat = Provider.of<PrivateChatProvider>(context, listen: false);
+        final library = Provider.of<LibraryProvider>(context, listen: false);
+
+        // Ensure all providers are always cleared when logging out from any screen
+        auth.addLogoutListener(chat.clearSession);
+        auth.addLogoutListener(vault.clearSession);
+        auth.addLogoutListener(aiChat.clearSession);
+        auth.addLogoutListener(library.clearSession);
+
+        await vault.attachUser(uid);
+        if (!vault.hasPrivateSecret || !vault.hasLibraryPin) {
+          if (mounted) {
+            Navigator.pushReplacementNamed(context, AppRoutes.securitySetup);
+          }
+          return;
+        }
+        aiChat.initUserSession(uid);
+        chat.initUserSession(
+          uid,
+          username: auth.currentUser?.username,
+          email: auth.currentUser?.email,
+        );
+        library.initUserSession(uid);
+      }
+      if (mounted) {
+        _checkIntruderLogs();
       }
     });
   }
@@ -78,9 +107,12 @@ class _AiHomeScreenState extends State<AiHomeScreen> {
       final bg = isDark ? AppColors.darkSurfacePrimary : AppColors.lightSurfacePrimary;
       final textPrimary = isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
       final textSecondary = isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
+      final lastLog = logs.last;
+      final hasRealPhoto = lastLog.photoBase64 != null && lastLog.photoBase64!.isNotEmpty;
 
       showDialog(
         context: context,
+        barrierDismissible: false,
         builder: (ctx) => AlertDialog(
           backgroundColor: bg,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusSheet)),
@@ -99,37 +131,81 @@ class _AiHomeScreenState extends State<AiHomeScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Someone attempted to access your account or vault with incorrect passcodes ($count failed attempt(s)).',
+                lastLog.targetUsername != null && lastLog.targetUsername!.isNotEmpty
+                    ? 'Someone attempted to access your account (@${lastLog.targetUsername}) with incorrect credentials ($count failed attempt(s)).'
+                    : 'Someone attempted to access your account or vault with incorrect passcodes ($count failed attempt(s)).',
                 style: AppTypography.body(color: textSecondary),
               ),
               const SizedBox(height: AppSpacing.md),
-              Container(
-                width: double.infinity,
-                height: 120,
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.darkSurfaceSecondary : AppColors.lightSurfaceSecondary,
+              if (hasRealPhoto) ...[
+                ClipRRect(
                   borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                  border: Border.all(color: AppColors.danger.withValues(alpha: 0.4)),
+                  child: Stack(
+                    alignment: Alignment.bottomRight,
+                    children: [
+                      Image.memory(
+                        base64Decode(lastLog.photoBase64!),
+                        width: double.infinity,
+                        height: 200,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          width: double.infinity,
+                          height: 120,
+                          color: Colors.black26,
+                          child: const Center(child: Text('Photo format error')),
+                        ),
+                      ),
+                      Container(
+                        margin: const EdgeInsets.all(8),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.7),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.camera_alt_rounded, size: 12, color: Colors.white),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Front Camera Snapshot',
+                              style: AppTypography.caption(color: Colors.white).copyWith(fontSize: 10),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.camera_alt_outlined, color: AppColors.danger, size: 36),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text('[Captured Intruder Frame]',
-                        style: AppTypography.caption(color: AppColors.danger)),
-                    Text('Time: ${logs.last.timestamp.hour}:${logs.last.timestamp.minute}:${logs.last.timestamp.second}',
-                        style: AppTypography.caption(color: textSecondary)),
-                  ],
+              ] else ...[
+                Container(
+                  width: double.infinity,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    color: isDark ? AppColors.darkSurfaceSecondary : AppColors.lightSurfaceSecondary,
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                    border: Border.all(color: AppColors.danger.withValues(alpha: 0.4)),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.no_photography_outlined, color: AppColors.danger, size: 36),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text('Security Violation Recorded',
+                          style: AppTypography.caption(color: AppColors.danger)),
+                      Text('Time: ${lastLog.timestamp.hour.toString().padLeft(2, '0')}:${lastLog.timestamp.minute.toString().padLeft(2, '0')}:${lastLog.timestamp.second.toString().padLeft(2, '0')}',
+                          style: AppTypography.caption(color: textSecondary)),
+                    ],
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
           actions: [
             ElevatedButton(
-              onPressed: () {
-                vault.clearIntruderLogs();
-                Navigator.pop(ctx);
+              onPressed: () async {
+                await vault.clearIntruderLogs();
+                if (ctx.mounted) Navigator.pop(ctx);
               },
               child: const Text('Dismiss Alert'),
             ),
@@ -339,9 +415,47 @@ class _AiHomeScreenState extends State<AiHomeScreen> {
       backgroundColor: bg,
       drawer: const AppSidebarDrawer(),
       appBar: MiraloAppBar(
-        leadingIcon: Icons.menu_rounded,
-        leadingTooltip: 'Open sidebar',
-        onLeadingTap: () => _scaffoldKey.currentState?.openDrawer(),
+        leading: Consumer<PrivateChatProvider>(
+          builder: (context, privateChat, _) {
+            final hasUnread = privateChat.totalUnreadCount > 0 ||
+                privateChat.pendingFriendRequests.isNotEmpty;
+            return Stack(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: surfaceColor,
+                    shape: BoxShape.circle,
+                  ),
+                  child: IconButton(
+                    padding: EdgeInsets.zero,
+                    icon: Icon(Icons.menu_rounded, color: textPrimary, size: 24),
+                    onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+                    tooltip: 'Open sidebar',
+                  ),
+                ),
+                if (hasUnread)
+                  Positioned(
+                    right: 4,
+                    top: 4,
+                    child: Container(
+                      width: 9,
+                      height: 9,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0A84FF),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: bg,
+                          width: 1.5,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
         // Subtle compact Model Selector in top bar center per section 9
         titleWidget: GestureDetector(
           onTap: () => _showModelSelector(context, ai),

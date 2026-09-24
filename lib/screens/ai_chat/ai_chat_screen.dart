@@ -10,8 +10,32 @@ import '../../widgets/chat/composer.dart';
 import '../../widgets/chat/message_list.dart';
 import '../../widgets/common/miralo_empty_state.dart';
 
-class AiChatScreen extends StatelessWidget {
+class AiChatScreen extends StatefulWidget {
   const AiChatScreen({super.key});
+
+  @override
+  State<AiChatScreen> createState() => _AiChatScreenState();
+}
+
+class _AiChatScreenState extends State<AiChatScreen> {
+  final TextEditingController _composerController = TextEditingController();
+  final FocusNode _composerFocusNode = FocusNode();
+
+  @override
+  void dispose() {
+    _composerController.dispose();
+    _composerFocusNode.dispose();
+    super.dispose();
+  }
+
+  void _handleEdit(String editedText) {
+    // Prefill the composer field with the edited text so user can adjust & resend
+    _composerController.text = editedText;
+    _composerController.selection = TextSelection.collapsed(
+      offset: editedText.length,
+    );
+    _composerFocusNode.requestFocus();
+  }
 
   void _showModelSelector(BuildContext context, AiChatProvider ai) {
     final models = ai.availableModels;
@@ -230,8 +254,7 @@ class AiChatScreen extends StatelessWidget {
                       ? () => ai.regenerateLast(isSpecialUser: auth.isSpecialUser)
                       : null,
                   onEdit: msg.role == 'user'
-                      ? (editedText) => ai.editUserPrompt(msg.id, editedText,
-                          isSpecialUser: auth.isSpecialUser)
+                      ? (editedText) => _handleEdit(editedText)
                       : null,
                 );
               },
@@ -240,6 +263,8 @@ class AiChatScreen extends StatelessWidget {
         isPrivate: false,
         isSubmitting: ai.isStreaming,
         hintText: 'Ask anything...',
+        controller: _composerController,
+        focusNode: _composerFocusNode,
         onSubmitted: (prompt) =>
             ai.sendPrompt(prompt, isSpecialUser: auth.isSpecialUser),
         onSubmittedWithImage: (prompt, img) => ai.sendPrompt(prompt,

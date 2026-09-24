@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/theme/app_colors.dart';
@@ -35,6 +36,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   Future<void> _handleSignUp() async {
+    // Immediately dismiss virtual keyboard so it doesn't linger into next page
+    FocusManager.instance.primaryFocus?.unfocus();
+    FocusScope.of(context).unfocus();
+    SystemChannels.textInput.invokeMethod('TextInput.hide');
+
     final name = _nameController.text.trim();
     final username = _usernameController.text.trim().toLowerCase();
     final email = _emailController.text.trim();
@@ -62,6 +68,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final success = await auth.signup(name, email, pass, username: username.isNotEmpty ? username : null);
     if (success && mounted) {
+      FocusManager.instance.primaryFocus?.unfocus();
+      FocusScope.of(context).unfocus();
+      SystemChannels.textInput.invokeMethod('TextInput.hide');
       Navigator.pushReplacementNamed(context, AppRoutes.securitySetup);
     } else if (mounted) {
       setState(() => _errorMessage = auth.errorMessage ?? 'Sign up failed. Please try again.');
@@ -93,20 +102,30 @@ class _SignUpScreenState extends State<SignUpScreen> {
               title: '',
             ),
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(AppSpacing.screenH,
-                    AppSpacing.sm, AppSpacing.screenH, AppSpacing.xl),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text('Create account',
-                  style: AppTypography.display(color: textPrimary)),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                'Join MIRALO AI for private, intelligent workflows.',
-                style: AppTypography.body(color: textSecondary),
-              ),
-              const SizedBox(height: AppSpacing.xl),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenH),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: constraints.maxHeight,
+                      ),
+                      child: IntrinsicHeight(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const SizedBox(height: AppSpacing.sm),
+                            Text('Create account',
+                                style: AppTypography.display(color: textPrimary)),
+                            const SizedBox(height: AppSpacing.sm),
+                            Text(
+                              'Join MIRALO AI for private, intelligent workflows.',
+                              style: AppTypography.body(color: textSecondary),
+                            ),
+                            const SizedBox(height: AppSpacing.xl),
 
               // Error banner
               if (_errorMessage != null) ...[
@@ -250,13 +269,18 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   ),
                 ),
               ),
+              const SizedBox(height: AppSpacing.sm),
             ],
           ),
         ),
       ),
-    ],
-  ),
+    );
+  },
 ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

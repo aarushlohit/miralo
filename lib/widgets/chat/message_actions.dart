@@ -7,6 +7,11 @@ class MessageActionsSheet extends StatelessWidget {
   final String text;
   final VoidCallback? onReact;
   final VoidCallback? onReply;
+  final VoidCallback? onDownload;
+  final VoidCallback? onFavorite;
+  final bool isFavorite;
+  final VoidCallback? onPin;
+  final bool isPinned;
   final VoidCallback? onSaveToLibrary;
   final VoidCallback? onMoveToVault;
   final VoidCallback? onDelete;
@@ -16,6 +21,11 @@ class MessageActionsSheet extends StatelessWidget {
     required this.text,
     this.onReact,
     this.onReply,
+    this.onDownload,
+    this.onFavorite,
+    this.isFavorite = false,
+    this.onPin,
+    this.isPinned = false,
     this.onSaveToLibrary,
     this.onMoveToVault,
     this.onDelete,
@@ -26,6 +36,11 @@ class MessageActionsSheet extends StatelessWidget {
     required String text,
     VoidCallback? onReact,
     VoidCallback? onReply,
+    VoidCallback? onDownload,
+    VoidCallback? onFavorite,
+    bool isFavorite = false,
+    VoidCallback? onPin,
+    bool isPinned = false,
     VoidCallback? onSaveToLibrary,
     VoidCallback? onMoveToVault,
     VoidCallback? onDelete,
@@ -45,6 +60,11 @@ class MessageActionsSheet extends StatelessWidget {
         text: text,
         onReact: onReact,
         onReply: onReply,
+        onDownload: onDownload,
+        onFavorite: onFavorite,
+        isFavorite: isFavorite,
+        onPin: onPin,
+        isPinned: isPinned,
         onSaveToLibrary: onSaveToLibrary,
         onMoveToVault: onMoveToVault,
         onDelete: onDelete,
@@ -118,6 +138,36 @@ class MessageActionsSheet extends StatelessWidget {
                 );
               },
             ),
+            if (onDownload != null)
+              _ActionRow(
+                icon: Icons.file_download_outlined,
+                title: 'Download to Device',
+                textColor: textColor,
+                onTap: () {
+                  Navigator.pop(context);
+                  onDownload?.call();
+                },
+              ),
+            if (onFavorite != null)
+              _ActionRow(
+                icon: isFavorite ? Icons.star_rounded : Icons.star_border_rounded,
+                title: isFavorite ? 'Remove from Favorites' : 'Save Favorite',
+                textColor: isFavorite ? MiraloColors.accent : textColor,
+                onTap: () {
+                  Navigator.pop(context);
+                  onFavorite?.call();
+                },
+              ),
+            if (onPin != null)
+              _ActionRow(
+                icon: isPinned ? Icons.push_pin_rounded : Icons.push_pin_outlined,
+                title: isPinned ? 'Unpin Message' : 'Pin Message',
+                textColor: isPinned ? MiraloColors.accent : textColor,
+                onTap: () {
+                  Navigator.pop(context);
+                  onPin?.call();
+                },
+              ),
             if (onSaveToLibrary != null)
               _ActionRow(
                 icon: Icons.bookmark_border_rounded,

@@ -7,12 +7,16 @@ class ImageViewer extends StatelessWidget {
   final String? imageBase64;
   final String? imageUrl;
   final String title;
+  final VoidCallback? onMoveToVault;
+  final VoidCallback? onSaveToLibrary;
 
   const ImageViewer({
     super.key,
     this.imageBase64,
     this.imageUrl,
     this.title = 'Image',
+    this.onMoveToVault,
+    this.onSaveToLibrary,
   });
 
   static void show(
@@ -20,6 +24,8 @@ class ImageViewer extends StatelessWidget {
     String? imageBase64,
     String? imageUrl,
     String title = 'Image',
+    VoidCallback? onMoveToVault,
+    VoidCallback? onSaveToLibrary,
   }) {
     Navigator.push(
       context,
@@ -28,6 +34,8 @@ class ImageViewer extends StatelessWidget {
           imageBase64: imageBase64,
           imageUrl: imageUrl,
           title: title,
+          onMoveToVault: onMoveToVault,
+          onSaveToLibrary: onSaveToLibrary,
         ),
       ),
     );
@@ -50,6 +58,44 @@ class ImageViewer extends StatelessWidget {
           style: MiraloTypography.titleMedium(color: MiraloColors.darkTextPrimary),
         ),
         centerTitle: true,
+        actions: [
+          if (onMoveToVault != null || onSaveToLibrary != null)
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert, color: MiraloColors.darkTextPrimary),
+              onSelected: (val) {
+                if (val == 'move_vault') {
+                  Navigator.pop(context);
+                  onMoveToVault?.call();
+                } else if (val == 'save_library') {
+                  onSaveToLibrary?.call();
+                }
+              },
+              itemBuilder: (_) => [
+                if (onMoveToVault != null)
+                  const PopupMenuItem(
+                    value: 'move_vault',
+                    child: Row(
+                      children: [
+                        Icon(Icons.lock_outline_rounded, size: 18, color: MiraloColors.accent),
+                        SizedBox(width: 8),
+                        Text('Move to Library (Vault)'),
+                      ],
+                    ),
+                  ),
+                if (onSaveToLibrary != null)
+                  const PopupMenuItem(
+                    value: 'save_library',
+                    child: Row(
+                      children: [
+                        Icon(Icons.bookmark_add_outlined, size: 18, color: MiraloColors.accent),
+                        SizedBox(width: 8),
+                        Text('Save to Library'),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+        ],
       ),
       body: Center(
         child: InteractiveViewer(

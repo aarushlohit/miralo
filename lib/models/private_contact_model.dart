@@ -8,6 +8,8 @@ class PrivateContactModel {
   final bool isMuted;
   final bool isPinned;
   final int unreadCount;
+  final bool isGroup;
+  final List<String> memberIds;
 
   PrivateContactModel({
     required this.id,
@@ -19,6 +21,8 @@ class PrivateContactModel {
     this.isMuted = false,
     this.isPinned = false,
     this.unreadCount = 0,
+    this.isGroup = false,
+    this.memberIds = const [],
   });
 
   PrivateContactModel copyWith({
@@ -31,6 +35,8 @@ class PrivateContactModel {
     bool? isMuted,
     bool? isPinned,
     int? unreadCount,
+    bool? isGroup,
+    List<String>? memberIds,
   }) {
     return PrivateContactModel(
       id: id ?? this.id,
@@ -42,6 +48,8 @@ class PrivateContactModel {
       isMuted: isMuted ?? this.isMuted,
       isPinned: isPinned ?? this.isPinned,
       unreadCount: unreadCount ?? this.unreadCount,
+      isGroup: isGroup ?? this.isGroup,
+      memberIds: memberIds ?? this.memberIds,
     );
   }
 
@@ -56,20 +64,32 @@ class PrivateContactModel {
       'isMuted': isMuted,
       'isPinned': isPinned,
       'unreadCount': unreadCount,
+      'isGroup': isGroup,
+      'memberIds': memberIds,
     };
   }
 
   factory PrivateContactModel.fromJson(Map<String, dynamic> json) {
+    final rawMembers = json['memberIds'];
+    List<String> parsedMembers = [];
+    if (rawMembers is List) {
+      parsedMembers = rawMembers.map((e) => e.toString()).toList();
+    }
+
     return PrivateContactModel(
-      id: json['id'] as String,
-      displayName: json['displayName'] as String,
-      username: json['username'] as String,
-      avatarUrl: json['avatarUrl'] as String?,
-      isOnline: json['isOnline'] as bool? ?? false,
-      lastSeenText: json['lastSeenText'] as String? ?? 'recently',
-      isMuted: json['isMuted'] as bool? ?? false,
-      isPinned: json['isPinned'] as bool? ?? false,
-      unreadCount: json['unreadCount'] as int? ?? 0,
+      id: json['id']?.toString() ?? '',
+      displayName: json['displayName']?.toString() ?? 'User',
+      username: json['username']?.toString() ?? '',
+      avatarUrl: json['avatarUrl']?.toString(),
+      isOnline: json['isOnline'] == true,
+      lastSeenText: json['lastSeenText']?.toString() ?? 'recently',
+      isMuted: json['isMuted'] == true,
+      isPinned: json['isPinned'] == true,
+      unreadCount: json['unreadCount'] is num
+          ? (json['unreadCount'] as num).toInt()
+          : (int.tryParse(json['unreadCount']?.toString() ?? '0') ?? 0),
+      isGroup: json['isGroup'] == true,
+      memberIds: parsedMembers,
     );
   }
 }

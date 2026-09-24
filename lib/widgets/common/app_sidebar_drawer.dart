@@ -5,6 +5,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../models/ai_chat_model.dart';
+import '../../models/private_contact_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/ai_chat_provider.dart';
 import '../../providers/private_chat_provider.dart';
@@ -187,6 +188,108 @@ class _AppSidebarDrawerState extends State<AppSidebarDrawer> {
     );
   }
 
+  void _showPrivateChatOptions(
+    BuildContext context,
+    PrivateChatProvider privateChat,
+    PrivateContactModel contact,
+  ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? AppColors.darkSurfacePrimary : AppColors.lightSurfacePrimary;
+    final textPrimary = isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
+    final border = isDark ? AppColors.darkBorder : AppColors.lightBorder;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: bg,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSpacing.radiusSheet)),
+      ),
+      builder: (ctx) => SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenH, vertical: 4),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  contact.displayName,
+                  style: AppTypography.heading3(color: textPrimary),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            ListTile(
+              leading: const Icon(Icons.cleaning_services_outlined, color: AppColors.accent, size: 20),
+              title: Text('Clear messages', style: AppTypography.bodyMedium(color: textPrimary)),
+              dense: true,
+              onTap: () {
+                Navigator.pop(ctx);
+                privateChat.clearConversationMessages(contact.id);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Cleared messages with ${contact.displayName}')),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline_rounded, color: Colors.red, size: 20),
+              title: Text(
+                'Delete Chat',
+                style: AppTypography.bodyMedium(color: Colors.red),
+              ),
+              dense: true,
+              onTap: () {
+                Navigator.pop(ctx);
+                showDialog(
+                  context: context,
+                  builder: (dCtx) => AlertDialog(
+                    backgroundColor: bg,
+                    title: Text('Delete Chat?', style: AppTypography.heading3(color: textPrimary)),
+                    content: Text(
+                      'Are you sure you want to delete this chat with ${contact.displayName}? This cannot be undone.',
+                      style: AppTypography.body(color: textPrimary),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(dCtx),
+                        child: const Text('Cancel'),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pop(dCtx);
+                          privateChat.deleteConversation(contact.id);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Deleted chat with ${contact.displayName}')),
+                          );
+                        },
+                        child: const Text('Delete', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: AppSpacing.md),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -364,19 +467,58 @@ class _AppSidebarDrawerState extends State<AppSidebarDrawer> {
                     },
                   ),
                   _NavItem(
-                    icon: Icons.auto_stories_outlined,
-                    label: 'Library',
-                    trailing: !vault.isLibraryUnlocked
-                        ? const Icon(Icons.lock_outline_rounded,
-                            size: 16, color: AppColors.accent)
-                        : null,
+                    icon: Icons.group_add_outlined,
+                    label: 'New Group',
                     onTap: () {
                       _close(context);
-                      if (vault.isLibraryUnlocked) {
-                        Navigator.pushNamed(context, AppRoutes.library);
-                      } else {
-                        Navigator.pushNamed(context, AppRoutes.libraryLocked);
-                      }
+                      AddFriendSheet.show(context, initialTab: 2);
+                    },
+                  ),
+                  if (vault.isPrivateUnlocked)
+                    _NavItem(
+                      icon: Icons.photo_library_outlined,
+                      label: 'Images',
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (privateChat.allChatImages.isNotEmpty) ...[
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppColors.accent.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                '${privateChat.allChatImages.length}',
+                                style: const TextStyle(
+                                  color: AppColors.accent,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                          ],
+                          const Icon(Icons.lock_outline_rounded,
+                              size: 16, color: AppColors.accent),
+                        ],
+                      ),
+                      onTap: () {
+                        _close(context);
+                        vault.lockLibrary();
+                        Navigator.pushNamed(context, AppRoutes.libraryLocked,
+                            arguments: AppRoutes.images);
+                      },
+                    ),
+                  _NavItem(
+                    icon: Icons.auto_stories_outlined,
+                    label: 'Library',
+                    trailing: const Icon(Icons.lock_outline_rounded,
+                        size: 16, color: AppColors.accent),
+                    onTap: () {
+                      _close(context);
+                      vault.lockLibrary();
+                      Navigator.pushNamed(context, AppRoutes.libraryLocked);
                     },
                   ),
                   _NavItem(
@@ -464,27 +606,94 @@ class _AppSidebarDrawerState extends State<AppSidebarDrawer> {
                       )),
                 ],
 
-                // ── Private contacts (only after secret unlock) ──────
+                // ── Private chats & DMs (only after secret unlock) ──────
                 if (vault.isPrivateUnlocked &&
-                    privateChat.contacts.isNotEmpty) ...[
+                    (privateChat.allConversations.isNotEmpty ||
+                        privateChat.pendingFriendRequests.isNotEmpty)) ...[
                   const SizedBox(height: AppSpacing.md),
-                  _SectionLabel('CONTACTS', textMuted),
-                  ...privateChat.contacts.map((contact) {
+                  Padding(
+                    padding: const EdgeInsets.only(right: AppSpacing.sm),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _SectionLabel('CHATS & DMS', textMuted),
+                        if (privateChat.pendingFriendRequests.isNotEmpty)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.accent,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              '${privateChat.pendingFriendRequests.length} new',
+                              style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  if (privateChat.pendingFriendRequests.isNotEmpty)
+                    InkWell(
+                      onTap: () {
+                        _close(context);
+                        AddFriendSheet.show(context, initialTab: 1);
+                      },
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: AppColors.accent.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                          border: Border.all(color: AppColors.accent.withValues(alpha: 0.3), width: 0.8),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.mark_email_unread_outlined, color: AppColors.accent, size: 18),
+                            const SizedBox(width: AppSpacing.sm),
+                            Expanded(
+                              child: Text(
+                                '${privateChat.pendingFriendRequests.length} Friend Invitation${privateChat.pendingFriendRequests.length > 1 ? 's' : ''}',
+                                style: const TextStyle(
+                                  color: AppColors.accent,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            const Icon(Icons.arrow_forward_ios_rounded, color: AppColors.accent, size: 12),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ...privateChat.allConversations.map((contact) {
+                    final isFriend = privateChat.contacts.any((c) => c.id == contact.id);
                     final displayName =
                         vault.hideMode.isEnabled &&
                                 vault.hideMode.hidePrivateChatNames
                             ? 'Contact'
                             : contact.displayName;
 
+                    final lastMsg = privateChat.getLastMessageForContact(contact.id);
+                    final subtitle = !isFriend
+                        ? 'Pending request'
+                        : (contact.isOnline
+                            ? 'Online'
+                            : (lastMsg != null && lastMsg.text.isNotEmpty
+                                ? lastMsg.text
+                                : 'Encrypted chat'));
+
                     return _ContactItem(
                       name: displayName,
                       isOnline: contact.isOnline,
                       unread: contact.unreadCount,
+                      subtitle: subtitle,
                       onTap: () {
                         privateChat.setActiveChat(contact.id);
                         _close(context);
                         Navigator.pushNamed(context, AppRoutes.privateChat);
                       },
+                      onOptionsTap: () => _showPrivateChatOptions(context, privateChat, contact),
                     );
                   }),
                 ],
@@ -755,13 +964,17 @@ class _ContactItem extends StatelessWidget {
   final String name;
   final bool isOnline;
   final int unread;
+  final String? subtitle;
   final VoidCallback onTap;
+  final VoidCallback? onOptionsTap;
 
   const _ContactItem({
     required this.name,
     required this.isOnline,
     required this.unread,
+    this.subtitle,
     required this.onTap,
+    this.onOptionsTap,
   });
 
   @override
@@ -774,6 +987,7 @@ class _ContactItem extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
+      onLongPress: onOptionsTap,
       borderRadius: BorderRadius.circular(14),
       child: Padding(
         padding: const EdgeInsets.symmetric(
@@ -793,25 +1007,43 @@ class _ContactItem extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis),
                   Text(
-                    isOnline ? 'Online' : 'Last seen recently',
+                    subtitle ?? (isOnline ? 'Online' : 'Last seen recently'),
                     style: AppTypography.caption(color: textMuted),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
             ),
-            if (unread > 0)
+            if (unread > 0) ...[
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                 decoration: BoxDecoration(
-                  color: AppColors.accent,
+                  color: const Color(0xFF0A84FF),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Text(unread.toString(),
+                child: Center(
+                  child: Text(
+                    unread > 99 ? '99+' : unread.toString(),
                     style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700)),
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+            ],
+            if (onOptionsTap != null)
+              IconButton(
+                icon: const Icon(Icons.more_horiz_rounded, size: 16),
+                color: textMuted,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+                onPressed: onOptionsTap,
+                tooltip: 'Options',
               ),
           ],
         ),
@@ -819,3 +1051,4 @@ class _ContactItem extends StatelessWidget {
     );
   }
 }
+

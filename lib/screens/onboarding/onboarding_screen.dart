@@ -1,3 +1,4 @@
+import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/routes/app_routes.dart';
@@ -94,6 +95,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       return;
     }
 
+    if (_currentStep == 3) {
+      final hasCamera = await _checkAndRequestCameraPermission();
+      if (!hasCamera) {
+        if (mounted) _showCameraPermissionRequiredDialog();
+        return;
+      }
+      _goToStep(4);
+      return;
+    }
+
     if (_currentStep == 4) {
       // Validate Private Passcode
       final pass = _privatePasscodeController.text.trim();
@@ -127,8 +138,76 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     if (_currentStep < 6) {
       _goToStep(_currentStep + 1);
     } else {
+      final hasCamera = await _checkAndRequestCameraPermission();
+      if (!hasCamera) {
+        if (mounted) _showCameraPermissionRequiredDialog();
+        return;
+      }
+      if (!mounted) return;
       Navigator.pushReplacementNamed(context, AppRoutes.home);
     }
+  }
+
+  Future<bool> _checkAndRequestCameraPermission() async {
+    try {
+      final cameras = await availableCameras();
+      if (cameras.isEmpty) {
+        return true;
+      }
+      final controller = CameraController(
+        cameras.first,
+        ResolutionPreset.low,
+        enableAudio: false,
+      );
+      await controller.initialize();
+      await controller.dispose();
+      return true;
+    } catch (e) {
+      debugPrint('Camera permission check: $e');
+      return false;
+    }
+  }
+
+  void _showCameraPermissionRequiredDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Theme.of(context).brightness == Brightness.dark
+            ? AppColors.darkSurfacePrimary
+            : AppColors.lightSurfacePrimary,
+        title: const Row(
+          children: [
+            Icon(Icons.camera_alt_outlined, color: AppColors.accent),
+            SizedBox(width: 8),
+            Text('Camera Permission Required', style: TextStyle(fontSize: 16)),
+          ],
+        ),
+        content: const Text(
+          'Miralo requires camera permission for intruder detection and photo capture. '
+          'You cannot finish onboarding without granting camera access.',
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final granted = await _checkAndRequestCameraPermission();
+              if (!mounted) return;
+              if (granted) {
+                if (_currentStep == 3) {
+                  _goToStep(4);
+                } else if (_currentStep >= 6) {
+                  Navigator.pushReplacementNamed(context, AppRoutes.home);
+                }
+              } else {
+                _showCameraPermissionRequiredDialog();
+              }
+            },
+            child: const Text('Grant Camera Access'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -376,7 +455,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           _buildPillarTile(
             icon: Icons.chat_bubble_outline_rounded,
             title: 'AI Conversations',
-            subtitle: 'Direct cloud & local reasoning with NVIDIA NIM, Gemini, and OpenCode.',
+            subtitle: 'Direct cloud & local reasoning with NVIDIA NIM and Google Gemini.',
             surface: surface,
             border: border,
             textPrimary: textPrimary,
@@ -546,9 +625,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
           MiraloTextField(
             controller: _libraryPasscodeController,
-            hint: '4-digit Library PIN (e.g. 1234)',
+            hint: 'Any text, phrase or PIN (e.g. "safe2025")',
             prefixIcon: Icons.pin_outlined,
-            keyboardType: TextInputType.number,
             obscureText: true,
             showToggleObscure: true,
           ),

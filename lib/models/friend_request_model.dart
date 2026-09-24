@@ -34,15 +34,15 @@ class FriendRequestModel {
 
   factory FriendRequestModel.fromJson(Map<String, dynamic> json) {
     return FriendRequestModel(
-      id: json['id'] as String,
-      senderId: json['senderId'] as String,
-      senderName: json['senderName'] as String,
-      senderUsername: json['senderUsername'] as String,
-      receiverId: json['receiverId'] as String,
-      receiverUsername: json['receiverUsername'] as String,
-      status: json['status'] as String? ?? 'pending',
+      id: json['id']?.toString() ?? 'req_${DateTime.now().millisecondsSinceEpoch}',
+      senderId: json['senderId']?.toString() ?? '',
+      senderName: json['senderName']?.toString() ?? 'User',
+      senderUsername: json['senderUsername']?.toString() ?? '',
+      receiverId: json['receiverId']?.toString() ?? '',
+      receiverUsername: json['receiverUsername']?.toString() ?? '',
+      status: json['status']?.toString() ?? 'pending',
       createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'] as String)
+          ? (DateTime.tryParse(json['createdAt'].toString()) ?? DateTime.now())
           : DateTime.now(),
     );
   }

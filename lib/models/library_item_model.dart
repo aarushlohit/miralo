@@ -52,10 +52,17 @@ class LibraryItemModel {
   final String size;
   final String? folderId;
   final String? thumbnailUrl;
+  final String? cloudUrl;
   final DateTime createdAt;
   final DateTime updatedAt;
   final bool isEncrypted;
   final String source; // 'upload', 'private_chat', 'saved'
+
+  bool get isSavedToCloud =>
+      (cloudUrl != null && cloudUrl!.isNotEmpty) ||
+      (thumbnailUrl != null &&
+          (thumbnailUrl!.startsWith('http://') ||
+              thumbnailUrl!.startsWith('https://')));
 
   LibraryItemModel({
     required this.id,
@@ -65,6 +72,7 @@ class LibraryItemModel {
     required this.size,
     this.folderId,
     this.thumbnailUrl,
+    this.cloudUrl,
     required this.createdAt,
     required this.updatedAt,
     this.isEncrypted = true,
@@ -78,7 +86,9 @@ class LibraryItemModel {
     String? mimeType,
     String? size,
     String? folderId,
+    bool clearFolderId = false,
     String? thumbnailUrl,
+    String? cloudUrl,
     DateTime? createdAt,
     DateTime? updatedAt,
     bool? isEncrypted,
@@ -90,8 +100,9 @@ class LibraryItemModel {
       type: type ?? this.type,
       mimeType: mimeType ?? this.mimeType,
       size: size ?? this.size,
-      folderId: folderId ?? this.folderId,
+      folderId: clearFolderId ? null : (folderId ?? this.folderId),
       thumbnailUrl: thumbnailUrl ?? this.thumbnailUrl,
+      cloudUrl: cloudUrl ?? this.cloudUrl,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       isEncrypted: isEncrypted ?? this.isEncrypted,
@@ -108,6 +119,7 @@ class LibraryItemModel {
       'size': size,
       'folderId': folderId,
       'thumbnailUrl': thumbnailUrl,
+      'cloudUrl': cloudUrl,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       'isEncrypted': isEncrypted,
@@ -124,6 +136,7 @@ class LibraryItemModel {
       size: json['size'] as String,
       folderId: json['folderId'] as String?,
       thumbnailUrl: json['thumbnailUrl'] as String?,
+      cloudUrl: json['cloudUrl'] as String?,
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
       isEncrypted: json['isEncrypted'] as bool? ?? true,

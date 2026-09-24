@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/theme/miralo_tokens.dart';
+import '../../providers/ai_chat_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/library_provider.dart';
+import '../../providers/private_chat_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/vault_provider.dart';
 import '../../widgets/common/miralo_app_bar.dart';
@@ -290,8 +293,16 @@ class SettingsScreen extends StatelessWidget {
                     children: [
                       InkWell(
                         onTap: () {
+                          final chat = Provider.of<PrivateChatProvider>(context, listen: false);
+                          final aiChat = Provider.of<AiChatProvider>(context, listen: false);
+                          final library = Provider.of<LibraryProvider>(context, listen: false);
                           vault.lockAll();
-                          auth.logout();
+                          auth.logout(
+                            onClearChatSession: chat.clearSession,
+                            onClearVaultSession: vault.clearSession,
+                            onClearAiChatSession: aiChat.clearSession,
+                            onClearLibrarySession: library.clearSession,
+                          );
                           Navigator.pushNamedAndRemoveUntil(
                             context,
                             AppRoutes.onboarding,

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/ai_chat_model.dart';
@@ -7,6 +8,12 @@ import '../services/ai_service.dart';
 
 class AiChatProvider extends ChangeNotifier {
   static const String _prefConversationsKey = 'miralo_ai_conversations_v2';
+  String? _currentUserId;
+  StreamSubscription<DatabaseEvent>? _aiChatSubscription;
+
+  String _getPrefKey() => _currentUserId != null && _currentUserId!.isNotEmpty
+      ? 'miralo_ai_conversations_$_currentUserId'
+      : _prefConversationsKey;
 
   final List<AiChatModel> _conversations = [];
   String? _activeChatId;
@@ -78,9 +85,95 @@ class AiChatProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Initialize user-scoped AI conversations on login/attach with real-time sync
+  Future<void> initUserSession(String userId) async {
+    _aiChatSubscription?.cancel();
+    _aiChatSubscription = null;
+    _currentUserId = userId;
+    _conversations.clear();
+    _activeChatId = null;
+
+    // 1. Load from user-scoped local storage for instant offline availability
+    await _loadConversations();
+
+    // 2. Real-time Firebase RTDB Sync (multi-device live sync)
+    try {
+      final ref = FirebaseDatabase.instance.ref('users/$userId/ai_chats');
+      _aiChatSubscription = ref.onValue.listen((event) async {
+        if (event.snapshot.exists && event.snapshot.value is Map) {
+          final rawMap = Map<String, dynamic>.from(event.snapshot.value as Map);
+          final cloudChats = <AiChatModel>[];
+          for (var entry in rawMap.values) {
+            if (entry is Map) {
+              try {
+                cloudChats.add(AiChatModel.fromJson(Map<String, dynamic>.from(entry)));
+              } catch (_) {}
+            }
+          }
+          if (cloudChats.isNotEmpty) {
+            cloudChats.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+            _conversations.clear();
+            _conversations.addAll(cloudChats);
+            if (_activeChatId == null || !_conversations.any((c) => c.id == _activeChatId)) {
+              _activeChatId = _conversations.first.id;
+            }
+            final prefs = await SharedPreferences.getInstance();
+            final raw = jsonEncode(_conversations.map((c) => c.toJson()).toList());
+            await prefs.setString(_getPrefKey(), raw);
+            notifyListeners();
+          }
+        }
+      });
+    } catch (e) {
+      debugPrint('Firebase AI chat subscription error: $e');
+    }
+
+    // 3. Initial one-shot sync from Firebase Realtime Database
+    try {
+      final snap = await FirebaseDatabase.instance.ref('users/$userId/ai_chats').get();
+      if (snap.exists && snap.value is Map) {
+        final rawMap = Map<String, dynamic>.from(snap.value as Map);
+        final cloudChats = <AiChatModel>[];
+        for (var entry in rawMap.values) {
+          if (entry is Map) {
+            try {
+              cloudChats.add(AiChatModel.fromJson(Map<String, dynamic>.from(entry)));
+            } catch (_) {}
+          }
+        }
+        if (cloudChats.isNotEmpty) {
+          cloudChats.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+          _conversations.clear();
+          _conversations.addAll(cloudChats);
+          _activeChatId ??= _conversations.first.id;
+          final prefs = await SharedPreferences.getInstance();
+          final raw = jsonEncode(_conversations.map((c) => c.toJson()).toList());
+          await prefs.setString(_getPrefKey(), raw);
+        }
+      }
+    } catch (_) {}
+
+    if (_conversations.isEmpty) {
+      _seedDefaultChat();
+    }
+    notifyListeners();
+  }
+
+  /// Clear all conversations and active chat on logout
+  void clearSession() {
+    _aiChatSubscription?.cancel();
+    _aiChatSubscription = null;
+    _currentUserId = null;
+    _conversations.clear();
+    _activeChatId = null;
+    _searchQuery = '';
+    _seedDefaultChat();
+    notifyListeners();
+  }
+
   Future<void> _loadConversations() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_prefConversationsKey);
+    final raw = prefs.getString(_getPrefKey());
 
     if (raw != null && raw.isNotEmpty) {
       try {
@@ -94,7 +187,6 @@ class AiChatProvider extends ChangeNotifier {
       } catch (_) {}
     }
 
-    // Ensure at least one chat exists at all times
     if (_conversations.isEmpty) {
       _seedDefaultChat();
     }
@@ -115,7 +207,7 @@ class AiChatProvider extends ChangeNotifier {
           role: 'assistant',
           text:
               'Welcome to MIRALO AI. Your intelligence workspace is ready.\n\n'
-              '• Select from NVIDIA NIM, Google Gemini, and OpenCode models.\n'
+              '• Select from NVIDIA NIM and Google Gemini models.\n'
               '• Use voice dictation or attach images for multimodal analysis.\n'
               '• All your conversations are strictly private.',
           timestamp: DateTime.now(),
@@ -131,7 +223,18 @@ class AiChatProvider extends ChangeNotifier {
   Future<void> _saveConversations() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = jsonEncode(_conversations.map((c) => c.toJson()).toList());
-    await prefs.setString(_prefConversationsKey, raw);
+    await prefs.setString(_getPrefKey(), raw);
+
+    // Also sync to Firebase Realtime Database if logged in
+    if (_currentUserId != null && _currentUserId!.isNotEmpty) {
+      try {
+        final chatMap = <String, dynamic>{};
+        for (final chat in _conversations) {
+          chatMap[chat.id] = chat.toJson();
+        }
+        FirebaseDatabase.instance.ref('users/$_currentUserId/ai_chats').set(chatMap);
+      } catch (_) {}
+    }
   }
 
   void selectModel(String model) {
@@ -178,6 +281,17 @@ class AiChatProvider extends ChangeNotifier {
         title: newTitle.trim(),
         updatedAt: DateTime.now(),
       );
+      _saveConversations();
+      notifyListeners();
+    }
+  }
+
+  /// Clears messages from the currently active AI conversation
+  void clearMessages() {
+    if (_activeChatId == null) return;
+    final idx = _conversations.indexWhere((c) => c.id == _activeChatId);
+    if (idx != -1) {
+      _conversations[idx] = _conversations[idx].copyWith(messages: []);
       _saveConversations();
       notifyListeners();
     }
@@ -264,7 +378,7 @@ class AiChatProvider extends ChangeNotifier {
     );
     notifyListeners();
 
-    // Fetch response from real AiService (Gemini, NVIDIA NIM, OpenCode)
+    // Fetch response from real AiService (Gemini or NVIDIA NIM)
     final fullResponse = await AiService.instance.sendPrompt(
       prompt: prompt,
       model: _selectedModel,

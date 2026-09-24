@@ -41,6 +41,7 @@ class MiraloSegmentedTabs extends StatelessWidget {
           final selected = i == selectedIndex;
           return Expanded(
             child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
               onTap: () => _callback(i),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),

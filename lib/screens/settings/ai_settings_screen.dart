@@ -20,28 +20,24 @@ class AiSettingsScreen extends StatefulWidget {
 class _AiSettingsScreenState extends State<AiSettingsScreen> {
   final _geminiKeyCtrl = TextEditingController();
   final _nvidiaKeyCtrl = TextEditingController();
-  final _openCodeKeyCtrl = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _geminiKeyCtrl.text = AiService.instance.geminiApiKey ?? '';
     _nvidiaKeyCtrl.text = AiService.instance.nvidiaApiKey ?? '';
-    _openCodeKeyCtrl.text = AiService.instance.openCodeApiKey ?? '';
   }
 
   @override
   void dispose() {
     _geminiKeyCtrl.dispose();
     _nvidiaKeyCtrl.dispose();
-    _openCodeKeyCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _saveKeys() async {
     await AiService.instance.setGeminiApiKey(_geminiKeyCtrl.text);
     await AiService.instance.setNvidiaApiKey(_nvidiaKeyCtrl.text);
-    await AiService.instance.setOpenCodeApiKey(_openCodeKeyCtrl.text);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -128,7 +124,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Default backend API keys for NVIDIA NIM, Google Gemini, and OpenCode are active. Custom BYOK keys are completely optional.',
+                            'Default backend API keys for NVIDIA NIM and Google Gemini are active. Custom BYOK keys are completely optional.',
                             style: AppTypography.caption(color: textSecondary),
                           ),
                         ],
@@ -180,15 +176,6 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
               controller: _nvidiaKeyCtrl,
               hint: 'NVIDIA NIM API Key',
               prefixIcon: Icons.memory_outlined,
-              obscureText: true,
-              showToggleObscure: true,
-            ),
-            const SizedBox(height: AppSpacing.sm + 2),
-
-            MiraloTextField(
-              controller: _openCodeKeyCtrl,
-              hint: 'OpenCode / DeepSeek API Key',
-              prefixIcon: Icons.code_rounded,
               obscureText: true,
               showToggleObscure: true,
             ),

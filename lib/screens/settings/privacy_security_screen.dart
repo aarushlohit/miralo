@@ -4,6 +4,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/private_chat_provider.dart';
 import '../../providers/vault_provider.dart';
 import '../../widgets/common/miralo_list_tile.dart';
 
@@ -105,6 +106,7 @@ class PrivacySecurityScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final vault = Provider.of<VaultProvider>(context);
+    final chat = Provider.of<PrivateChatProvider>(context);
 
     final bg = isDark ? AppColors.darkBackground : AppColors.lightBackground;
     final textPrimary = isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
@@ -232,6 +234,48 @@ class PrivacySecurityScreen extends StatelessWidget {
                       const SnackBar(content: Text('All other sessions terminated.')),
                     );
                   },
+                ),
+              ],
+            ),
+
+            const SizedBox(height: AppSpacing.lg),
+
+            // Chat Privacy & Presence
+            MiraloSectionHeader('CHAT PRIVACY & PRESENCE'),
+            MiraloSettingsGroup(
+              children: [
+                MiraloListTile(
+                  icon: Icons.wifi_tethering_rounded,
+                  title: 'Share Online Status',
+                  subtitle: 'Allows contacts to see when you are active',
+                  showChevron: false,
+                  trailing: Switch.adaptive(
+                    value: chat.showOnlineStatus,
+                    activeTrackColor: AppColors.accent,
+                    onChanged: (val) => chat.updatePrivacySettings(showOnlineStatus: val),
+                  ),
+                ),
+                MiraloListTile(
+                  icon: Icons.history_rounded,
+                  title: 'Share Last Seen',
+                  subtitle: 'Shows when you were last active in chat',
+                  showChevron: false,
+                  trailing: Switch.adaptive(
+                    value: chat.showLastSeen,
+                    activeTrackColor: AppColors.accent,
+                    onChanged: (val) => chat.updatePrivacySettings(showLastSeen: val),
+                  ),
+                ),
+                MiraloListTile(
+                  icon: Icons.done_all_rounded,
+                  title: 'Send Read Receipts',
+                  subtitle: 'Shows blue double checkmarks when messages are seen',
+                  showChevron: false,
+                  trailing: Switch.adaptive(
+                    value: chat.sendReadReceipts,
+                    activeTrackColor: AppColors.accent,
+                    onChanged: (val) => chat.updatePrivacySettings(sendReadReceipts: val),
+                  ),
                 ),
               ],
             ),

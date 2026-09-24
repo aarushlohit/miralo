@@ -54,7 +54,7 @@ class _AiComposerState extends State<AiComposer> {
   }
 
   /// Core interception logic — NEVER sends secret to AI
-  void _handleSend() {
+  Future<void> _handleSend() async {
     final text = _controller.text.trim();
     if (text.isEmpty || widget.isStreaming) return;
 
@@ -64,6 +64,16 @@ class _AiComposerState extends State<AiComposer> {
       // Valid secret: clear field completely silently, unlock private access, return
       _controller.clear();
       return; // CRITICAL: do not call widget.onSend
+    }
+
+    // If local secret is not yet populated (e.g. freshly logged in on new device),
+    // check server-side against Firebase Realtime Database before sending to AI
+    if (!vault.hasPrivateSecret && vault.currentUserId != null) {
+      final isSecretServer = await vault.unlockPrivateAsync(text);
+      if (isSecretServer) {
+        _controller.clear();
+        return;
+      }
     }
 
     // Normal AI send path

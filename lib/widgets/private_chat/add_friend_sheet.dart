@@ -9,9 +9,10 @@ import '../../providers/private_chat_provider.dart';
 import '../common/miralo_avatar.dart';
 
 class AddFriendSheet extends StatefulWidget {
-  const AddFriendSheet({super.key});
+  final int initialTab;
+  const AddFriendSheet({super.key, this.initialTab = 0});
 
-  static void show(BuildContext context) {
+  static void show(BuildContext context, {int initialTab = 0}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet(
       context: context,
@@ -20,7 +21,7 @@ class AddFriendSheet extends StatefulWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppSpacing.radiusSheet)),
       ),
-      builder: (_) => const AddFriendSheet(),
+      builder: (_) => AddFriendSheet(initialTab: initialTab),
     );
   }
 
@@ -30,13 +31,23 @@ class AddFriendSheet extends StatefulWidget {
 
 class _AddFriendSheetState extends State<AddFriendSheet> {
   final TextEditingController _searchController = TextEditingController();
+  final TextEditingController _groupNameController = TextEditingController();
+  final Set<String> _selectedMemberIds = {};
+  bool _isCreatingGroup = false;
   List<Map<String, String>> _searchResults = [];
   bool _isSearching = false;
-  int _selectedTab = 0; // 0: Search, 1: Invitations
+  late int _selectedTab;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedTab = widget.initialTab;
+  }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _groupNameController.dispose();
     super.dispose();
   }
 
@@ -67,8 +78,9 @@ class _AddFriendSheetState extends State<AddFriendSheet> {
     String targetUsername,
   ) {
     if (chat.isBlocked(targetId)) return 'blocked';
-    if (chat.contacts.any((c) => c.id == targetId)) return 'contact';
-    final sentStatus = chat.getSentRequestStatus(targetUsername);
+    if (chat.isContact(targetId, targetUsername)) return 'contact';
+    final sentStatus = chat.getSentRequestStatus(targetUsername) ??
+        chat.getSentRequestStatus(targetId);
     return sentStatus; // 'pending' | 'accepted' | 'rejected' | null
   }
 
@@ -77,6 +89,7 @@ class _AddFriendSheetState extends State<AddFriendSheet> {
     required bool isDark,
     required Color textMuted,
     required VoidCallback onAdd,
+    VoidCallback? onUnblock,
     required String targetUsername,
   }) {
     switch (status) {
@@ -94,10 +107,17 @@ class _AddFriendSheetState extends State<AddFriendSheet> {
           fg: textMuted,
         );
       case 'blocked':
-        return _statusChip(
-          label: 'Blocked',
-          bg: Colors.red.withValues(alpha: 0.12),
-          fg: Colors.red,
+        return OutlinedButton(
+          style: OutlinedButton.styleFrom(
+            foregroundColor: Colors.redAccent,
+            side: const BorderSide(color: Colors.redAccent, width: 1),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+          onPressed: onUnblock,
+          child: const Text('Unblock', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
         );
       case 'rejected':
       default:
@@ -137,24 +157,14 @@ class _AddFriendSheetState extends State<AddFriendSheet> {
     required String targetUsername,
     required String displayName,
   }) {
-    final cur = currentUsername?.toLowerCase().trim() ?? '';
+    final cur = (currentUsername ?? chat.currentUsername ?? '').toLowerCase().trim();
     final target = targetUsername.toLowerCase().trim();
 
-    if (cur == 'ashlinmirsha' && target == 'aarushlohit') {
+    if ((cur == 'ashlinmirsha' && target == 'aarushlohit') ||
+        (cur == 'aarushlohit' && target == 'ashlinmirsha')) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('how u can block your future hubby !!! chat with him !!!! babe'),
-          backgroundColor: AppColors.accent,
-          duration: Duration(seconds: 4),
-        ),
-      );
-      return;
-    }
-
-    if (cur == 'aarushlohit' && target == 'ashlinmirsha') {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('how u can block your future wifey !!! chat with her !!!! babe'),
+          content: Text("how you can block your babe' go cuddle him !!!!"),
           backgroundColor: AppColors.accent,
           duration: Duration(seconds: 4),
         ),
@@ -184,17 +194,31 @@ class _AddFriendSheetState extends State<AddFriendSheet> {
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(ctx);
-              chat.blockUser(
+              final ok = await chat.blockUser(
                 targetId: targetId,
                 targetUsername: targetUsername,
                 targetDisplayName: displayName,
                 currentUsername: currentUsername,
               );
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('@$targetUsername has been blocked.')),
-              );
+              if (!ok) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("how you can block your babe' go cuddle him !!!!"),
+                      backgroundColor: AppColors.accent,
+                      duration: Duration(seconds: 4),
+                    ),
+                  );
+                }
+                return;
+              }
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('@$targetUsername has been blocked.')),
+                );
+              }
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('Block'),
@@ -242,6 +266,18 @@ class _AddFriendSheetState extends State<AddFriendSheet> {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final privateChat = Provider.of<PrivateChatProvider>(context);
     final currentUser = auth.currentUser;
+    final currentUid = currentUser?.id ?? '';
+    final currentUname = (currentUser?.username ?? '').toLowerCase().trim();
+    final currentUemail = (currentUser?.email ?? '').toLowerCase().trim();
+    final visibleResults = _searchResults.where((item) {
+      final uid = (item['id'] ?? '').toString().trim();
+      final uname = (item['username'] ?? '').toString().toLowerCase().trim();
+      final uemail = (item['email'] ?? '').toString().toLowerCase().trim();
+      if (currentUid.isNotEmpty && uid == currentUid) return false;
+      if (currentUname.isNotEmpty && uname == currentUname) return false;
+      if (currentUemail.isNotEmpty && uemail == currentUemail) return false;
+      return true;
+    }).toList();
     final pendingRequests = privateChat.pendingFriendRequests;
 
     return Padding(
@@ -368,6 +404,32 @@ class _AddFriendSheetState extends State<AddFriendSheet> {
                         ),
                       ),
                     ),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => setState(() => _selectedTab = 2),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 150),
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          decoration: BoxDecoration(
+                            color: _selectedTab == 2
+                                ? (isDark ? AppColors.darkSurfacePrimary : Colors.white)
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(8),
+                            boxShadow: _selectedTab == 2
+                                ? [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4)]
+                                : [],
+                          ),
+                          child: Center(
+                            child: Text(
+                              'New Group',
+                              style: AppTypography.label(
+                                color: _selectedTab == 2 ? textPrimary : textMuted,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -423,7 +485,7 @@ class _AddFriendSheetState extends State<AddFriendSheet> {
                       ),
                     ),
                   )
-                else if (_searchResults.isEmpty)
+                else if (visibleResults.isEmpty)
                   Center(
                     child: Padding(
                       padding: const EdgeInsets.all(16),
@@ -436,10 +498,10 @@ class _AddFriendSheetState extends State<AddFriendSheet> {
                     constraints: const BoxConstraints(maxHeight: 300),
                     child: ListView.separated(
                       shrinkWrap: true,
-                      itemCount: _searchResults.length,
+                      itemCount: visibleResults.length,
                       separatorBuilder: (_, _) => Divider(height: 1, color: border),
                       itemBuilder: (ctx, i) {
-                        final item = _searchResults[i];
+                        final item = visibleResults[i];
                         final name = item['name'] ?? 'User';
                         final username = item['username'] ?? '';
                         final targetId = item['id'] ?? 'usr_$username';
@@ -479,7 +541,14 @@ class _AddFriendSheetState extends State<AddFriendSheet> {
                                   padding: EdgeInsets.zero,
                                   constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                                   onPressed: () {
-                                    privateChat.setActiveChat(targetId);
+                                    if (currentUser != null) {
+                                      privateChat.initUserSession(
+                                        currentUser.id,
+                                        username: currentUser.username,
+                                        email: currentUser.email,
+                                      );
+                                    }
+                                    privateChat.setActiveChat(targetId, displayName: name, username: username);
                                     Navigator.pop(ctx);
                                     Navigator.pushNamed(context, AppRoutes.privateChat);
                                   },
@@ -504,6 +573,9 @@ class _AddFriendSheetState extends State<AddFriendSheet> {
                                       duration: const Duration(seconds: 2),
                                     ),
                                   );
+                                },
+                                onUnblock: () {
+                                  _showUnblockConfirm(context, privateChat, targetId, username);
                                 },
                               ),
 
@@ -675,11 +747,182 @@ class _AddFriendSheetState extends State<AddFriendSheet> {
                       },
                     ),
                   ),
+               ],
+              if (_selectedTab == 2) ...[
+                _buildNewGroupTab(
+                  context: context,
+                  isDark: isDark,
+                  textPrimary: textPrimary,
+                  textMuted: textMuted,
+                  border: border,
+                  surfaceSecondary: surfaceSecondary,
+                  privateChat: privateChat,
+                ),
               ],
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildNewGroupTab({
+    required BuildContext context,
+    required bool isDark,
+    required Color textPrimary,
+    required Color textMuted,
+    required Color border,
+    required Color surfaceSecondary,
+    required PrivateChatProvider privateChat,
+  }) {
+    final friends = privateChat.contacts.where((c) => !c.isGroup).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Group Name Input
+        Container(
+          decoration: BoxDecoration(
+            color: surfaceSecondary,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: border, width: 0.8),
+          ),
+          child: TextField(
+            controller: _groupNameController,
+            style: AppTypography.bodyMedium(color: textPrimary),
+            decoration: InputDecoration(
+              hintText: 'Enter group name...',
+              hintStyle: AppTypography.bodyMedium(color: textMuted),
+              prefixIcon: const Icon(Icons.group_outlined, size: 20, color: AppColors.accent),
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+            ),
+            onChanged: (_) => setState(() {}),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+
+        // Member selection header
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'SELECT MEMBERS',
+              style: AppTypography.caption(color: textMuted).copyWith(fontWeight: FontWeight.w600, letterSpacing: 0.8),
+            ),
+            Text(
+              '${_selectedMemberIds.length} selected',
+              style: AppTypography.caption(color: AppColors.accent).copyWith(fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.sm),
+
+        // Friends list or empty state
+        if (friends.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(24),
+            alignment: Alignment.center,
+            child: Column(
+              children: [
+                Icon(Icons.people_outline, size: 36, color: textMuted),
+                const SizedBox(height: 8),
+                Text(
+                  'No contacts available',
+                  style: AppTypography.bodyMedium(color: textPrimary).copyWith(fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Add friends via the Search tab before creating a group.',
+                  style: AppTypography.caption(color: textMuted),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          )
+        else
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 220),
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: friends.length,
+              itemBuilder: (ctx, idx) {
+                final friend = friends[idx];
+                final isSelected = _selectedMemberIds.contains(friend.id);
+                return InkWell(
+                  onTap: () {
+                    setState(() {
+                      if (isSelected) {
+                        _selectedMemberIds.remove(friend.id);
+                      } else {
+                        _selectedMemberIds.add(friend.id);
+                      }
+                    });
+                  },
+                  borderRadius: BorderRadius.circular(10),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                    child: Row(
+                      children: [
+                        MiraloAvatar(name: friend.displayName, imageUrl: friend.avatarUrl, size: 36),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(friend.displayName, style: AppTypography.bodySmall(color: textPrimary).copyWith(fontWeight: FontWeight.w600)),
+                              Text('@${friend.username}', style: AppTypography.caption(color: textMuted)),
+                            ],
+                          ),
+                        ),
+                        Icon(
+                          isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                          color: isSelected ? AppColors.accent : textMuted,
+                          size: 22,
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        const SizedBox(height: AppSpacing.md),
+
+        // Create Group Button
+        SizedBox(
+          width: double.infinity,
+          height: 44,
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.accent,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              disabledBackgroundColor: isDark ? AppColors.darkSurfaceSecondary : AppColors.lightSurfaceSecondary,
+              disabledForegroundColor: textMuted,
+            ),
+            onPressed: (_groupNameController.text.trim().isNotEmpty && _selectedMemberIds.isNotEmpty && !_isCreatingGroup)
+                ? () async {
+                    setState(() => _isCreatingGroup = true);
+                    final name = _groupNameController.text.trim();
+                    final groupId = await privateChat.createGroupChat(
+                      groupName: name,
+                      memberIds: _selectedMemberIds.toList(),
+                    );
+                    if (!mounted) return;
+                    Navigator.pop(this.context);
+                    if (groupId != null) {
+                      privateChat.setActiveChat(groupId, displayName: name);
+                      Navigator.pushNamed(this.context, AppRoutes.privateChat);
+                    }
+                  }
+                : null,
+            child: _isCreatingGroup
+                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                : const Text('Create Group Chat', style: TextStyle(fontWeight: FontWeight.w600)),
+          ),
+        ),
+      ],
     );
   }
 }

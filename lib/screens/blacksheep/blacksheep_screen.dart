@@ -1,9 +1,11 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../providers/vault_provider.dart';
+import '../../widgets/chat/image_viewer.dart';
 import '../../widgets/common/miralo_app_bar.dart';
 import '../../widgets/common/miralo_empty_state.dart';
 
@@ -127,34 +129,7 @@ class _BlacksheepScreenState extends State<BlacksheepScreen> {
                                     ),
                                     const SizedBox(height: AppSpacing.md),
                                     // Intruder captured photo preview frame
-                                    Container(
-                                      width: double.infinity,
-                                      height: 160,
-                                      decoration: BoxDecoration(
-                                        color: isDark ? AppColors.darkSurfaceSecondary : AppColors.lightSurfaceSecondary,
-                                        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                                        border: Border.all(color: AppColors.danger.withValues(alpha: 0.3)),
-                                      ),
-                                      child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          const Icon(Icons.camera_alt_outlined, color: AppColors.danger, size: 42),
-                                          const SizedBox(height: AppSpacing.xs),
-                                          Text(
-                                            '[CAPTURED INTRUDER FRAME]',
-                                            style: AppTypography.caption(color: AppColors.danger).copyWith(
-                                              fontWeight: FontWeight.bold,
-                                              letterSpacing: 1.1,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            'Photo stored securely in Blacksheep Vault',
-                                            style: AppTypography.caption(color: textSecondary),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
+                                    _buildIntruderPhotoFrame(context, log.photoBase64, isDark, textSecondary),
                                   ],
                                 ),
                               ),
@@ -185,6 +160,89 @@ class _BlacksheepScreenState extends State<BlacksheepScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildIntruderPhotoFrame(BuildContext context, String? photoBase64, bool isDark, Color textSecondary) {
+    if (photoBase64 != null && photoBase64.isNotEmpty) {
+      try {
+        final bytes = base64Decode(photoBase64);
+        return GestureDetector(
+          onTap: () => ImageViewer.show(
+            context,
+            imageBase64: photoBase64,
+            title: 'Intruder Photo',
+          ),
+          child: Container(
+            height: 180,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+              border: Border.all(color: AppColors.danger.withValues(alpha: 0.5)),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(AppSpacing.radiusSm - 1),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Image.memory(
+                    bytes,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => _buildNoPhotoFallback(isDark, textSecondary),
+                  ),
+                  Positioned(
+                    bottom: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.7),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.fullscreen, color: Colors.white, size: 14),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Tap to Expand',
+                            style: AppTypography.caption(color: Colors.white).copyWith(fontSize: 11),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      } catch (_) {}
+    }
+
+    return _buildNoPhotoFallback(isDark, textSecondary);
+  }
+
+  Widget _buildNoPhotoFallback(bool isDark, Color textSecondary) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.md, horizontal: AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkSurfaceSecondary : AppColors.lightSurfaceSecondary,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+        border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.no_photography_outlined, size: 20, color: textSecondary),
+          const SizedBox(width: AppSpacing.sm),
+          Text(
+            'No Camera Frame Available',
+            style: AppTypography.caption(color: textSecondary),
+          ),
+        ],
       ),
     );
   }

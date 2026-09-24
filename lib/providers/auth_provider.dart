@@ -1,9 +1,11 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
+import '../services/cloudinary_service.dart';
 
 class AuthProvider extends ChangeNotifier {
   static const String _prefUserKey = 'miralo_auth_user_v2';
@@ -22,6 +24,14 @@ class AuthProvider extends ChangeNotifier {
     final u = _currentUser!.username.toLowerCase().trim();
     return u == 'aarushlohit' || u == 'ashlinmirsha';
   }
+
+  String? _lastFailedTargetUserId;
+  String? _lastFailedTargetUsername;
+
+  /// Holds the target account's userId if a login failed for an existing account (wrong password).
+  /// Null if the username/email does not exist (wrong username, false positive).
+  String? get lastFailedTargetUserId => _lastFailedTargetUserId;
+  String? get lastFailedTargetUsername => _lastFailedTargetUsername;
 
   bool _isInitialized = false;
   bool get isInitialized => _isInitialized;
@@ -94,6 +104,8 @@ class AuthProvider extends ChangeNotifier {
   Future<bool> login(String emailOrUsername, String password, {String? username}) async {
     _isLoading = true;
     _errorMessage = null;
+    _lastFailedTargetUserId = null;
+    _lastFailedTargetUsername = null;
     notifyListeners();
 
     final cleanInput = emailOrUsername.trim().toLowerCase();
@@ -106,8 +118,13 @@ class AuthProvider extends ChangeNotifier {
         if (snap.exists && snap.value != null && snap.value is Map) {
           final data = Map<String, dynamic>.from(snap.value as Map);
           final emailFromIndex = data['email']?.toString();
+          final uidFromIndex = data['id']?.toString() ?? data['userId']?.toString();
+          final usernameFromIndex = data['username']?.toString() ?? cleanInput;
           if (emailFromIndex != null && emailFromIndex.isNotEmpty) {
             resolvedEmail = emailFromIndex.trim().toLowerCase();
+            // Valid existing user found! Save target info in case password is wrong
+            _lastFailedTargetUserId = uidFromIndex;
+            _lastFailedTargetUsername = usernameFromIndex;
           } else {
             _isLoading = false;
             _errorMessage = 'Incorrect email, username or password. Please try again.';
@@ -115,7 +132,7 @@ class AuthProvider extends ChangeNotifier {
             return false;
           }
         } else {
-          // Username not found in index. To prevent username enumeration, return generic error.
+          // Username not found in index. To prevent false positives, target stays null.
           _isLoading = false;
           _errorMessage = 'Incorrect email, username or password. Please try again.';
           notifyListeners();
@@ -129,6 +146,36 @@ class AuthProvider extends ChangeNotifier {
           notifyListeners();
           return false;
         }
+      }
+    } else {
+      // Identifier is an email (contains @)
+      try {
+        final safeEmailKey = cleanInput.replaceAll('.', '_').replaceAll('@', '_at_');
+        final emailSnap = await FirebaseDatabase.instance.ref('email_index/$safeEmailKey').get();
+        if (emailSnap.exists && emailSnap.value != null && emailSnap.value is Map) {
+          final data = Map<String, dynamic>.from(emailSnap.value as Map);
+          _lastFailedTargetUserId = data['userId']?.toString() ?? data['id']?.toString();
+          _lastFailedTargetUsername = data['username']?.toString() ?? cleanInput.split('@').first;
+        } else {
+          // Fallback: search users node directly
+          final usersSnap = await FirebaseDatabase.instance.ref('users').get();
+          if (usersSnap.exists && usersSnap.value is Map) {
+            final rawUsers = Map<String, dynamic>.from(usersSnap.value as Map);
+            for (var entry in rawUsers.entries) {
+              if (entry.value is Map) {
+                final uData = Map<String, dynamic>.from(entry.value as Map);
+                final uEmail = (uData['email'] ?? '').toString().toLowerCase().trim();
+                if (uEmail == cleanInput) {
+                  _lastFailedTargetUserId = entry.key.toString();
+                  _lastFailedTargetUsername = uData['username']?.toString() ?? cleanInput.split('@').first;
+                  break;
+                }
+              }
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('Email lookup notice: $e');
       }
     }
 
@@ -175,6 +222,10 @@ class AuthProvider extends ChangeNotifier {
     } on FirebaseAuthException catch (e) {
       debugPrint('FirebaseAuthException login: ${e.code} - ${e.message}');
       _isLoading = false;
+      if (e.code == 'user-not-found') {
+        _lastFailedTargetUserId = null;
+        _lastFailedTargetUsername = null;
+      }
       if (e.code == 'user-disabled') {
         _errorMessage = 'This account has been disabled.';
       } else {
@@ -206,6 +257,8 @@ class AuthProvider extends ChangeNotifier {
       }
     }
 
+    _lastFailedTargetUserId = null;
+    _lastFailedTargetUsername = null;
     _isLoading = false;
     await _saveUser();
     _syncUserToFirebase();
@@ -331,25 +384,77 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  void updateProfile({String? displayName, String? username, String? avatarUrl}) {
+  void updateProfile({
+    String? displayName,
+    String? username,
+    String? avatarUrl,
+    String? bio,
+    String? note,
+  }) {
     if (_currentUser == null) return;
     _currentUser = _currentUser!.copyWith(
       displayName: displayName,
       username: username,
       avatarUrl: avatarUrl,
+      bio: bio,
+      note: note,
     );
     _saveUser();
     _syncUserToFirebase();
     notifyListeners();
   }
 
-  void logout() {
+  Future<String?> uploadCustomAvatar(Uint8List fileBytes, String filename) async {
+    if (_currentUser == null) return null;
+    try {
+      _isLoading = true;
+      notifyListeners();
+      final url = await CloudinaryService.uploadFileBytes(
+        fileBytes: fileBytes,
+        fileName: filename,
+        resourceType: 'image',
+      );
+      if (url != null) {
+        updateProfile(avatarUrl: url);
+      }
+      return url;
+    } catch (e) {
+      debugPrint('Error uploading custom avatar: $e');
+      return null;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  final List<VoidCallback> _logoutListeners = [];
+  void addLogoutListener(VoidCallback cb) {
+    if (!_logoutListeners.contains(cb)) {
+      _logoutListeners.add(cb);
+    }
+  }
+
+  void logout({
+    VoidCallback? onClearChatSession,
+    VoidCallback? onClearVaultSession,
+    VoidCallback? onClearAiChatSession,
+    VoidCallback? onClearLibrarySession,
+  }) {
     try {
       FirebaseAuth.instance.signOut();
     } catch (_) {}
+    // Clear all provider sessions BEFORE nullifying current user
+    onClearChatSession?.call();
+    onClearVaultSession?.call();
+    onClearAiChatSession?.call();
+    onClearLibrarySession?.call();
+    for (final cb in _logoutListeners) {
+      try {
+        cb();
+      } catch (_) {}
+    }
     _currentUser = null;
     _saveUser();
     notifyListeners();
   }
 }
-
