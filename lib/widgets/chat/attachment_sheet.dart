@@ -278,6 +278,7 @@ class AttachmentSheet extends StatelessWidget {
               ),
             ),
           ],
+          ),
         ),
       ),
     );
