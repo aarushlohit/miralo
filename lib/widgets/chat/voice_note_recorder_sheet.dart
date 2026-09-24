@@ -307,7 +307,7 @@ class _VoiceWaveformVisualizerState extends State<_VoiceWaveformVisualizer> with
           height: 36,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: List.generate(24, (index) {
               final sinFactor = (index % 5 + 1) * 0.2;
               final height = widget.isPaused
@@ -320,7 +320,7 @@ class _VoiceWaveformVisualizerState extends State<_VoiceWaveformVisualizer> with
                 decoration: BoxDecoration(
                   color: widget.isPaused
                       ? (isDark ? Colors.white30 : Colors.black26)
-                      : MiraloColors.accent.withOpacity(0.6 + 0.4 * ((val + sinFactor) % 1.0)),
+                      : MiraloColors.accent.withValues(alpha: 0.6 + 0.4 * ((val + sinFactor) % 1.0)),
                   borderRadius: BorderRadius.circular(2),
                 ),
               );
