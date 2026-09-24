@@ -162,9 +162,6 @@ class AttachmentSheet extends StatelessWidget {
     final subColor = isDark
         ? MiraloColors.darkTextSecondary
         : MiraloColors.lightTextSecondary;
-    final iconBg = isDark
-        ? MiraloColors.darkSurfaceSecondary
-        : MiraloColors.lightSurfaceSecondary;
     final border = isDark
         ? MiraloColors.darkBorder
         : MiraloColors.lightBorder;
@@ -210,59 +207,72 @@ class AttachmentSheet extends StatelessWidget {
             const SizedBox(height: MiraloSpacing.lg),
 
             // Camera, Photos, Document, Voice Note & GIPHY GIF options
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              alignment: WrapAlignment.center,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _ImageActionTile(
-                  icon: Icons.camera_alt_outlined,
-                  label: 'Camera',
-                  bgColor: iconBg,
-                  textColor: textColor,
-                  onTap: () => _pickImage(context, ImageSource.camera),
+                Expanded(
+                  child: _ImageActionTile(
+                    icon: Icons.insert_drive_file_rounded,
+                    label: 'File',
+                    bgColor: const Color(0xFFD97706).withValues(alpha: 0.15),
+                    iconColor: const Color(0xFFD97706),
+                    textColor: textColor,
+                    onTap: () => _pickDocument(context),
+                  ),
                 ),
-                _ImageActionTile(
-                  icon: Icons.photo_library_outlined,
-                  label: 'Photos',
-                  bgColor: iconBg,
-                  textColor: textColor,
-                  onTap: () => _pickImage(context, ImageSource.gallery),
+                Expanded(
+                  child: _ImageActionTile(
+                    icon: Icons.camera_alt_rounded,
+                    label: 'Camera',
+                    bgColor: const Color(0xFFE11D48).withValues(alpha: 0.15),
+                    iconColor: const Color(0xFFE11D48),
+                    textColor: textColor,
+                    onTap: () => _pickImage(context, ImageSource.camera),
+                  ),
                 ),
-                _ImageActionTile(
-                  icon: Icons.insert_drive_file_outlined,
-                  label: 'File',
-                  bgColor: iconBg,
-                  textColor: textColor,
-                  onTap: () => _pickDocument(context),
+                Expanded(
+                  child: _ImageActionTile(
+                    icon: Icons.photo_library_rounded,
+                    label: 'Photos',
+                    bgColor: const Color(0xFF4F46E5).withValues(alpha: 0.15),
+                    iconColor: const Color(0xFF4F46E5),
+                    textColor: textColor,
+                    onTap: () => _pickImage(context, ImageSource.gallery),
+                  ),
                 ),
-                _ImageActionTile(
-                  icon: Icons.mic_none_rounded,
-                  label: 'Voice Note',
-                  bgColor: iconBg,
-                  textColor: textColor,
-                  onTap: () {
-                    Navigator.pop(context);
-                    VoiceNoteRecorderSheet.show(
-                      context,
-                      onVoiceNoteRecorded: onVoiceNoteRecorded,
-                    );
-                  },
-                ),
-                _ImageActionTile(
-                  icon: Icons.gif_box_outlined,
-                  label: 'GIF',
-                  bgColor: iconBg,
-                  textColor: textColor,
-                  onTap: () {
-                    Navigator.pop(context);
-                    if (onGifSelected != null) {
-                      GiphyPickerSheet.show(
+                Expanded(
+                  child: _ImageActionTile(
+                    icon: Icons.mic_rounded,
+                    label: 'Voice Note',
+                    bgColor: const Color(0xFF0D9488).withValues(alpha: 0.15),
+                    iconColor: const Color(0xFF0D9488),
+                    textColor: textColor,
+                    onTap: () {
+                      Navigator.pop(context);
+                      VoiceNoteRecorderSheet.show(
                         context,
-                        onGifSelected: onGifSelected!,
+                        onVoiceNoteRecorded: onVoiceNoteRecorded,
                       );
-                    }
-                  },
+                    },
+                  ),
+                ),
+                Expanded(
+                  child: _ImageActionTile(
+                    icon: Icons.gif_box_rounded,
+                    label: 'GIF',
+                    bgColor: const Color(0xFF059669).withValues(alpha: 0.15),
+                    iconColor: const Color(0xFF059669),
+                    textColor: textColor,
+                    onTap: () {
+                      Navigator.pop(context);
+                      if (onGifSelected != null) {
+                        GiphyPickerSheet.show(
+                          context,
+                          onGifSelected: onGifSelected!,
+                        );
+                      }
+                    },
+                  ),
                 ),
               ],
             ),
@@ -289,6 +299,7 @@ class _ImageActionTile extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color bgColor;
+  final Color? iconColor;
   final Color textColor;
   final VoidCallback onTap;
 
@@ -296,6 +307,7 @@ class _ImageActionTile extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.bgColor,
+    this.iconColor,
     required this.textColor,
     required this.onTap,
   });
@@ -306,7 +318,6 @@ class _ImageActionTile extends StatelessWidget {
       onTap: onTap,
       borderRadius: MiraloRadius.r16,
       child: Container(
-        width: 62,
         padding: const EdgeInsets.symmetric(
           horizontal: 2,
           vertical: MiraloSpacing.sm,
@@ -315,18 +326,18 @@ class _ImageActionTile extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 52,
-              height: 52,
+              width: 50,
+              height: 50,
               decoration: BoxDecoration(
                 color: bgColor,
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: MiraloColors.accent, size: 24),
+              child: Icon(icon, color: iconColor ?? MiraloColors.accent, size: 24),
             ),
             const SizedBox(height: MiraloSpacing.xs),
             Text(
               label,
-              style: MiraloTypography.labelMedium(color: textColor),
+              style: MiraloTypography.labelMedium(color: textColor).copyWith(fontSize: 11),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,

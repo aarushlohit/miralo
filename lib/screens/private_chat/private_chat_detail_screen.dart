@@ -661,7 +661,7 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                         (cur == 'aarushlohit' && target == 'ashlinmirsha')) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text("bruh you made me for chatting with your loved one's how u can block its wrong !!!"),
+                          content: Text("bruh you made me for chatting with your loved one's how u can block its wrong !!! how u can block your future hubby go cuddle him"),
                           backgroundColor: MiraloColors.accent,
                           duration: Duration(seconds: 4),
                         ),
@@ -689,7 +689,7 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
-                                      content: Text("bruh you made me for chatting with your loved one's how u can block its wrong !!!"),
+                                      content: Text("bruh you made me for chatting with your loved one's how u can block its wrong !!! how u can block your future hubby go cuddle him"),
                                       backgroundColor: MiraloColors.accent,
                                       duration: Duration(seconds: 4),
                                     ),
