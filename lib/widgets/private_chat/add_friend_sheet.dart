@@ -164,7 +164,7 @@ class _AddFriendSheetState extends State<AddFriendSheet> {
         (cur == 'aarushlohit' && target == 'ashlinmirsha')) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("how you can block your babe' go cuddle him !!!!"),
+          content: Text("bruh you made me for chatting with your loved one's how u can block its wrong !!!"),
           backgroundColor: AppColors.accent,
           duration: Duration(seconds: 4),
         ),
@@ -206,7 +206,7 @@ class _AddFriendSheetState extends State<AddFriendSheet> {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text("how you can block your babe' go cuddle him !!!!"),
+                      content: Text("bruh you made me for chatting with your loved one's how u can block its wrong !!!"),
                       backgroundColor: AppColors.accent,
                       duration: Duration(seconds: 4),
                     ),
@@ -286,17 +286,23 @@ class _AddFriendSheetState extends State<AddFriendSheet> {
       ),
       child: SafeArea(
         top: false,
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.screenH,
-            AppSpacing.md,
-            AppSpacing.screenH,
-            AppSpacing.xl,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.85,
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+          child: SingleChildScrollView(
+            physics: const ClampingScrollPhysics(),
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.screenH,
+                AppSpacing.md,
+                AppSpacing.screenH,
+                AppSpacing.xl,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
               Center(
                 child: Container(
                   width: 36,
@@ -763,7 +769,9 @@ class _AddFriendSheetState extends State<AddFriendSheet> {
           ),
         ),
       ),
-    );
+    ),
+  ),
+);
   }
 
   Widget _buildNewGroupTab({

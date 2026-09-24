@@ -274,25 +274,30 @@ class _GroupProfileScreenState extends State<GroupProfileScreen> {
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(ctx).size.height * 0.8,
+        ),
         padding: const EdgeInsets.all(AppSpacing.md),
         decoration: BoxDecoration(
           color: Theme.of(ctx).cardColor,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(memberName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              if (memberUsername != null) Text('@$memberUsername', style: const TextStyle(color: Colors.grey, fontSize: 12)),
-              const Divider(),
-              if (!isMe) ...[
-                ListTile(
-                  leading: const Icon(Icons.chat_bubble_outline_rounded, color: AppColors.accent),
-                  title: const Text('Message privately'),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(memberName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                if (memberUsername != null) Text('@$memberUsername', style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                const Divider(),
+                if (!isMe) ...[
+                  ListTile(
+                    leading: const Icon(Icons.chat_bubble_outline_rounded, color: AppColors.accent),
+                    title: const Text('Message privately'),
                   onTap: () {
                     Navigator.pop(ctx);
                     chat.setActiveChat(memberId);
@@ -378,6 +383,7 @@ class _GroupProfileScreenState extends State<GroupProfileScreen> {
             ],
           ),
         ),
+        ),
       ),
     );
   }
@@ -410,20 +416,28 @@ class _GroupProfileScreenState extends State<GroupProfileScreen> {
     // Build member items
     final members = group.memberIds.map((mId) {
       if (mId == currentUserId) {
+        final currentUsername = (auth.currentUser?.username != null && auth.currentUser!.username.isNotEmpty)
+            ? auth.currentUser!.username
+            : ((chat.currentUsername != null && chat.currentUsername!.isNotEmpty)
+                ? chat.currentUsername
+                : (auth.currentUser?.displayName ?? 'aarushlohit'));
         return {
           'id': mId,
           'name': '${auth.currentUser?.displayName ?? 'You'} (You)',
-          'username': auth.currentUser?.username,
+          'username': currentUsername,
           'phone': auth.currentUser?.email,
           'avatarUrl': auth.currentUser?.avatarUrl,
           'note': chat.currentUserNote,
         };
       }
       final c = chat.getContact(mId);
+      final memberUsername = (c?.username != null && c!.username.isNotEmpty)
+          ? c.username
+          : (c?.displayName != null && c!.displayName.isNotEmpty ? c.displayName : null);
       return {
         'id': mId,
         'name': c?.displayName ?? 'Member $mId',
-        'username': c?.username,
+        'username': memberUsername,
         'phone': c?.phoneNumber,
         'avatarUrl': c?.avatarUrl,
         'note': c?.note,
@@ -475,7 +489,7 @@ class _GroupProfileScreenState extends State<GroupProfileScreen> {
                           shape: BoxShape.circle,
                           border: Border.all(color: surface, width: 2),
                         ),
-                        child: const Icon(Icons.camera_alt_rounded, size: 16, color: Colors.white),
+                        child: const Icon(Icons.edit_outlined, size: 16, color: Colors.white),
                       ),
                     ),
                   ),
@@ -527,9 +541,20 @@ class _GroupProfileScreenState extends State<GroupProfileScreen> {
                   children: [
                     Text('Description', style: AppTypography.labelMedium(color: textMuted)),
                     if (canEdit)
-                      GestureDetector(
+                      InkWell(
                         onTap: () => _showEditBioDialog(context, chat, group),
-                        child: const Text('Edit', style: TextStyle(color: AppColors.accent, fontSize: 13, fontWeight: FontWeight.w600)),
+                        borderRadius: BorderRadius.circular(6),
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.edit_outlined, size: 14, color: AppColors.accent),
+                              SizedBox(width: 4),
+                              Text('Edit', style: TextStyle(color: AppColors.accent, fontSize: 13, fontWeight: FontWeight.w600)),
+                            ],
+                          ),
+                        ),
                       ),
                   ],
                 ),
@@ -545,60 +570,65 @@ class _GroupProfileScreenState extends State<GroupProfileScreen> {
           ),
           const SizedBox(height: AppSpacing.md),
 
-          // ── Permissions Card (Owner/Admin) ──────────────────────────
-          if (isAdmin || isOwner) ...[
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              decoration: BoxDecoration(
-                color: surface,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: border, width: 0.6),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.security_rounded, size: 18, color: AppColors.accent),
-                      const SizedBox(width: 8),
-                      Text('Group Settings Permissions', style: AppTypography.labelMedium(color: textPrimary).copyWith(fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text('Who can edit group info and settings:', style: AppTypography.caption(color: textMuted)),
-                  const SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    initialValue: group.settingsPermission,
-                    decoration: InputDecoration(
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                    items: const [
-                      DropdownMenuItem(
-                        value: 'everyone',
-                        child: Text('Everyone (All Members)'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'admins',
-                        child: Text('Admins Only'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'roles',
-                        child: Text('Role-based (Admins & Tagged Roles)'),
-                      ),
-                    ],
-                    onChanged: (val) {
-                      if (val != null) {
-                        chat.updateGroupSettingsPermission(groupId: group.id, permission: val);
-                      }
-                    },
-                  ),
-                ],
-              ),
+          // ── Permissions Card (Visible to all, editable by Owner/Admin) ────────
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            decoration: BoxDecoration(
+              color: surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: border, width: 0.6),
             ),
-            const SizedBox(height: AppSpacing.md),
-          ],
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.security_rounded, size: 18, color: AppColors.accent),
+                    const SizedBox(width: 8),
+                    Text('Group Settings Permissions', style: AppTypography.labelMedium(color: textPrimary).copyWith(fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text('Who can edit group info and settings:', style: AppTypography.caption(color: textMuted)),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  initialValue: group.settingsPermission,
+                  decoration: InputDecoration(
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'everyone',
+                      child: Text('Everyone (All Members)'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'admins',
+                      child: Text('Admins Only'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'roles',
+                      child: Text('Role-based (Admins & Tagged Roles)'),
+                    ),
+                  ],
+                  onChanged: (isAdmin || isOwner)
+                      ? (val) {
+                          if (val != null) {
+                            chat.updateGroupSettingsPermission(groupId: group.id, permission: val);
+                          }
+                        }
+                      : null,
+                ),
+                if (!isAdmin && !isOwner) ...[
+                  const SizedBox(height: 6),
+                  Text('Only group owner or admins can modify this setting.',
+                      style: AppTypography.caption(color: textMuted).copyWith(fontStyle: FontStyle.italic, fontSize: 11)),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
 
           // ── Members Section ─────────────────────────────────────────
           Container(
@@ -688,7 +718,9 @@ class _GroupProfileScreenState extends State<GroupProfileScreen> {
                             child: const Text('Admin', style: TextStyle(color: AppColors.accent, fontSize: 10, fontWeight: FontWeight.bold)),
                           ),
                         ],
-                        if (roleTag.isNotEmpty) ...[
+                        if (roleTag.isNotEmpty &&
+                            (!isTargetOwner || roleTag.toLowerCase() != 'owner') &&
+                            (!isTargetAdmin || roleTag.toLowerCase() != 'admin')) ...[
                           const SizedBox(width: 6),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),

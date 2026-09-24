@@ -1,11 +1,14 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 
 class DownloadService {
   DownloadService._();
+
+  static const MethodChannel _mediaScannerChannel =
+      MethodChannel('com.miralo.ai/media_scanner');
 
   /// Determine the Miralo subfolder category based on file extension and type.
   static String getCategory(String fileName, [String? type]) {
@@ -49,11 +52,36 @@ class DownloadService {
     return 'Documents';
   }
 
-  /// Resolve the destination directory: `/Download/Miralo/<Category>`
+  /// Resolve the destination directory.
+  /// Images are saved to `/Pictures/Miralo` so they appear directly in the Android Gallery.
+  /// Videos are saved to `/Movies/Miralo`.
+  /// Documents and Audio are saved to `/Download/Miralo/<Category>`.
   static Future<Directory> getMiraloDirectory(String category) async {
     Directory? baseDir;
 
     if (Platform.isAndroid) {
+      if (category == 'Images') {
+        final pictures = Directory('/storage/emulated/0/Pictures/Miralo');
+        if (!pictures.existsSync()) {
+          try {
+            pictures.createSync(recursive: true);
+            return pictures;
+          } catch (_) {}
+        } else {
+          return pictures;
+        }
+      } else if (category == 'Videos') {
+        final movies = Directory('/storage/emulated/0/Movies/Miralo');
+        if (!movies.existsSync()) {
+          try {
+            movies.createSync(recursive: true);
+            return movies;
+          } catch (_) {}
+        } else {
+          return movies;
+        }
+      }
+
       final publicDownload = Directory('/storage/emulated/0/Download');
       if (publicDownload.existsSync()) {
         baseDir = publicDownload;
@@ -74,7 +102,17 @@ class DownloadService {
     return targetDir;
   }
 
-  /// Save raw bytes to `Miralo/<Category>/<fileName>`
+  /// Triggers Android MediaScanner so media files appear immediately in Gallery
+  static Future<void> scanMediaFile(String filePath) async {
+    if (!Platform.isAndroid) return;
+    try {
+      await _mediaScannerChannel.invokeMethod('scanFile', {'path': filePath});
+    } catch (e) {
+      debugPrint('MediaScanner error: $e');
+    }
+  }
+
+  /// Save raw bytes to destination and trigger gallery indexing for media
   static Future<File> saveFile({
     required String fileName,
     required Uint8List bytes,
@@ -100,6 +138,12 @@ class DownloadService {
     }
 
     await targetFile.writeAsBytes(bytes);
+
+    // Trigger media scanner for images & videos
+    if (category == 'Images' || category == 'Videos' || category == 'Audio') {
+      await scanMediaFile(targetFile.path);
+    }
+
     return targetFile;
   }
 
@@ -113,7 +157,7 @@ class DownloadService {
     }
   }
 
-  /// Complete download flow with SnackBar showing "Saved to `Miralo/<Category>`" and "OPEN FILE" action.
+  /// Complete download flow with SnackBar showing saved destination and "OPEN" action.
   static Future<File?> downloadAndPrompt(
     BuildContext context, {
     required String fileName,
@@ -125,13 +169,18 @@ class DownloadService {
       final file = await saveFile(fileName: fileName, bytes: bytes, type: type);
 
       if (context.mounted) {
+        final isMedia = category == 'Images' || category == 'Videos';
+        final message = isMedia
+            ? 'Saved to Gallery & Pictures/Miralo'
+            : 'Saved to Miralo/$category/$fileName';
+
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Saved to Miralo/$category/$fileName'),
+            content: Text(message),
             duration: const Duration(seconds: 5),
             action: SnackBarAction(
-              label: 'OPEN FILE',
+              label: 'OPEN',
               textColor: Colors.white,
               onPressed: () => openFile(file.path),
             ),

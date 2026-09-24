@@ -986,6 +986,23 @@ class PrivateChatProvider extends ChangeNotifier {
               lastSeenText: lastSeenStr,
             );
           }
+          if (isOnline) {
+            final msgs = _messages[contactId];
+            if (msgs != null && msgs.isNotEmpty) {
+              final channelId = getConversationChannelId(contactId);
+              for (int i = 0; i < msgs.length; i++) {
+                final m = msgs[i];
+                if (isMyMessage(m) && m.status == 'sent') {
+                  msgs[i] = m.copyWith(status: 'delivered');
+                  try {
+                    FirebaseDatabase.instance
+                        .ref('chats/$channelId/messages/${m.id}/status')
+                        .set('delivered');
+                  } catch (_) {}
+                }
+              }
+            }
+          }
           notifyListeners();
         }
       }, onError: (_) {});
@@ -1154,6 +1171,28 @@ class PrivateChatProvider extends ChangeNotifier {
               .toList();
           msgs.sort((a, b) => a.createdAt.compareTo(b.createdAt));
           list.addAll(msgs);
+
+          // WhatsApp style: when recipient has internet & receives message, mark as delivered
+          final isActiveChat = _activeChatId == contactId;
+          for (final m in msgs) {
+            if (!isMyMessage(m)) {
+              if (isActiveChat && _sendReadReceipts) {
+                if (m.status != 'seen') {
+                  try {
+                    FirebaseDatabase.instance
+                        .ref('chats/$channelId/messages/${m.id}/status')
+                        .set('seen');
+                  } catch (_) {}
+                }
+              } else if (m.status == 'sent') {
+                try {
+                  FirebaseDatabase.instance
+                      .ref('chats/$channelId/messages/${m.id}/status')
+                      .set('delivered');
+                } catch (_) {}
+              }
+            }
+          }
         }
         notifyListeners();
       }, onError: (e) {
@@ -1516,6 +1555,27 @@ class PrivateChatProvider extends ChangeNotifier {
               .toList();
           msgs.sort((a, b) => a.createdAt.compareTo(b.createdAt));
           list.addAll(msgs);
+
+          final isActiveChat = _activeChatId == contactId;
+          for (final m in msgs) {
+            if (!isMyMessage(m)) {
+              if (isActiveChat && _sendReadReceipts) {
+                if (m.status != 'seen') {
+                  try {
+                    FirebaseDatabase.instance
+                        .ref('chats/$channelId/messages/${m.id}/status')
+                        .set('seen');
+                  } catch (_) {}
+                }
+              } else if (m.status == 'sent') {
+                try {
+                  FirebaseDatabase.instance
+                      .ref('chats/$channelId/messages/${m.id}/status')
+                      .set('delivered');
+                } catch (_) {}
+              }
+            }
+          }
         }
         if (_activeChatId == contactId) {
           markMessagesAsSeen(contactId);
@@ -1632,6 +1692,8 @@ class PrivateChatProvider extends ChangeNotifier {
     final senderId = _currentUserId ?? 'me';
     final senderName = _currentDisplayName ?? _currentUsername ?? 'User';
     final channelId = getConversationChannelId(_activeChatId!);
+    final isRecipientOnline = activeContact?.isOnline == true;
+    final initialStatus = isRecipientOnline ? 'delivered' : 'sent';
 
     final newMsg = PrivateMessageModel(
       id: 'pmsg_${DateTime.now().millisecondsSinceEpoch}',
@@ -1642,7 +1704,7 @@ class PrivateChatProvider extends ChangeNotifier {
       text: text.trim(),
       replyToText: replyToText,
       createdAt: DateTime.now(),
-      status: 'sent',
+      status: initialStatus,
     );
 
     _messages.putIfAbsent(_activeChatId!, () => []).add(newMsg);
@@ -1675,6 +1737,8 @@ class PrivateChatProvider extends ChangeNotifier {
     final senderId = _currentUserId ?? 'me';
     final senderName = _currentDisplayName ?? _currentUsername ?? 'User';
     final channelId = getConversationChannelId(_activeChatId!);
+    final isRecipientOnline = activeContact?.isOnline == true;
+    final initialStatus = isRecipientOnline ? 'delivered' : 'sent';
 
     final newMsg = PrivateMessageModel(
       id: 'pmsg_${DateTime.now().millisecondsSinceEpoch}',
@@ -1688,7 +1752,7 @@ class PrivateChatProvider extends ChangeNotifier {
       fileName: fileName,
       fileSize: fileSize,
       createdAt: DateTime.now(),
-      status: 'sent',
+      status: initialStatus,
     );
 
     _messages.putIfAbsent(_activeChatId!, () => []).add(newMsg);

@@ -253,16 +253,6 @@ class _UniversalFileViewerState extends State<UniversalFileViewer> {
         ),
         centerTitle: true,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.download_rounded, color: Colors.white, size: 22),
-            tooltip: 'Save to Miralo',
-            onPressed: _saveToMiraloFolder,
-          ),
-          IconButton(
-            icon: const Icon(Icons.open_in_new_rounded, color: Colors.white, size: 22),
-            tooltip: 'Open with System App',
-            onPressed: _openWithSystemApp,
-          ),
           if (widget.onSaveToVault != null || widget.onDelete != null)
             PopupMenuButton<String>(
               icon: const Icon(Icons.more_vert_rounded, color: Colors.white),
@@ -323,7 +313,7 @@ class _UniversalFileViewerState extends State<UniversalFileViewer> {
                 Expanded(
                   child: ElevatedButton.icon(
                     icon: const Icon(Icons.open_in_new_rounded, size: 18),
-                    label: const Text('Open with System App'),
+                    label: const Text('Open'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: MiraloColors.accent,
                       foregroundColor: Colors.white,

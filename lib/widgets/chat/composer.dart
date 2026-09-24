@@ -18,6 +18,7 @@ import 'attachment_sheet.dart';
 import 'favorite_gifs_picker_sheet.dart';
 import 'giphy_picker_sheet.dart';
 import 'pinned_messages_sheet.dart';
+import 'voice_note_recorder_sheet.dart';
 
 class _PendingAttachment {
   final String type; // 'image', 'document'
@@ -1361,14 +1362,21 @@ class _ComposerState extends State<Composer> {
                                     onPressed: canSend ? _handleSend : null,
                                   ),
                                 )
-                              // Private mode hold-to-record voice note (WhatsApp-style)
+                               // Private mode hold-to-record or tap to open Voice Note recorder
                               : GestureDetector(
                                   onTap: () {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Hold to record voice note. Slide up to lock, slide left to cancel.'),
-                                        duration: Duration(seconds: 2),
-                                      ),
+                                    VoiceNoteRecorderSheet.show(
+                                      context,
+                                      onVoiceNoteRecorded: (audioUrlOrBase64, durationText) {
+                                        final privateChat = Provider.of<PrivateChatProvider>(context, listen: false);
+                                        privateChat.sendMediaMessage(
+                                          type: 'voice',
+                                          mediaUrl: audioUrlOrBase64.startsWith('http') ? audioUrlOrBase64 : null,
+                                          imageBase64: audioUrlOrBase64.startsWith('http') ? null : audioUrlOrBase64,
+                                          fileName: 'Voice Note ($durationText)',
+                                          fileSize: durationText,
+                                        );
+                                      },
                                     );
                                   },
                                   onLongPressStart: (_) => _startVoiceRecording(),

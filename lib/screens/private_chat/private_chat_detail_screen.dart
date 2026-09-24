@@ -330,15 +330,19 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(ctx).size.height * 0.85,
+        ),
         padding: const EdgeInsets.all(MiraloSpacing.lg),
         decoration: BoxDecoration(
           color: isDark ? MiraloColors.darkSurfacePrimary : MiraloColors.lightSurfacePrimary,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
               Center(
                 child: Container(
                   width: 36,
@@ -423,6 +427,7 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                   },
                 ),
             ],
+            ),
           ),
         ),
       ),
@@ -656,7 +661,7 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                         (cur == 'aarushlohit' && target == 'ashlinmirsha')) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text("how you can block your babe' go cuddle him !!!!"),
+                          content: Text("bruh you made me for chatting with your loved one's how u can block its wrong !!!"),
                           backgroundColor: MiraloColors.accent,
                           duration: Duration(seconds: 4),
                         ),
@@ -684,7 +689,7 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
-                                      content: Text("how you can block your babe' go cuddle him !!!!"),
+                                      content: Text("bruh you made me for chatting with your loved one's how u can block its wrong !!!"),
                                       backgroundColor: MiraloColors.accent,
                                       duration: Duration(seconds: 4),
                                     ),
