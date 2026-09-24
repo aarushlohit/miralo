@@ -712,13 +712,15 @@ class _AppSidebarDrawerState extends State<AppSidebarDrawer> {
                               : contact.displayName;
 
                       final lastMsg = privateChat.getLastMessageForContact(contact.id);
-                      final subtitle = !isFriend
-                          ? 'Pending request'
-                          : (contact.isOnline
-                              ? 'Online'
-                              : (lastMsg != null && lastMsg.text.isNotEmpty
-                                  ? lastMsg.text
-                                  : 'Encrypted chat'));
+                      final subtitle = contact.isPendingInvitation
+                          ? 'New invitation · Tap to chat'
+                          : (!isFriend
+                              ? 'Pending request'
+                              : (contact.isOnline
+                                  ? 'Online'
+                                  : (lastMsg != null && lastMsg.text.isNotEmpty
+                                      ? lastMsg.text
+                                      : 'Encrypted chat')));
 
                       return _ContactItem(
                         name: displayName,

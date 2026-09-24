@@ -452,7 +452,9 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
                                 : (lastMessageObj.type == 'voice'
                                     ? '🎤 Voice note'
                                     : lastMessageObj.text))
-                            : 'Tap to start conversation');
+                            : (contact.isPendingInvitation
+                                ? 'New invitation · Tap to review & chat'
+                                : 'Tap to start conversation'));
 
                     return InkWell(
                       onTap: () {
@@ -515,6 +517,28 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
                                   const SizedBox(height: 3),
                                   Row(
                                     children: [
+                                      if (contact.isPendingInvitation)
+                                        Container(
+                                          margin: const EdgeInsets.only(right: 6),
+                                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.accent.withValues(alpha: 0.18),
+                                            borderRadius: BorderRadius.circular(4),
+                                            border: Border.all(
+                                              color: AppColors.accent.withValues(alpha: 0.4),
+                                              width: 0.6,
+                                            ),
+                                          ),
+                                          child: const Text(
+                                            'Invitation',
+                                            style: TextStyle(
+                                              color: AppColors.accent,
+                                              fontSize: 10.5,
+                                              fontWeight: FontWeight.w700,
+                                              letterSpacing: 0.2,
+                                            ),
+                                          ),
+                                        ),
                                       if (contact.isGroup && lastMsg.toLowerCase().contains('@all'))
                                         Container(
                                           margin: const EdgeInsets.only(right: 6),

@@ -77,6 +77,53 @@ class PrivateChatProvider extends ChangeNotifier {
 
   List<PrivateContactModel> get contacts => _contacts;
 
+  /// Strips 'usr_' or '@' prefixes and normalizes for comparison
+  static String _normalizeIdentifier(String input) {
+    String s = input.trim();
+    if (s.startsWith('usr_')) s = s.substring(4);
+    if (s.startsWith('@')) s = s.substring(1);
+    return s.toLowerCase().trim();
+  }
+
+  /// Resolves any ID, username, 'usr_...', or '@...' to its canonical UID
+  String resolveCanonicalId(String idOrUsername) {
+    if (idOrUsername.startsWith('group_')) return idOrUsername;
+    final norm = _normalizeIdentifier(idOrUsername);
+    if (norm.isEmpty) return idOrUsername;
+
+    // 1. Check confirmed contacts
+    for (final c in _contacts) {
+      if (c.id.toLowerCase() == norm ||
+          _normalizeIdentifier(c.username) == norm ||
+          _normalizeIdentifier(c.id) == norm) {
+        return c.id;
+      }
+    }
+
+    // 2. Check pending friend requests
+    for (final req in _pendingFriendRequests) {
+      if (req.senderId.toLowerCase() == norm ||
+          _normalizeIdentifier(req.senderUsername) == norm) {
+        return req.senderId;
+      }
+      if (req.receiverId.toLowerCase() == norm ||
+          _normalizeIdentifier(req.receiverUsername) == norm) {
+        return req.receiverId;
+      }
+    }
+
+    // 3. Check temporary contacts
+    for (final temp in _tempContacts.values) {
+      if (temp.id.toLowerCase() == norm ||
+          _normalizeIdentifier(temp.username) == norm ||
+          _normalizeIdentifier(temp.id) == norm) {
+        return temp.id;
+      }
+    }
+
+    return idOrUsername;
+  }
+
   /// Merges messages from oldKey into canonicalKey (e.g. username -> uid)
   void _mergeMessageKeys(String oldKey, String canonicalKey) {
     if (oldKey == canonicalKey || oldKey.isEmpty || canonicalKey.isEmpty) return;
@@ -94,28 +141,37 @@ class PrivateChatProvider extends ChangeNotifier {
     }
   }
 
-  /// Combined list of all DM conversations (accepted friends + active non-friend DMs + pending invitations), sorted by latest message
+  /// Combined list of all DM conversations (accepted friends + active non-friend DMs + pending invitations).
+  /// Every person appears exactly ONCE. Cold DM / invitation chat seamlessly continues as the final chat upon acceptance.
   List<PrivateContactModel> get allConversations {
-    final Map<String, PrivateContactModel> map = {};
+    final Map<String, PrivateContactModel> canonicalMap = {};
+
+    // 1. First add all confirmed contacts
     for (var c in _contacts) {
-      map[c.id] = c;
-    }
-    for (var temp in _tempContacts.values) {
-      if (!map.containsKey(temp.id)) {
-        map[temp.id] = temp;
+      canonicalMap[c.id] = c;
+      if (c.username.isNotEmpty) {
+        _mergeMessageKeys(c.username, c.id);
+        _mergeMessageKeys('usr_${c.username}', c.id);
+        _mergeMessageKeys('@${c.username}', c.id);
       }
     }
 
-    // Seamlessly include pending friend invitations directly into conversation list
+    // 2. Add pending friend requests (if not already in contacts)
     for (var req in _pendingFriendRequests) {
       final senderId = req.senderId;
       final senderUsername = req.senderUsername;
-      final existingKey = map.keys.firstWhere(
-        (k) => k == senderId || map[k]?.username.toLowerCase() == senderUsername.toLowerCase(),
-        orElse: () => '',
-      );
+      final normSender = _normalizeIdentifier(senderUsername);
+
+      String existingKey = '';
+      for (final entry in canonicalMap.entries) {
+        if (entry.key == senderId || _normalizeIdentifier(entry.value.username) == normSender) {
+          existingKey = entry.key;
+          break;
+        }
+      }
+
       if (existingKey.isEmpty) {
-        map[senderId] = PrivateContactModel(
+        canonicalMap[senderId] = PrivateContactModel(
           id: senderId,
           displayName: req.senderName,
           username: senderUsername,
@@ -124,24 +180,59 @@ class PrivateChatProvider extends ChangeNotifier {
           isPendingInvitation: true,
         );
       } else {
-        map[existingKey] = map[existingKey]!.copyWith(isPendingInvitation: true);
+        // Mark the existing conversation with isPendingInvitation
+        canonicalMap[existingKey] = canonicalMap[existingKey]!.copyWith(isPendingInvitation: true);
       }
+
       _mergeMessageKeys(senderUsername, senderId);
-    }
-
-    // Merge message keys where username is used instead of UID
-    for (var c in map.values.toList()) {
-      if (c.username.isNotEmpty && c.username != c.id) {
-        _mergeMessageKeys(c.username, c.id);
+      _mergeMessageKeys('usr_$senderUsername', senderId);
+      _mergeMessageKeys('@$senderUsername', senderId);
+      if (existingKey.isNotEmpty && existingKey != senderId) {
+        _mergeMessageKeys(existingKey, senderId);
       }
     }
 
-    for (var chatId in _messages.keys) {
-      if (!map.containsKey(chatId)) {
-        map[chatId] = PrivateContactModel(
-          id: chatId,
-          displayName: chatId.startsWith('usr_') ? chatId.replaceFirst('usr_', '@') : chatId,
-          username: chatId,
+    // 3. Add temp contacts (cold DMs, recent chats) only if not already present
+    for (var temp in _tempContacts.values) {
+      final normUname = _normalizeIdentifier(temp.username);
+      final normId = _normalizeIdentifier(temp.id);
+
+      bool alreadyPresent = false;
+      for (final entry in canonicalMap.entries) {
+        if (entry.key == temp.id ||
+            _normalizeIdentifier(entry.value.username) == normUname ||
+            _normalizeIdentifier(entry.value.id) == normId) {
+          alreadyPresent = true;
+          _mergeMessageKeys(temp.id, entry.key);
+          break;
+        }
+      }
+
+      if (!alreadyPresent) {
+        canonicalMap[temp.id] = temp;
+      }
+    }
+
+    // 4. Merge messages for any orphan message keys
+    for (final msgKey in _messages.keys.toList()) {
+      final normMsgKey = _normalizeIdentifier(msgKey);
+      bool merged = false;
+      for (final entry in canonicalMap.entries) {
+        if (entry.key == msgKey ||
+            _normalizeIdentifier(entry.value.username) == normMsgKey ||
+            _normalizeIdentifier(entry.value.id) == normMsgKey) {
+          if (entry.key != msgKey) {
+            _mergeMessageKeys(msgKey, entry.key);
+          }
+          merged = true;
+          break;
+        }
+      }
+      if (!merged && !canonicalMap.containsKey(msgKey)) {
+        canonicalMap[msgKey] = PrivateContactModel(
+          id: msgKey,
+          displayName: msgKey.startsWith('usr_') ? msgKey.replaceFirst('usr_', '@') : msgKey,
+          username: msgKey.startsWith('usr_') ? msgKey.replaceFirst('usr_', '') : msgKey,
           isOnline: false,
           unreadCount: 0,
         );
@@ -155,9 +246,9 @@ class PrivateChatProvider extends ChangeNotifier {
     final seenUsernames = <String>{};
     final seenIds = <String>{};
 
-    for (var c in map.values) {
+    for (var c in canonicalMap.values) {
       final cleanId = c.id.toLowerCase().trim();
-      final cleanUname = c.username.toLowerCase().trim();
+      final cleanUname = _normalizeIdentifier(c.username);
       if (curId.isNotEmpty && cleanId == curId) continue;
       if (curUname.isNotEmpty && (cleanUname == curUname || cleanId == curUname)) continue;
 
@@ -252,19 +343,63 @@ class PrivateChatProvider extends ChangeNotifier {
 
   PrivateContactModel? get activeContact {
     if (_activeChatId == null) return null;
-    try {
-      return _contacts.firstWhere((c) => c.id == _activeChatId);
-    } catch (_) {
-      return _tempContacts[_activeChatId];
-    }
+    return getContact(_activeChatId!);
   }
 
   PrivateContactModel? getContact(String id) {
-    try {
-      return _contacts.firstWhere((c) => c.id == id);
-    } catch (_) {
-      return _tempContacts[id];
+    final norm = _normalizeIdentifier(id);
+    // 1. Confirmed contacts
+    for (final c in _contacts) {
+      if (c.id == id ||
+          c.id.toLowerCase() == norm ||
+          _normalizeIdentifier(c.username) == norm ||
+          _normalizeIdentifier(c.id) == norm) {
+        return c;
+      }
     }
+    // 2. Pending friend requests (invitations)
+    for (final req in _pendingFriendRequests) {
+      if (req.senderId == id ||
+          _normalizeIdentifier(req.senderUsername) == norm ||
+          req.senderId.toLowerCase() == norm) {
+        return PrivateContactModel(
+          id: req.senderId,
+          displayName: req.senderName,
+          username: req.senderUsername,
+          isOnline: true,
+          isPendingInvitation: true,
+        );
+      }
+      if (req.receiverId == id ||
+          _normalizeIdentifier(req.receiverUsername) == norm ||
+          req.receiverId.toLowerCase() == norm) {
+        return PrivateContactModel(
+          id: req.receiverId,
+          displayName: req.receiverUsername,
+          username: req.receiverUsername,
+          isOnline: false,
+        );
+      }
+    }
+    // 3. Temp contacts
+    for (final temp in _tempContacts.values) {
+      if (temp.id == id ||
+          temp.id.toLowerCase() == norm ||
+          _normalizeIdentifier(temp.username) == norm) {
+        return temp;
+      }
+    }
+    // 4. Default fallback contact object
+    if (id.isNotEmpty) {
+      final clean = id.startsWith('usr_') ? id.replaceFirst('usr_', '') : id;
+      return PrivateContactModel(
+        id: id,
+        displayName: clean.startsWith('@') ? clean : '@$clean',
+        username: clean.replaceFirst('@', ''),
+        isOnline: false,
+      );
+    }
+    return null;
   }
 
   List<PrivateMessageModel> get activeMessages {
@@ -964,6 +1099,19 @@ class PrivateChatProvider extends ChangeNotifier {
                 continue;
               }
               _contacts.add(contact);
+              // Clean up any temp contact for this user
+              _tempContacts.remove(contact.id);
+              _tempContacts.remove(contact.username);
+              _tempContacts.remove('usr_${contact.username}');
+              _tempContacts.remove('@${contact.username}');
+              _tempContacts.remove(_normalizeIdentifier(contact.username));
+
+              // Merge messages from username / usr_ keys into canonical contact.id
+              _mergeMessageKeys(contact.username, contact.id);
+              _mergeMessageKeys('usr_${contact.username}', contact.id);
+              _mergeMessageKeys('@${contact.username}', contact.id);
+              _mergeMessageKeys(_normalizeIdentifier(contact.username), contact.id);
+
               _subscribeToContactChat(contact.id);
               _subscribeToContactPresence(contact.id);
             }
@@ -1180,22 +1328,7 @@ class PrivateChatProvider extends ChangeNotifier {
     }
     if (_currentUserId == null || _currentUserId!.isEmpty) return contactId;
 
-    // Resolve username to real ID if contactId was passed as a username
-    String canonicalTarget = contactId;
-    for (var c in _contacts) {
-      if (c.username.toLowerCase() == contactId.toLowerCase()) {
-        canonicalTarget = c.id;
-        break;
-      }
-    }
-    if (canonicalTarget == contactId) {
-      for (var req in _pendingFriendRequests) {
-        if (req.senderUsername.toLowerCase() == contactId.toLowerCase()) {
-          canonicalTarget = req.senderId;
-          break;
-        }
-      }
-    }
+    final canonicalTarget = resolveCanonicalId(contactId);
 
     return _currentUserId!.compareTo(canonicalTarget) < 0
         ? 'chat_${_currentUserId}_$canonicalTarget'
@@ -1225,39 +1358,59 @@ class PrivateChatProvider extends ChangeNotifier {
       return;
     }
 
-    // Resolve chatId to canonical contact ID if username was passed
-    String canonicalId = chatId;
-    for (var c in _contacts) {
-      if (c.username.toLowerCase() == chatId.toLowerCase()) {
-        canonicalId = c.id;
-        break;
-      }
-    }
-    if (canonicalId == chatId) {
-      for (var req in _pendingFriendRequests) {
-        if (req.senderUsername.toLowerCase() == chatId.toLowerCase()) {
-          canonicalId = req.senderId;
-          break;
-        }
-      }
-    }
+    final canonicalId = resolveCanonicalId(chatId);
     _mergeMessageKeys(chatId, canonicalId);
+    _mergeMessageKeys('usr_$chatId', canonicalId);
+    _mergeMessageKeys('@$chatId', canonicalId);
+    if (username != null) {
+      _mergeMessageKeys(username, canonicalId);
+      _mergeMessageKeys('usr_$username', canonicalId);
+      _mergeMessageKeys('@$username', canonicalId);
+    }
 
     _activeChatId = canonicalId;
-    final contactIndex = _contacts.indexWhere((c) => c.id == canonicalId);
+    final contactIndex = _contacts.indexWhere(
+      (c) => c.id == canonicalId || _normalizeIdentifier(c.username) == _normalizeIdentifier(username ?? chatId),
+    );
     if (contactIndex != -1) {
       _contacts[contactIndex] = _contacts[contactIndex].copyWith(unreadCount: 0);
-    } else if (displayName != null || username != null) {
-      _tempContacts[canonicalId] = PrivateContactModel(
-        id: canonicalId,
-        displayName: displayName ?? username ?? 'User',
-        username: username ?? 'user',
-        isOnline: false,
-        lastSeenText: 'Active recently',
-        unreadCount: 0,
-      );
     } else {
-      _fetchUserForChatIfMissing(canonicalId);
+      // Check if it's a pending friend request
+      final req = _pendingFriendRequests.firstWhere(
+        (r) => r.senderId == canonicalId || _normalizeIdentifier(r.senderUsername) == _normalizeIdentifier(username ?? chatId),
+        orElse: () => FriendRequestModel(
+          id: '',
+          senderId: '',
+          senderName: '',
+          senderUsername: '',
+          receiverId: '',
+          receiverUsername: '',
+          status: '',
+          createdAt: DateTime.now(),
+        ),
+      );
+
+      if (req.id.isNotEmpty) {
+        _tempContacts[canonicalId] = PrivateContactModel(
+          id: canonicalId,
+          displayName: req.senderName,
+          username: req.senderUsername,
+          isOnline: true,
+          unreadCount: 0,
+          isPendingInvitation: true,
+        );
+      } else if (displayName != null || username != null) {
+        _tempContacts[canonicalId] = PrivateContactModel(
+          id: canonicalId,
+          displayName: displayName ?? username ?? 'User',
+          username: username ?? (chatId.startsWith('usr_') ? chatId.replaceFirst('usr_', '') : chatId),
+          isOnline: false,
+          lastSeenText: 'Active recently',
+          unreadCount: 0,
+        );
+      } else {
+        _fetchUserForChatIfMissing(canonicalId);
+      }
     }
     final channelId = getConversationChannelId(canonicalId);
     _listenToFirebaseChat(canonicalId, channelId);
@@ -2117,6 +2270,9 @@ class PrivateChatProvider extends ChangeNotifier {
     _sentRequestStatuses[req.senderUsername.toLowerCase().trim()] = status;
     _tempContacts.remove(req.senderId);
     _tempContacts.remove(req.senderUsername);
+    _tempContacts.remove('usr_${req.senderUsername}');
+    _tempContacts.remove('@${req.senderUsername}');
+    _tempContacts.remove(_normalizeIdentifier(req.senderUsername));
 
     if (accept) {
       final newContact = PrivateContactModel(
@@ -2127,9 +2283,29 @@ class PrivateChatProvider extends ChangeNotifier {
         lastSeenText: 'Online',
         unreadCount: 0,
       );
-      if (!_contacts.any((c) => c.id == req.senderId)) {
+      final existingIndex = _contacts.indexWhere(
+        (c) => c.id == req.senderId || _normalizeIdentifier(c.username) == _normalizeIdentifier(req.senderUsername),
+      );
+      if (existingIndex != -1) {
+        _contacts[existingIndex] = newContact;
+      } else {
         _contacts.insert(0, newContact);
       }
+
+      // Merge messages from all possible keys into canonical UID
+      _mergeMessageKeys(req.senderUsername, req.senderId);
+      _mergeMessageKeys('usr_${req.senderUsername}', req.senderId);
+      _mergeMessageKeys('@${req.senderUsername}', req.senderId);
+      _mergeMessageKeys(_normalizeIdentifier(req.senderUsername), req.senderId);
+
+      // Point activeChatId to canonical UID if it was username
+      if (_activeChatId == req.senderUsername ||
+          _activeChatId == 'usr_${req.senderUsername}' ||
+          _activeChatId == '@${req.senderUsername}' ||
+          _activeChatId == _normalizeIdentifier(req.senderUsername)) {
+        _activeChatId = req.senderId;
+      }
+
       _subscribeToContactPresence(req.senderId);
       _subscribeToContactChat(req.senderId);
 

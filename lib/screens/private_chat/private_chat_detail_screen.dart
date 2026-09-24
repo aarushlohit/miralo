@@ -1252,6 +1252,7 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                           ),
                           onPressed: () {
                             chat.respondToFriendRequest(incomingReq!, false);
+                            if (context.mounted) Navigator.pop(context);
                           },
                           child: const Text('Decline', style: TextStyle(fontSize: 12)),
                         ),
