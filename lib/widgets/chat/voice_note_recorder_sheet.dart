@@ -41,6 +41,8 @@ class _VoiceNoteRecorderSheetState extends State<VoiceNoteRecorderSheet> {
   int _secondsElapsed = 0;
   Timer? _timer;
   String? _recordedPath;
+  bool _isPaused = false;
+  bool _isProcessing = false;
 
   @override
   void initState() {
@@ -69,10 +71,11 @@ class _VoiceNoteRecorderSheetState extends State<VoiceNoteRecorderSheet> {
         setState(() {
           _secondsElapsed = 0;
           _recordedPath = path;
+          _isPaused = false;
         });
 
         _timer = Timer.periodic(const Duration(seconds: 1), (t) {
-          if (mounted) {
+          if (mounted && !_isPaused) {
             setState(() => _secondsElapsed++);
           }
         });
@@ -82,8 +85,26 @@ class _VoiceNoteRecorderSheetState extends State<VoiceNoteRecorderSheet> {
     }
   }
 
+  Future<void> _togglePauseResume() async {
+    if (_isProcessing) return;
+    try {
+      if (_isPaused) {
+        await _audioRecorder.resume();
+        setState(() => _isPaused = false);
+      } else {
+        await _audioRecorder.pause();
+        setState(() => _isPaused = true);
+      }
+    } catch (e) {
+      debugPrint('Error toggling pause/resume: $e');
+    }
+  }
+
   Future<void> _stopAndSend() async {
+    if (_isProcessing) return;
+    setState(() => _isProcessing = true);
     _timer?.cancel();
+
     try {
       final path = await _audioRecorder.stop();
 
@@ -117,10 +138,14 @@ class _VoiceNoteRecorderSheetState extends State<VoiceNoteRecorderSheet> {
     } catch (e) {
       debugPrint('Error stopping voice recording: $e');
       if (mounted) Navigator.pop(context);
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
     }
   }
 
   Future<void> _cancelRecording() async {
+    if (_isProcessing) return;
+    setState(() => _isProcessing = true);
     _timer?.cancel();
     try {
       await _audioRecorder.stop();
@@ -159,13 +184,16 @@ class _VoiceNoteRecorderSheetState extends State<VoiceNoteRecorderSheet> {
                 Container(
                   width: 10,
                   height: 10,
-                  decoration: const BoxDecoration(
-                    color: Colors.redAccent,
+                  decoration: BoxDecoration(
+                    color: _isPaused ? Colors.amber : Colors.redAccent,
                     shape: BoxShape.circle,
                   ),
                 ),
                 const SizedBox(width: 8),
-                Text('Recording Voice Note...', style: MiraloTypography.titleMedium(color: textPrimary)),
+                Text(
+                  _isPaused ? 'Recording Paused' : 'Recording Voice Note...',
+                  style: MiraloTypography.titleMedium(color: textPrimary),
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -178,8 +206,13 @@ class _VoiceNoteRecorderSheetState extends State<VoiceNoteRecorderSheet> {
                 fontFeatures: [FontFeature.tabularFigures()],
               ),
             ),
+            const SizedBox(height: 12),
+            _VoiceWaveformVisualizer(isPaused: _isPaused),
             const SizedBox(height: 8),
-            Text('Speak into your microphone', style: MiraloTypography.bodySmall(color: textSecondary)),
+            Text(
+              _isPaused ? 'Tap resume to continue' : 'Speak into your microphone',
+              style: MiraloTypography.bodySmall(color: textSecondary),
+            ),
             const SizedBox(height: 24),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -189,21 +222,33 @@ class _VoiceNoteRecorderSheetState extends State<VoiceNoteRecorderSheet> {
                   label: const Text('Cancel', style: TextStyle(color: Colors.redAccent)),
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: Colors.redAccent),
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  onPressed: _cancelRecording,
+                  onPressed: _isProcessing ? null : _cancelRecording,
+                ),
+                IconButton.filledTonal(
+                  icon: Icon(_isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded, color: MiraloColors.accent),
+                  iconSize: 24,
+                  onPressed: _isProcessing ? null : _togglePauseResume,
+                  tooltip: _isPaused ? 'Resume' : 'Pause',
                 ),
                 ElevatedButton.icon(
-                  icon: const Icon(Icons.send_rounded, size: 18),
-                  label: const Text('Send Voice Note'),
+                  icon: _isProcessing
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Icon(Icons.send_rounded, size: 18),
+                  label: Text(_isProcessing ? 'Sending...' : 'Send Voice Note'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: MiraloColors.accent,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  onPressed: _stopAndSend,
+                  onPressed: _isProcessing ? null : _stopAndSend,
                 ),
               ],
             ),
@@ -211,6 +256,78 @@ class _VoiceNoteRecorderSheetState extends State<VoiceNoteRecorderSheet> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _VoiceWaveformVisualizer extends StatefulWidget {
+  final bool isPaused;
+  const _VoiceWaveformVisualizer({required this.isPaused});
+
+  @override
+  State<_VoiceWaveformVisualizer> createState() => _VoiceWaveformVisualizerState();
+}
+
+class _VoiceWaveformVisualizerState extends State<_VoiceWaveformVisualizer> with SingleTickerProviderStateMixin {
+  late AnimationController _animController;
+
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void didUpdateWidget(covariant _VoiceWaveformVisualizer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isPaused) {
+      _animController.stop();
+    } else if (!_animController.isAnimating) {
+      _animController.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return AnimatedBuilder(
+      animation: _animController,
+      builder: (context, _) {
+        final val = _animController.value;
+        return SizedBox(
+          height: 36,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAlignment.center,
+            children: List.generate(24, (index) {
+              final sinFactor = (index % 5 + 1) * 0.2;
+              final height = widget.isPaused
+                  ? 6.0
+                  : 8.0 + (24.0 * ((val + sinFactor) % 1.0));
+              return Container(
+                width: 3,
+                height: height,
+                margin: const EdgeInsets.symmetric(horizontal: 2),
+                decoration: BoxDecoration(
+                  color: widget.isPaused
+                      ? (isDark ? Colors.white30 : Colors.black26)
+                      : MiraloColors.accent.withOpacity(0.6 + 0.4 * ((val + sinFactor) % 1.0)),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              );
+            }),
+          ),
+        );
+      },
     );
   }
 }

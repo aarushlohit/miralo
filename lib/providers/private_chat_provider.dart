@@ -1760,6 +1760,23 @@ class PrivateChatProvider extends ChangeNotifier {
     _syncMessageToFirebase(newMsg, channelId);
   }
 
+  void editMessage(String messageId, String newText) {
+    if (_activeChatId == null || newText.trim().isEmpty) return;
+    final msgs = _messages[_activeChatId!];
+    if (msgs == null) return;
+    final idx = msgs.indexWhere((m) => m.id == messageId);
+    if (idx != -1) {
+      final updated = msgs[idx].copyWith(
+        text: newText.trim(),
+        isEdited: true,
+      );
+      msgs[idx] = updated;
+      notifyListeners();
+      final channelId = getConversationChannelId(_activeChatId!);
+      _syncMessageToFirebase(updated, channelId);
+    }
+  }
+
   void toggleReaction(String messageId, String emoji) {
     if (_activeChatId == null) return;
     final list = _messages[_activeChatId!];

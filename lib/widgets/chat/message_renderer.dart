@@ -31,6 +31,7 @@ class MessageRenderer extends StatelessWidget {
   final bool isPinned;
   final bool isStarred;
   final bool isHighlighted;
+  final bool isEdited;
   final String? dateHeader;
 
   const MessageRenderer({
@@ -57,6 +58,7 @@ class MessageRenderer extends StatelessWidget {
     this.isPinned = false,
     this.isStarred = false,
     this.isHighlighted = false,
+    this.isEdited = false,
     this.dateHeader,
   });
 
@@ -256,6 +258,15 @@ class MessageRenderer extends StatelessWidget {
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
+                            if (isEdited) ...[
+                              Text(
+                                'edited ',
+                                style: MiraloTypography.bodySmall(color: textMuted).copyWith(
+                                  fontStyle: FontStyle.italic,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
                             Text(
                               _formatTime(createdAt),
                               style: MiraloTypography.bodySmall(color: textMuted),
