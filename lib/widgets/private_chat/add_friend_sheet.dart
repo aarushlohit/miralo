@@ -208,7 +208,7 @@ class _AddFriendSheetState extends State<AddFriendSheet> {
               if (!ok) {
                 if (context.mounted) {
                   final msg = currentUsername == 'ashlinmirsha'
-                      ? "bruh you made me for chatting with your loved one's how u can block its wrong !!! how u can block your future hubby go cuddle him"
+                      ? "! how u can block your future hubby go cuddle him"
                       : "bruh you made me for chatting with your loved one's how u can block its wrong !!!";
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(

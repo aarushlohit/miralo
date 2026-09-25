@@ -655,7 +655,7 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                     if ((cur == 'ashlinmirsha' && target == 'aarushlohit') ||
                         (cur == 'aarushlohit' && target == 'ashlinmirsha')) {
                       final msg = cur == 'ashlinmirsha'
-                          ? "bruh you made me for chatting with your loved one's how u can block its wrong !!! how u can block your future hubby go cuddle him"
+                          ? "! how u can block your future hubby go cuddle him"
                           : "bruh you made me for chatting with your loved one's how u can block its wrong !!!";
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
