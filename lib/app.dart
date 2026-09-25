@@ -60,6 +60,10 @@ class MiraloApp extends StatelessWidget {
             themeMode: themeProvider.themeMode,
             theme: AppTheme.lightTheme,
             darkTheme: AppTheme.darkTheme,
+            builder: (context, child) {
+              Provider.of<PrivateChatProvider>(context, listen: false).setNavigationContext(context);
+              return child ?? const SizedBox();
+            },
             initialRoute: AppRoutes.splash,
             routes: {
               AppRoutes.splash: (_) => const SplashScreen(),

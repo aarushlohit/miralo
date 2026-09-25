@@ -10,6 +10,7 @@ import '../models/private_contact_model.dart';
 import '../models/private_message_model.dart';
 import '../services/chat_backup_service.dart';
 import '../services/encryption_service.dart';
+import '../services/stealth_notification_service.dart';
 import 'library_provider.dart';
 
 class PrivateChatProvider extends ChangeNotifier {
@@ -46,6 +47,11 @@ class PrivateChatProvider extends ChangeNotifier {
   final Map<String, bool> _typingUsers = {};
   final Map<String, String> _typingUserNames = {};
   final Map<String, StreamSubscription<DatabaseEvent>> _typingSubscriptions = {};
+  final Set<String> _notifiedMessageIds = {};
+  BuildContext? _appContext;
+  void setNavigationContext(BuildContext context) {
+    _appContext = context;
+  }
 
   bool isContactTyping(String? chatId) => chatId != null && _typingUsers[chatId] == true;
   String? getTypingUserName(String? chatId) => chatId != null ? _typingUserNames[chatId] : null;
@@ -1184,12 +1190,23 @@ class PrivateChatProvider extends ChangeNotifier {
                         .set('seen');
                   } catch (_) {}
                 }
-              } else if (m.status == 'sent') {
-                try {
-                  FirebaseDatabase.instance
-                      .ref('chats/$channelId/messages/${m.id}/status')
-                      .set('delivered');
-                } catch (_) {}
+              } else {
+                if (m.status == 'sent') {
+                  try {
+                    FirebaseDatabase.instance
+                        .ref('chats/$channelId/messages/${m.id}/status')
+                        .set('delivered');
+                  } catch (_) {}
+                }
+                // Trigger stealth notification if user is not in this active chat
+                if (_notifiedMessageIds.add(m.id) && _appContext != null && _appContext!.mounted) {
+                  StealthNotificationService.showStealthInAppNotification(
+                    _appContext!,
+                    onTap: () {
+                      setActiveChat(contactId);
+                    },
+                  );
+                }
               }
             }
           }
