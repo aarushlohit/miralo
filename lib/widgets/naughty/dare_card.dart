@@ -6,6 +6,7 @@ import '../../models/naughty_dare_model.dart';
 
 class DareCardWidget extends StatelessWidget {
   final NaughtyDareModel dare;
+  final bool isLoading;
   final VoidCallback onSpinAgain;
   final VoidCallback onSkip;
   final VoidCallback onSendToChat;
@@ -14,6 +15,7 @@ class DareCardWidget extends StatelessWidget {
   const DareCardWidget({
     super.key,
     required this.dare,
+    this.isLoading = false,
     required this.onSpinAgain,
     required this.onSkip,
     required this.onSendToChat,
@@ -59,20 +61,49 @@ class DareCardWidget extends StatelessWidget {
                   ),
                 ),
               ),
-              Text(
-                'Intensity: ${dare.intensity}',
-                style: AppTypography.caption(color: textSecondary),
+              Row(
+                children: [
+                  const Icon(Icons.auto_awesome, size: 14, color: Colors.amber),
+                  const SizedBox(width: 4),
+                  Text(
+                    'NVIDIA NIM AI ✨',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.amberAccent : Colors.amber.shade900,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
 
           const SizedBox(height: AppSpacing.lg),
 
-          Text(
-            dare.dareText,
-            style: AppTypography.heading3(color: textPrimary).copyWith(fontWeight: FontWeight.w500),
-            textAlign: TextAlign.center,
-          ),
+          if (isLoading)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 24.0),
+              child: Column(
+                children: [
+                  SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.accent),
+                  ),
+                  SizedBox(height: 12),
+                  Text(
+                    'Generating romantic prompt with NVIDIA NIM AI...',
+                    style: TextStyle(fontSize: 13, fontStyle: FontStyle.italic, color: AppColors.accent),
+                  ),
+                ],
+              ),
+            )
+          else
+            Text(
+              dare.dareText,
+              style: AppTypography.heading3(color: textPrimary).copyWith(fontWeight: FontWeight.w500),
+              textAlign: TextAlign.center,
+            ),
 
           const SizedBox(height: AppSpacing.xl),
 
@@ -87,14 +118,14 @@ class DareCardWidget extends StatelessWidget {
                 ),
                 elevation: 0,
               ),
-              onPressed: onSpinAgain,
+              onPressed: isLoading ? null : onSpinAgain,
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(Icons.refresh_rounded, size: 20),
                   SizedBox(width: 8),
                   Text(
-                    'Next Prompt',
+                    'Generate AI Prompt',
                     style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                   ),
                 ],

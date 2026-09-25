@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/routes/app_routes.dart';
@@ -8,6 +7,7 @@ import '../../core/theme/app_typography.dart';
 import '../../models/naughty_dare_model.dart';
 import '../../providers/private_chat_provider.dart';
 import '../../providers/vault_provider.dart';
+import '../../services/ai_service.dart';
 import '../../widgets/naughty/dare_card.dart';
 
 class NaughtyModeScreen extends StatefulWidget {
@@ -19,6 +19,9 @@ class NaughtyModeScreen extends StatefulWidget {
 
 class _NaughtyModeScreenState extends State<NaughtyModeScreen> {
   String _selectedCategory = 'Sensual';
+  String _selectedMode = 'mix'; // 'mix', 'truth', 'dare'
+  bool _isLoadingAi = false;
+  final TextEditingController _customTopicController = TextEditingController();
 
   final List<String> _categories = [
     'Sweet',
@@ -30,65 +33,50 @@ class _NaughtyModeScreenState extends State<NaughtyModeScreen> {
     'Random Mix',
   ];
 
-  final List<NaughtyDareModel> _curatedDares = [
-    NaughtyDareModel(
-      id: 'dare_1',
-      category: 'Sensual',
-      intensity: 'Playful',
-      dareText:
-          'Imagine your partner beside you. If you feel comfortable, share one thing about their touch that you appreciate most.',
-    ),
-    NaughtyDareModel(
-      id: 'dare_2',
-      category: 'Romantic',
-      intensity: 'Sweet',
-      dareText:
-          'Give your partner a long, uninterrupted embrace and whisper one memory you cherish about them.',
-    ),
-    NaughtyDareModel(
-      id: 'dare_3',
-      category: 'Flirty',
-      intensity: 'Playful',
-      dareText:
-          'Send your partner a teasing compliment describing something you look forward to doing together.',
-    ),
-    NaughtyDareModel(
-      id: 'dare_4',
-      category: 'Couple Fantasy',
-      intensity: 'Intense',
-      dareText:
-          'Take turns describing a dream getaway together where neither of you checks a clock or looks at a screen.',
-    ),
-    NaughtyDareModel(
-      id: 'dare_5',
-      category: 'Sweet',
-      intensity: 'Sweet',
-      dareText:
-          'Maintain gentle eye contact for 30 seconds without speaking, then smile and share what came into your thoughts.',
-    ),
-  ];
-
   late NaughtyDareModel _currentDare;
 
   @override
   void initState() {
     super.initState();
-    _currentDare = _curatedDares.first;
+    _currentDare = NaughtyDareModel(
+      id: 'initial',
+      category: _selectedCategory,
+      intensity: 'Playful',
+      dareText: 'Truth 💕: What is one secret thing that always makes you smile about me?',
+      isAiGenerated: true,
+    );
+    _spinDare();
   }
 
-  void _spinDare() {
-    final random = Random();
-    final matching = _curatedDares.where((d) {
-      if (_selectedCategory != 'Random Mix' && d.category != _selectedCategory) {
-        return false;
-      }
-      return true;
-    }).toList();
+  @override
+  void dispose() {
+    _customTopicController.dispose();
+    super.dispose();
+  }
 
-    final pool = matching.isNotEmpty ? matching : _curatedDares;
-    setState(() {
-      _currentDare = pool[random.nextInt(pool.length)];
-    });
+  Future<void> _spinDare() async {
+    if (_isLoadingAi) return;
+    setState(() => _isLoadingAi = true);
+
+    final customTopic = _customTopicController.text.trim();
+    final aiPromptText = await AiService.instance.generateNaughtyTruthOrDare(
+      mode: _selectedMode,
+      category: _selectedCategory,
+      customTopic: customTopic.isNotEmpty ? customTopic : null,
+    );
+
+    if (mounted) {
+      setState(() {
+        _isLoadingAi = false;
+        _currentDare = NaughtyDareModel(
+          id: 'ai_${DateTime.now().millisecondsSinceEpoch}',
+          category: _selectedCategory,
+          intensity: _selectedMode == 'truth' ? 'Deep' : (_selectedMode == 'dare' ? 'Spicy' : 'Romantic'),
+          dareText: aiPromptText,
+          isAiGenerated: true,
+        );
+      });
+    }
   }
 
   @override
@@ -155,7 +143,7 @@ class _NaughtyModeScreenState extends State<NaughtyModeScreen> {
             ),
           ),
         ),
-        title: Text('Partner Prompts',
+        title: Text('Partner Prompts — NVIDIA NIM AI',
             style: AppTypography.bodyMedium(color: textPrimary)
                 .copyWith(fontWeight: FontWeight.w600)),
         centerTitle: true,
@@ -167,7 +155,23 @@ class _NaughtyModeScreenState extends State<NaughtyModeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('CATEGORY', style: AppTypography.labelSmall(color: textSecondary)),
+              // Mode Selector (Mix / Truth / Dare)
+              Text('GAME MODE', style: AppTypography.labelSmall(color: textSecondary)),
+              const SizedBox(height: AppSpacing.xs),
+              Row(
+                children: [
+                  _buildModeChip('mix', 'Mix 💖', textPrimary, border),
+                  const SizedBox(width: 8),
+                  _buildModeChip('truth', 'Truth 💕', textPrimary, border),
+                  const SizedBox(width: 8),
+                  _buildModeChip('dare', 'Dare 🔥', textPrimary, border),
+                ],
+              ),
+
+              const SizedBox(height: AppSpacing.md),
+
+              // Category Selector
+              Text('CATEGORY STYLE', style: AppTypography.labelSmall(color: textSecondary)),
               const SizedBox(height: AppSpacing.sm),
               SizedBox(
                 height: 36,
@@ -206,11 +210,47 @@ class _NaughtyModeScreenState extends State<NaughtyModeScreen> {
                 ),
               ),
 
-              const SizedBox(height: AppSpacing.xl),
+              const SizedBox(height: AppSpacing.md),
+
+              // Custom Question / Topic Input Field
+              Text('CUSTOM TOPIC / QUESTION', style: AppTypography.labelSmall(color: textSecondary)),
+              const SizedBox(height: AppSpacing.xs),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _customTopicController,
+                      style: AppTypography.bodySmall(color: textPrimary),
+                      decoration: InputDecoration(
+                        hintText: 'e.g. first kiss, beach date, cuddle time...',
+                        hintStyle: AppTypography.caption(color: textSecondary),
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        filled: true,
+                        fillColor: surface,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: border, width: 0.8),
+                        ),
+                      ),
+                      onSubmitted: (_) => _spinDare(),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton.filled(
+                    style: IconButton.styleFrom(backgroundColor: AppColors.accent),
+                    icon: const Icon(Icons.auto_awesome, color: Colors.white, size: 20),
+                    onPressed: _spinDare,
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: AppSpacing.lg),
 
               // Interactive Dare Card
               DareCardWidget(
                 dare: _currentDare,
+                isLoading: _isLoadingAi,
                 onSpinAgain: _spinDare,
                 onSkip: _spinDare,
                 onSendToChat: () {
@@ -218,9 +258,9 @@ class _NaughtyModeScreenState extends State<NaughtyModeScreen> {
                       (chatProvider.contacts.isNotEmpty ? chatProvider.contacts.first : null);
                   if (contact != null) {
                     chatProvider.setActiveChat(contact.id);
-                    chatProvider.sendTextMessage('Partner Prompt: ${_currentDare.dareText}');
+                    chatProvider.sendTextMessage(_currentDare.dareText);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Sent prompt to ${contact.displayName}!')),
+                      SnackBar(content: Text('Sent AI prompt to ${contact.displayName}!')),
                     );
                   }
                 },
@@ -238,7 +278,7 @@ class _NaughtyModeScreenState extends State<NaughtyModeScreen> {
 
               const SizedBox(height: AppSpacing.xl),
 
-              // Consent guarantee banner
+              // AI Engine & Consent guarantee banner
               Container(
                 padding: const EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(
@@ -248,12 +288,11 @@ class _NaughtyModeScreenState extends State<NaughtyModeScreen> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.verified_user_outlined,
-                        color: AppColors.accent, size: 22),
+                    const Icon(Icons.auto_awesome, color: Colors.amber, size: 22),
                     const SizedBox(width: AppSpacing.md),
                     Expanded(
                       child: Text(
-                        'Consensual & Private. Prompts can always be skipped. Nothing is recorded or uploaded to AI servers.',
+                        'Powered by NVIDIA NIM AI flagship model. Generates unique, romantic, flirty, and harmless sexy prompts dynamically for couples.',
                         style: AppTypography.caption(color: textSecondary),
                       ),
                     ),
@@ -261,6 +300,39 @@ class _NaughtyModeScreenState extends State<NaughtyModeScreen> {
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildModeChip(String modeKey, String label, Color textPrimary, Color border) {
+    final isSelected = _selectedMode == modeKey;
+    return Expanded(
+      child: InkWell(
+        onTap: () {
+          setState(() => _selectedMode = modeKey);
+          _spinDare();
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.accent : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isSelected ? AppColors.accent : border,
+              width: 1,
+            ),
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: isSelected ? Colors.white : textPrimary,
+            ),
           ),
         ),
       ),

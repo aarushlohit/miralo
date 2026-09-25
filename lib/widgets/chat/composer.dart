@@ -13,6 +13,7 @@ import '../../models/private_contact_model.dart';
 import '../../providers/ai_chat_provider.dart';
 import '../../providers/private_chat_provider.dart';
 import '../../providers/vault_provider.dart';
+import '../../services/ai_service.dart';
 import '../../services/cloudinary_service.dart';
 import 'attachment_sheet.dart';
 import 'favorite_gifs_picker_sheet.dart';
@@ -741,9 +742,10 @@ class _ComposerState extends State<Composer> {
       _controller.clear();
       _executeSlashCommand('/clear');
       return;
-    } else if (lower == '/naughty') {
+    } else if (lower.startsWith('/naughty')) {
+      final param = text.substring(text.toLowerCase().indexOf('/naughty') + 8).trim();
       _controller.clear();
-      _executeSlashCommand('/naughty');
+      _executeNaughtySlashCommand(param);
       return;
     } else if (lower == '/dice') {
       _controller.clear();
@@ -884,20 +886,7 @@ class _ComposerState extends State<Composer> {
         }
         break;
       case '/naughty':
-        _controller.clear();
-        if (widget.isPrivate) {
-          final privateChat = Provider.of<PrivateChatProvider>(context, listen: false);
-          final dares = [
-            "Truth 💕: What was your very first impression of me?",
-            "Dare 🔥: Send a cute voice note saying something sweet.",
-            "Truth 💓: What is one secret thing that always makes you smile about me?",
-            "Dare 💋: Hold my gaze for 10 seconds without laughing!",
-            "Truth 💖: What is your favorite memory of us together?",
-            "Dare 💫: Give me a soft compliment right now.",
-          ];
-          dares.shuffle();
-          privateChat.sendTextMessage(dares.first);
-        }
+        _executeNaughtySlashCommand('');
         break;
       case '/dice':
         _controller.clear();
@@ -943,6 +932,40 @@ class _ComposerState extends State<Composer> {
           TextPosition(offset: _controller.text.length),
         );
         break;
+    }
+  }
+
+  Future<void> _executeNaughtySlashCommand(String param) async {
+    final lowerParam = param.toLowerCase();
+    String mode = 'mix';
+    String? customTopic;
+
+    if (lowerParam == 'dare') {
+      mode = 'dare';
+    } else if (lowerParam == 'truth') {
+      mode = 'truth';
+    } else if (lowerParam.startsWith('dare ')) {
+      mode = 'dare';
+      customTopic = param.substring(5).trim();
+    } else if (lowerParam.startsWith('truth ')) {
+      mode = 'truth';
+      customTopic = param.substring(6).trim();
+    } else if (param.isNotEmpty) {
+      customTopic = param.trim();
+    }
+
+    final prompt = await AiService.instance.generateNaughtyTruthOrDare(
+      mode: mode,
+      customTopic: customTopic,
+    );
+
+    if (!mounted) return;
+
+    if (widget.isPrivate) {
+      final privateChat = Provider.of<PrivateChatProvider>(context, listen: false);
+      privateChat.sendTextMessage(prompt);
+    } else {
+      widget.onSubmitted?.call(prompt);
     }
   }
 

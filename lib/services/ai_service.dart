@@ -215,6 +215,57 @@ class AiService {
     );
   }
 
+  /// Generates a real AI-driven romantic, flirty, or sexy Truth or Dare prompt using NVIDIA NIM / AI.
+  Future<String> generateNaughtyTruthOrDare({
+    String mode = 'mix', // 'truth', 'dare', or 'mix'
+    String category = 'Sensual', // 'Sweet', 'Romantic', 'Flirty', 'Sensual', 'Intimate', 'Couple Fantasy'
+    String? customTopic,
+  }) async {
+    final modeInstruction = mode == 'truth'
+        ? 'Generate a romantic, spicy, or deep TRUTH question.'
+        : mode == 'dare'
+            ? 'Generate a romantic, flirty, or harmless sexy DARE action.'
+            : 'Generate EITHER a romantic TRUTH question OR a flirty DARE action.';
+
+    final systemInstruction = '''
+You are an AI romantic game master for couples.
+$modeInstruction
+Category style: $category.
+${customTopic != null && customTopic.trim().isNotEmpty ? "User's Custom Topic / Question Idea: '$customTopic'. Make sure to incorporate this topic!" : ""}
+
+REQUIREMENTS:
+- Format the output strictly starting with either "Truth 💕: " or "Dare 🔥: ".
+- Make it romantic, sweet, flirty, or harmlessly sexy and fun for lovers.
+- Keep it concise (1 to 2 sentences max).
+- Return ONLY the final prompt string without quotes, markdown wrappers, or intro text.
+''';
+
+    try {
+      final response = await sendPrompt(
+        prompt: systemInstruction,
+        model: AiModels.nemotronSuper120b, // Prefers NVIDIA NIM flagship
+      );
+      final trimmed = response.trim().replaceAll('"', '').replaceAll('`', '');
+      if (trimmed.isNotEmpty && (trimmed.startsWith('Truth') || trimmed.startsWith('Dare'))) {
+        return trimmed;
+      } else if (trimmed.isNotEmpty) {
+        final prefix = mode == 'truth' ? 'Truth 💕: ' : (mode == 'dare' ? 'Dare 🔥: ' : 'Truth 💕: ');
+        return '$prefix$trimmed';
+      }
+    } catch (e) {
+      debugPrint("Error generating AI Naughty prompt: $e");
+    }
+
+    // Dynamic fallbacks if offline or error occurs
+    if (mode == 'truth') {
+      return "Truth 💕: ${customTopic ?? 'What was the exact moment you realized you were falling in love with me?'}";
+    } else if (mode == 'dare') {
+      return "Dare 🔥: ${customTopic ?? 'Give your partner a soft 10-second kiss and whisper your favorite secret about them.'}";
+    } else {
+      return "Truth 💕: ${customTopic ?? 'What is one cute habit of mine that secretly drives you wild?'}";
+    }
+  }
+
   Future<String> _callGeminiApi({
     required String prompt,
     required String apiKey,
