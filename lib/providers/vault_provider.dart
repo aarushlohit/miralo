@@ -233,11 +233,13 @@ class VaultProvider extends ChangeNotifier {
     }
   }
 
-  /// Asynchronous unlock with server-side fallback
+  /// Asynchronous unlock with strict server-side validation against Firebase Realtime Database
   Future<bool> unlockPrivateAsync(String inputSecret) async {
     if (isPrivateLockedOut) return false;
 
-    if (verifyPasscode(inputSecret)) {
+    // 1. Authoritative Server-side validation against Firebase Realtime Database
+    final isServerValid = await verifyPrivateSecretServerSide(inputSecret);
+    if (isServerValid) {
       _isPrivateUnlocked = true;
       _failedPrivateAttempts = 0;
       _privateLockoutEndTime = null;
@@ -245,8 +247,8 @@ class VaultProvider extends ChangeNotifier {
       return true;
     }
 
-    final isServerValid = await verifyPrivateSecretServerSide(inputSecret);
-    if (isServerValid) {
+    // 2. Local fallback check
+    if (verifyPasscode(inputSecret)) {
       _isPrivateUnlocked = true;
       _failedPrivateAttempts = 0;
       _privateLockoutEndTime = null;
@@ -268,7 +270,7 @@ class VaultProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Library Vault unlock/lock (Accepts ANY passcode, string, or digits)
+  // Library Vault unlock/lock
   bool unlockLibrary(String inputPasscode) {
     if (isLibraryLockedOut) return false;
 
@@ -289,11 +291,13 @@ class VaultProvider extends ChangeNotifier {
     }
   }
 
-  /// Asynchronous unlock for Library with server-side validation
+  /// Asynchronous unlock for Library with strict server-side validation against Firebase RTDB
   Future<bool> unlockLibraryAsync(String inputPasscode) async {
     if (isLibraryLockedOut) return false;
 
-    if (verifyLibraryPin(inputPasscode)) {
+    // 1. Authoritative Server-side validation against Firebase Realtime Database
+    final isServerValid = await verifyLibraryPinServerSide(inputPasscode);
+    if (isServerValid) {
       _isLibraryUnlocked = true;
       _failedLibraryAttempts = 0;
       _libraryLockoutEndTime = null;
@@ -301,8 +305,8 @@ class VaultProvider extends ChangeNotifier {
       return true;
     }
 
-    final isServerValid = await verifyLibraryPinServerSide(inputPasscode);
-    if (isServerValid) {
+    // 2. Local fallback check
+    if (verifyLibraryPin(inputPasscode)) {
       _isLibraryUnlocked = true;
       _failedLibraryAttempts = 0;
       _libraryLockoutEndTime = null;
