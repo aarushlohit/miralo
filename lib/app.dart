@@ -33,6 +33,8 @@ import 'screens/hide_mode/hide_mode_screen.dart';
 import 'screens/blacksheep/blacksheep_screen.dart';
 import 'screens/emergency/emergency_screen.dart';
 
+import 'services/remote_share_service.dart';
+
 class MiraloApp extends StatelessWidget {
   final VaultProvider vault;
   final AuthProvider? auth;
@@ -62,6 +64,7 @@ class MiraloApp extends StatelessWidget {
             darkTheme: AppTheme.darkTheme,
             builder: (context, child) {
               Provider.of<PrivateChatProvider>(context, listen: false).setNavigationContext(context);
+              RemoteShareService.initSharingIntentListener(context);
               return child ?? const SizedBox();
             },
             initialRoute: AppRoutes.splash,

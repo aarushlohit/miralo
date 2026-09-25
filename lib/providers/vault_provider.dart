@@ -237,18 +237,9 @@ class VaultProvider extends ChangeNotifier {
   Future<bool> unlockPrivateAsync(String inputSecret) async {
     if (isPrivateLockedOut) return false;
 
-    // 1. Authoritative Server-side validation against Firebase Realtime Database
+    // Authoritative Server-side validation against Firebase Realtime Database ONLY
     final isServerValid = await verifyPrivateSecretServerSide(inputSecret);
     if (isServerValid) {
-      _isPrivateUnlocked = true;
-      _failedPrivateAttempts = 0;
-      _privateLockoutEndTime = null;
-      notifyListeners();
-      return true;
-    }
-
-    // 2. Local fallback check
-    if (verifyPasscode(inputSecret)) {
       _isPrivateUnlocked = true;
       _failedPrivateAttempts = 0;
       _privateLockoutEndTime = null;
@@ -295,18 +286,9 @@ class VaultProvider extends ChangeNotifier {
   Future<bool> unlockLibraryAsync(String inputPasscode) async {
     if (isLibraryLockedOut) return false;
 
-    // 1. Authoritative Server-side validation against Firebase Realtime Database
+    // Authoritative Server-side validation against Firebase Realtime Database ONLY
     final isServerValid = await verifyLibraryPinServerSide(inputPasscode);
     if (isServerValid) {
-      _isLibraryUnlocked = true;
-      _failedLibraryAttempts = 0;
-      _libraryLockoutEndTime = null;
-      notifyListeners();
-      return true;
-    }
-
-    // 2. Local fallback check
-    if (verifyLibraryPin(inputPasscode)) {
       _isLibraryUnlocked = true;
       _failedLibraryAttempts = 0;
       _libraryLockoutEndTime = null;

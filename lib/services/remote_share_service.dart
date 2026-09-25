@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import '../core/theme/miralo_tokens.dart';
 import '../providers/private_chat_provider.dart';
 import '../providers/vault_provider.dart';
@@ -8,6 +10,39 @@ import '../providers/vault_provider.dart';
 /// Secure Remote Share Gateway for Android Intents & Multi-Platform Files
 class RemoteShareService {
   RemoteShareService._();
+
+  static StreamSubscription? _intentMediaStreamSubscription;
+  static bool _initialized = false;
+
+  static void initSharingIntentListener(BuildContext context) {
+    if (_initialized) return;
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
+    _initialized = true;
+
+    // For sharing items while app is running
+    _intentMediaStreamSubscription = ReceiveSharingIntent.instance.getMediaStream().listen((List<SharedMediaFile> value) {
+      if (value.isNotEmpty && context.mounted) {
+        final paths = value.map((f) => f.path).toList();
+        promptRemoteShareDialog(context, filePaths: paths);
+      }
+    }, onError: (err) {
+      debugPrint("getIntentMediaStream error: $err");
+    });
+
+    // For sharing items when app is launched from intent
+    ReceiveSharingIntent.instance.getInitialMedia().then((List<SharedMediaFile> value) {
+      if (value.isNotEmpty && context.mounted) {
+        final paths = value.map((f) => f.path).toList();
+        promptRemoteShareDialog(context, filePaths: paths);
+        ReceiveSharingIntent.instance.reset();
+      }
+    });
+  }
+
+  static void dispose() {
+    _intentMediaStreamSubscription?.cancel();
+    _initialized = false;
+  }
 
   static void promptRemoteShareDialog(
     BuildContext context, {
