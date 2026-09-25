@@ -111,59 +111,68 @@ class FullImageViewer extends StatelessWidget {
             ),
             child: SafeArea(
               top: false,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildActionBtn(
-                    context,
-                    icon: Icons.download_outlined,
-                    label: 'Download',
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Image downloaded to app storage.')),
-                      );
-                    },
-                  ),
-                  _buildActionBtn(
-                    context,
-                    icon: Icons.folder_copy_outlined,
-                    label: 'Move to Library',
-                    onTap: () {
-                      library.uploadItem(
-                        name: '$title.jpg',
-                        type: 'image',
-                        size: '2.4 MB',
-                        folderId: 'folder_images',
-                      );
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Saved to Secure Library!')),
-                      );
-                    },
-                  ),
-                  _buildActionBtn(
-                    context,
-                    icon: Icons.share_outlined,
-                    label: 'Share',
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Sharing image link...')),
-                      );
-                    },
-                  ),
-                  _buildActionBtn(
-                    context,
-                    icon: Icons.delete_outline,
-                    label: 'Delete',
-                    color: AppColors.danger,
-                    onTap: () {
-                      Navigator.pop(context);
-                      if (onDelete != null) onDelete!();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Image removed.')),
-                      );
-                    },
-                  ),
-                ],
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    const SizedBox(width: 8),
+                    _buildActionBtn(
+                      context,
+                      icon: Icons.download_outlined,
+                      label: 'Download',
+                      onTap: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Image downloaded to app storage.')),
+                        );
+                      },
+                    ),
+                    const SizedBox(width: 12),
+                    _buildActionBtn(
+                      context,
+                      icon: Icons.folder_copy_outlined,
+                      label: 'Move to Library',
+                      onTap: () {
+                        library.uploadItem(
+                          name: '$title.jpg',
+                          type: 'image',
+                          size: '2.4 MB',
+                          folderId: 'folder_images',
+                        );
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Saved to Secure Library!')),
+                        );
+                      },
+                    ),
+                    const SizedBox(width: 12),
+                    _buildActionBtn(
+                      context,
+                      icon: Icons.share_outlined,
+                      label: 'Share',
+                      onTap: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Sharing image link...')),
+                        );
+                      },
+                    ),
+                    const SizedBox(width: 12),
+                    _buildActionBtn(
+                      context,
+                      icon: Icons.delete_outline,
+                      label: 'Delete',
+                      color: AppColors.danger,
+                      onTap: () {
+                        Navigator.pop(context);
+                        if (onDelete != null) onDelete!();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Image removed.')),
+                        );
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                ),
               ),
             ),
           ),

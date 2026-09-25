@@ -297,75 +297,85 @@ class FilePreviewDialog extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            // Actions Grid
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildAction(
-                  context,
-                  icon: Icons.open_in_new_rounded,
-                  label: 'Open',
-                  onTap: () {
-                    Navigator.pop(context);
-                    UniversalFileViewer.show(
-                      context,
-                      fileUrl: item.cloudUrl ?? (item.thumbnailUrl?.startsWith('http') == true ? item.thumbnailUrl : null),
-                      fileBase64: (item.thumbnailUrl != null && !item.thumbnailUrl!.startsWith('http')) ? item.thumbnailUrl : null,
-                      fileName: item.name,
-                      fileType: item.type,
-                      fileSize: item.size,
-                      onDelete: onDelete,
-                    );
-                  },
-                ),
-                _buildAction(
-                  context,
-                  icon: Icons.download_outlined,
-                  label: 'Download',
-                  onTap: () {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('File exported.')),
-                    );
-                  },
-                ),
-                _buildAction(
-                  context,
-                  icon: Icons.drive_file_rename_outline,
-                  label: 'Rename',
-                  onTap: () => _showRenameDialog(context),
-                ),
-                _buildAction(
-                  context,
-                  icon: Icons.drive_file_move_outlined,
-                  label: 'Move',
-                  onTap: () => _showMoveDialog(context),
-                ),
-                _buildAction(
-                  context,
-                  icon: Icons.share_outlined,
-                  label: 'Share',
-                  onTap: () {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Sharing secure link...')),
-                    );
-                  },
-                ),
-                _buildAction(
-                  context,
-                  icon: Icons.delete_outline,
-                  label: 'Delete',
-                  color: AppColors.danger,
-                  onTap: () {
-                    onDelete();
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('File deleted.')),
-                    );
-                  },
-                ),
-              ],
+            // Actions Grid (Scrollable horizontally to prevent pixel overflow)
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              child: Row(
+                children: [
+                  const SizedBox(width: 4),
+                  _buildAction(
+                    context,
+                    icon: Icons.open_in_new_rounded,
+                    label: 'Open',
+                    onTap: () {
+                      Navigator.pop(context);
+                      UniversalFileViewer.show(
+                        context,
+                        fileUrl: item.cloudUrl ?? (item.thumbnailUrl?.startsWith('http') == true ? item.thumbnailUrl : null),
+                        fileBase64: (item.thumbnailUrl != null && !item.thumbnailUrl!.startsWith('http')) ? item.thumbnailUrl : null,
+                        fileName: item.name,
+                        fileType: item.type,
+                        fileSize: item.size,
+                        onDelete: onDelete,
+                      );
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  _buildAction(
+                    context,
+                    icon: Icons.download_outlined,
+                    label: 'Download',
+                    onTap: () {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('File exported.')),
+                      );
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  _buildAction(
+                    context,
+                    icon: Icons.drive_file_rename_outline,
+                    label: 'Rename',
+                    onTap: () => _showRenameDialog(context),
+                  ),
+                  const SizedBox(width: 8),
+                  _buildAction(
+                    context,
+                    icon: Icons.drive_file_move_outlined,
+                    label: 'Move',
+                    onTap: () => _showMoveDialog(context),
+                  ),
+                  const SizedBox(width: 8),
+                  _buildAction(
+                    context,
+                    icon: Icons.share_outlined,
+                    label: 'Share',
+                    onTap: () {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Sharing secure link...')),
+                      );
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  _buildAction(
+                    context,
+                    icon: Icons.delete_outline,
+                    label: 'Delete',
+                    color: AppColors.danger,
+                    onTap: () {
+                      onDelete();
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('File deleted.')),
+                      );
+                    },
+                  ),
+                  const SizedBox(width: 4),
+                ],
+              ),
             ),
           ],
         ),
