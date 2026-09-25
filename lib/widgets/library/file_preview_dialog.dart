@@ -140,11 +140,13 @@ class FilePreviewDialog extends StatelessWidget {
     return Dialog(
       backgroundColor: surfaceColor,
       insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
+      child: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
             // Header
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -380,6 +382,7 @@ class FilePreviewDialog extends StatelessWidget {
           ],
         ),
       ),
+    ),
     );
   }
 

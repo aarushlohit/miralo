@@ -467,6 +467,10 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.85,
+      ),
       backgroundColor: bg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
@@ -475,14 +479,16 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
       ),
       builder: (ctx) => SafeArea(
         top: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: MiraloSpacing.lg,
-            vertical: MiraloSpacing.md,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: MiraloSpacing.lg,
+              vertical: MiraloSpacing.md,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
               Center(
                 child: Container(
                   width: 36,
@@ -719,6 +725,7 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
           ),
         ),
       ),
+    ),
     );
   }
 

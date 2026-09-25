@@ -63,12 +63,14 @@ class _ZipExportDialogState extends State<ZipExportDialog> {
     return Dialog(
       backgroundColor: surfaceColor,
       insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      child: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             // Header
             Row(
               children: [
@@ -248,6 +250,7 @@ class _ZipExportDialogState extends State<ZipExportDialog> {
           ],
         ),
       ),
+    ),
     );
   }
 }

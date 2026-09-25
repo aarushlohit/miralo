@@ -33,64 +33,68 @@ class LibraryFolderScreen extends StatelessWidget {
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: bg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppSpacing.radiusSheet)),
       ),
       builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.screenH, vertical: AppSpacing.md),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: AppSpacing.md),
-                  decoration: BoxDecoration(
-                      color: border, borderRadius: BorderRadius.circular(2)),
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.screenH, vertical: AppSpacing.md),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: AppSpacing.md),
+                    decoration: BoxDecoration(
+                        color: border, borderRadius: BorderRadius.circular(2)),
+                  ),
                 ),
-              ),
-              if (isImagesFolder || isCustomFolder) ...[
-                ListTile(
-                  leading: const Icon(Icons.photo_library_outlined, color: AppColors.accent),
-                  title: Text('Choose Photo from Gallery', style: AppTypography.bodyMedium(color: textPrimary)),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _pickImage(context, library, ImageSource.gallery);
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.camera_alt_outlined, color: AppColors.accent),
-                  title: Text('Take Photo with Camera', style: AppTypography.bodyMedium(color: textPrimary)),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _pickImage(context, library, ImageSource.camera);
-                  },
-                ),
+                if (isImagesFolder || isCustomFolder) ...[
+                  ListTile(
+                    leading: const Icon(Icons.photo_library_outlined, color: AppColors.accent),
+                    title: Text('Choose Photo from Gallery', style: AppTypography.bodyMedium(color: textPrimary)),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _pickImage(context, library, ImageSource.gallery);
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.camera_alt_outlined, color: AppColors.accent),
+                    title: Text('Take Photo with Camera', style: AppTypography.bodyMedium(color: textPrimary)),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _pickImage(context, library, ImageSource.camera);
+                    },
+                  ),
+                ],
+                if (isVideosFolder || isCustomFolder)
+                  ListTile(
+                    leading: const Icon(Icons.videocam_outlined, color: AppColors.accent),
+                    title: Text('Choose Video from Gallery', style: AppTypography.bodyMedium(color: textPrimary)),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _pickVideo(context, library);
+                    },
+                  ),
+                if (isDocsFolder || isCustomFolder)
+                  ListTile(
+                    leading: const Icon(Icons.upload_file_outlined, color: AppColors.accent),
+                    title: Text(isDocsFolder ? 'Upload Document (PDF, Word, Text)' : 'Upload Document or File',
+                        style: AppTypography.bodyMedium(color: textPrimary)),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _pickDocument(context, library, isDocsOnly: isDocsFolder);
+                    },
+                  ),
               ],
-              if (isVideosFolder || isCustomFolder)
-                ListTile(
-                  leading: const Icon(Icons.videocam_outlined, color: AppColors.accent),
-                  title: Text('Choose Video from Gallery', style: AppTypography.bodyMedium(color: textPrimary)),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _pickVideo(context, library);
-                  },
-                ),
-              if (isDocsFolder || isCustomFolder)
-                ListTile(
-                  leading: const Icon(Icons.upload_file_outlined, color: AppColors.accent),
-                  title: Text(isDocsFolder ? 'Upload Document (PDF, Word, Text)' : 'Upload Document or File',
-                      style: AppTypography.bodyMedium(color: textPrimary)),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _pickDocument(context, library, isDocsOnly: isDocsFolder);
-                  },
-                ),
-            ],
+            ),
           ),
         ),
       ),

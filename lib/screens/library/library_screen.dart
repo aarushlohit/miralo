@@ -91,17 +91,20 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: bg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppSpacing.radiusSheet)),
       ),
       builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.screenH, vertical: AppSpacing.md),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.screenH, vertical: AppSpacing.md),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
               Center(
                 child: Container(
                   width: 36,
@@ -147,6 +150,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
           ),
         ),
       ),
+    ),
     );
   }
 
@@ -291,46 +295,50 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: bg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppSpacing.radiusSheet)),
       ),
       builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.screenH, vertical: AppSpacing.md),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: AppSpacing.md),
-                  decoration: BoxDecoration(
-                      color: border, borderRadius: BorderRadius.circular(2)),
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.screenH, vertical: AppSpacing.md),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: AppSpacing.md),
+                    decoration: BoxDecoration(
+                        color: border, borderRadius: BorderRadius.circular(2)),
+                  ),
                 ),
-              ),
-              ListTile(
-                leading: const Icon(Icons.archive_outlined, color: AppColors.accent),
-                title: Text('Export as Encrypted ZIP', style: AppTypography.bodyMedium(color: textPrimary)),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  showDialog(context: context, builder: (_) => const ZipExportDialog());
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.lock_outline, color: AppColors.danger),
-                title: Text('Lock Library Vault',
-                    style: AppTypography.bodyMedium(color: AppColors.danger)
-                        .copyWith(fontWeight: FontWeight.w600)),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  vault.lockLibrary();
-                  Navigator.pop(context);
-                },
-              ),
-            ],
+                ListTile(
+                  leading: const Icon(Icons.archive_outlined, color: AppColors.accent),
+                  title: Text('Export as Encrypted ZIP', style: AppTypography.bodyMedium(color: textPrimary)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    showDialog(context: context, builder: (_) => const ZipExportDialog());
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.lock_outline, color: AppColors.danger),
+                  title: Text('Lock Library Vault',
+                      style: AppTypography.bodyMedium(color: AppColors.danger)
+                          .copyWith(fontWeight: FontWeight.w600)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    vault.lockLibrary();
+                    Navigator.pop(context);
+                  },
+                ),
+              ],
+            ),
           ),
         ),
       ),
