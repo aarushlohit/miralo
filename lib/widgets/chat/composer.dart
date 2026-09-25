@@ -708,44 +708,55 @@ class _ComposerState extends State<Composer> {
 
     // ─── SLASH COMMANDS INTERCEPTION ───
     final lower = text.toLowerCase();
-    if (lower == '/gif' || lower.startsWith('/gif ')) {
-      _controller.clear();
-      _openGiphyPicker();
-      return;
-    } else if (lower == '/favorite' ||
-        lower.startsWith('/favorite ') ||
-        lower == '/fav' ||
-        lower.startsWith('/fav ')) {
-      _controller.clear();
-      final trimmed = text.trim();
-      String query = '';
-      if (trimmed.toLowerCase().startsWith('/favorite')) {
-        query = trimmed.length > 9 ? trimmed.substring(9).trim() : '';
-      } else if (trimmed.toLowerCase().startsWith('/fav')) {
-        query = trimmed.length > 4 ? trimmed.substring(4).trim() : '';
+
+    // ─── DM / GROUP CHAT EXCLUSIVE SLASH COMMANDS ───
+    if (widget.isPrivate) {
+      if (lower == '/gif' || lower.startsWith('/gif ')) {
+        _controller.clear();
+        _openGiphyPicker();
+        return;
+      } else if (lower == '/favorite' ||
+          lower.startsWith('/favorite ') ||
+          lower == '/fav' ||
+          lower.startsWith('/fav ')) {
+        _controller.clear();
+        final trimmed = text.trim();
+        String query = '';
+        if (trimmed.toLowerCase().startsWith('/favorite')) {
+          query = trimmed.length > 9 ? trimmed.substring(9).trim() : '';
+        } else if (trimmed.toLowerCase().startsWith('/fav')) {
+          query = trimmed.length > 4 ? trimmed.substring(4).trim() : '';
+        }
+        _openFavoriteGifsPicker(initialQuery: query);
+        return;
+      } else if (lower == '/pinned' || lower == '/pin') {
+        _controller.clear();
+        _openPinnedMessages();
+        return;
+      } else if (lower == '/logout') {
+        _controller.clear();
+        _executeSlashCommand('/logout');
+        return;
+      } else if (lower == '/urgent') {
+        _controller.clear();
+        _executeSlashCommand('/urgent');
+        return;
+      } else if (lower.startsWith('/naughty')) {
+        final param = text.substring(text.toLowerCase().indexOf('/naughty') + 8).trim();
+        _controller.clear();
+        _executeNaughtySlashCommand(param);
+        return;
+      } else if (lower == '/all' && widget.isGroup) {
+        _controller.clear();
+        _executeSlashCommand('/all');
+        return;
       }
-      _openFavoriteGifsPicker(initialQuery: query);
-      return;
-    } else if (lower == '/pinned' || lower == '/pin') {
-      _controller.clear();
-      _openPinnedMessages();
-      return;
-    } else if (lower == '/logout') {
-      _controller.clear();
-      _executeSlashCommand('/logout');
-      return;
-    } else if (lower == '/urgent') {
-      _controller.clear();
-      _executeSlashCommand('/urgent');
-      return;
-    } else if (lower == '/clear') {
+    }
+
+    // ─── UNIVERSAL / AI CHAT SLASH COMMANDS ───
+    if (lower == '/clear') {
       _controller.clear();
       _executeSlashCommand('/clear');
-      return;
-    } else if (lower.startsWith('/naughty')) {
-      final param = text.substring(text.toLowerCase().indexOf('/naughty') + 8).trim();
-      _controller.clear();
-      _executeNaughtySlashCommand(param);
       return;
     } else if (lower == '/dice') {
       _controller.clear();
@@ -762,10 +773,6 @@ class _ComposerState extends State<Composer> {
     } else if (lower == '/tableflip') {
       _controller.clear();
       _executeSlashCommand('/tableflip');
-      return;
-    } else if (lower == '/all') {
-      _controller.clear();
-      _executeSlashCommand('/all');
       return;
     }
 
@@ -1161,9 +1168,23 @@ class _ComposerState extends State<Composer> {
               Builder(
                 builder: (context) {
                   final input = _controller.text.toLowerCase().trim();
-                  final matching = _allSlashCommands
-                      .where((c) => c.command.startsWith(input))
-                      .toList();
+                  final matching = _allSlashCommands.where((c) {
+                    if (!c.command.startsWith(input)) return false;
+                    // Filter DM-personalized commands if in AI Chat mode (!widget.isPrivate)
+                    if (!widget.isPrivate) {
+                      if (c.command == '/gif' ||
+                          c.command == '/favorite' ||
+                          c.command == '/pinned' ||
+                          c.command == '/urgent' ||
+                          c.command == '/logout' ||
+                          c.command == '/naughty' ||
+                          c.command == '/all') {
+                        return false;
+                      }
+                    }
+                    if (c.command == '/all' && !widget.isGroup) return false;
+                    return true;
+                  }).toList();
                   if (matching.isEmpty) return const SizedBox.shrink();
                   return _buildSlashSuggestionsOverlay(
                     matching,
