@@ -733,14 +733,6 @@ class _ComposerState extends State<Composer> {
         _controller.clear();
         _openPinnedMessages();
         return;
-      } else if (lower == '/logout') {
-        _controller.clear();
-        _executeSlashCommand('/logout');
-        return;
-      } else if (lower == '/urgent') {
-        _controller.clear();
-        _executeSlashCommand('/urgent');
-        return;
       } else if (lower.startsWith('/naughty')) {
         final param = text.substring(text.toLowerCase().indexOf('/naughty') + 8).trim();
         _controller.clear();
@@ -754,7 +746,15 @@ class _ComposerState extends State<Composer> {
     }
 
     // ─── UNIVERSAL / AI CHAT SLASH COMMANDS ───
-    if (lower == '/clear') {
+    if (lower == '/logout') {
+      _controller.clear();
+      _executeSlashCommand('/logout');
+      return;
+    } else if (lower == '/urgent') {
+      _controller.clear();
+      _executeSlashCommand('/urgent');
+      return;
+    } else if (lower == '/clear') {
       _controller.clear();
       _executeSlashCommand('/clear');
       return;
@@ -1175,8 +1175,6 @@ class _ComposerState extends State<Composer> {
                       if (c.command == '/gif' ||
                           c.command == '/favorite' ||
                           c.command == '/pinned' ||
-                          c.command == '/urgent' ||
-                          c.command == '/logout' ||
                           c.command == '/naughty' ||
                           c.command == '/all') {
                         return false;
