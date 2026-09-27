@@ -1031,6 +1031,7 @@ class _ComposerState extends State<Composer> {
   void _showAttachmentSheet() {
     AttachmentSheet.show(
       context,
+      isImageOnly: !widget.isPrivate,
       onImageSelected: (urlOrBase64, name) {
         setState(() {
           _pendingAttachment = _PendingAttachment(

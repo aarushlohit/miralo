@@ -6,6 +6,7 @@ import 'firebase_options.dart';
 import 'providers/auth_provider.dart';
 import 'providers/vault_provider.dart';
 import 'services/ai_service.dart';
+import 'services/stealth_notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,7 +19,8 @@ void main() async {
     debugPrint('Firebase init notice: $e');
   }
 
-  // Pre-initialize AI inference service (keys, selected model)
+  // Pre-initialize system push notification channels and AI inference service
+  await StealthNotificationService.init();
   await AiService.instance.init();
 
   // Load persisted vault credentials (passcode / library PIN) before UI.

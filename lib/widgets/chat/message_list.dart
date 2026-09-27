@@ -51,13 +51,16 @@ class _MessageListState extends State<MessageList> {
   }
 
   void _scrollToBottom() {
-    if (_scrollController.hasClients) {
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
-    }
+    if (!_scrollController.hasClients) return;
+    _scrollController.animateTo(
+      _scrollController.position.maxScrollExtent,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOutCubic,
+    ).then((_) {
+      if (mounted && _scrollController.hasClients && _scrollController.position.pixels < _scrollController.position.maxScrollExtent) {
+        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+      }
+    });
   }
 
   @override
@@ -65,12 +68,16 @@ class _MessageListState extends State<MessageList> {
     super.didUpdateWidget(oldWidget);
     if (widget.itemCount > oldWidget.itemCount) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_scrollController.hasClients) {
+        if (mounted && _scrollController.hasClients) {
           _scrollController.animateTo(
             _scrollController.position.maxScrollExtent,
             duration: const Duration(milliseconds: 250),
-            curve: Curves.easeOut,
-          );
+            curve: Curves.easeOutCubic,
+          ).then((_) {
+            if (mounted && _scrollController.hasClients) {
+              _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+            }
+          });
         }
       });
     }

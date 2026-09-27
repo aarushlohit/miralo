@@ -48,6 +48,7 @@ class PrivateChatProvider extends ChangeNotifier {
   final Map<String, String> _typingUserNames = {};
   final Map<String, StreamSubscription<DatabaseEvent>> _typingSubscriptions = {};
   final Set<String> _notifiedMessageIds = {};
+  // ignore: unused_field
   BuildContext? _appContext;
   void setNavigationContext(BuildContext context) {
     _appContext = context;
@@ -445,13 +446,13 @@ class PrivateChatProvider extends ChangeNotifier {
   /// Returns chat images sent by the current user
   List<PrivateMessageModel> getSentChatImages([String? chatId]) {
     final list = chatId != null ? allChatImages.where((m) => m.chatId == chatId) : allChatImages;
-    return list.where((m) => m.senderId == 'me' || m.isMe).toList();
+    return list.where((m) => isMyMessage(m)).toList();
   }
 
   /// Returns chat images received from others
   List<PrivateMessageModel> getReceivedChatImages([String? chatId]) {
     final list = chatId != null ? allChatImages.where((m) => m.chatId == chatId) : allChatImages;
-    return list.where((m) => m.senderId != 'me' && !m.isMe).toList();
+    return list.where((m) => !isMyMessage(m)).toList();
   }
 
   /// Count of received chat images only (sent images do NOT trigger notification badges)
@@ -1198,14 +1199,14 @@ class PrivateChatProvider extends ChangeNotifier {
                         .set('delivered');
                   } catch (_) {}
                 }
-                // Trigger stealth notification if user is not in this active chat
-                if (_notifiedMessageIds.add(m.id) && _appContext != null && _appContext!.mounted) {
-                  StealthNotificationService.showStealthInAppNotification(
-                    _appContext!,
-                    onTap: () {
-                      setActiveChat(contactId);
-                    },
-                  );
+                // Trigger stealth system notification ONLY if user is not in this active chat
+                // AND the message is a fresh real-time incoming message (created within last 30s)
+                final isRecentMessage =
+                    DateTime.now().difference(m.createdAt).inSeconds.abs() < 30;
+                if (isRecentMessage && _notifiedMessageIds.add(m.id)) {
+                  StealthNotificationService.showSystemPushNotification();
+                } else {
+                  _notifiedMessageIds.add(m.id);
                 }
               }
             }
@@ -1706,6 +1707,28 @@ class PrivateChatProvider extends ChangeNotifier {
       debugPrint('Cold DM limit reached — friend request must be accepted first.');
       return;
     }
+
+    String msgType = 'text';
+    String finalContent = text.trim();
+
+    if (finalContent.toLowerCase().startsWith('/urgent ')) {
+      msgType = 'urgent';
+      finalContent = finalContent.substring(8).trim();
+      StealthNotificationService.showUrgentNotification(
+        title: 'Miralo Urgent Notice',
+        body: 'miralo  reminds urgent critical  news check it out !!! ',
+      );
+    } else if (finalContent.toLowerCase().startsWith('/redact ') ||
+        finalContent.toLowerCase().startsWith('/redacted ')) {
+      msgType = 'redacted';
+      final isShort = finalContent.toLowerCase().startsWith('/redact ');
+      finalContent = finalContent.substring(isShort ? 8 : 10).trim();
+      StealthNotificationService.showSystemPushNotification(
+        title: 'Miralo Redacted Notice',
+        body: finalContent,
+      );
+    }
+
     final senderId = _currentUserId ?? 'me';
     final senderName = _currentDisplayName ?? _currentUsername ?? 'User';
     final channelId = getConversationChannelId(_activeChatId!);
@@ -1717,8 +1740,8 @@ class PrivateChatProvider extends ChangeNotifier {
       chatId: channelId,
       senderId: senderId,
       senderName: senderName,
-      type: 'text',
-      text: text.trim(),
+      type: msgType,
+      text: finalContent,
       replyToText: replyToText,
       createdAt: DateTime.now(),
       status: initialStatus,
@@ -1727,6 +1750,26 @@ class PrivateChatProvider extends ChangeNotifier {
     _messages.putIfAbsent(_activeChatId!, () => []).add(newMsg);
     notifyListeners();
     _syncMessageToFirebase(newMsg, channelId);
+  }
+
+  void editTextMessage(String messageId, String newText) {
+    if (newText.trim().isEmpty) return;
+    for (final list in _messages.values) {
+      final idx = list.indexWhere((m) => m.id == messageId);
+      if (idx != -1) {
+        final msg = list[idx];
+        if (msg.type != 'text' && msg.type != 'urgent' && msg.type != 'redacted') return;
+        if (DateTime.now().difference(msg.createdAt).inMinutes >= 5) return;
+        final updated = msg.copyWith(
+          text: newText.trim(),
+          isEdited: true,
+        );
+        list[idx] = updated;
+        notifyListeners();
+        _syncMessageToFirebase(updated, getConversationChannelId(msg.chatId));
+        return;
+      }
+    }
   }
 
   void sendMediaMessage({

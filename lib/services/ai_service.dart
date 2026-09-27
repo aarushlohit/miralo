@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -99,11 +100,11 @@ class AiService {
   static const String _prefNvidiaKey = 'miralo_ai_nvidia_key';
   static const String _prefSelectedModel = 'miralo_ai_selected_model';
 
-  // Default verified backend API keys (configured in .env)
+  // Default backend API keys dynamically loaded from env
   static const String defaultGeminiKey =
-      'YOUR_GEMINI_KEY';
+      String.fromEnvironment('GEMINI_API_KEY', defaultValue: '');
   static const String defaultNvidiaKey =
-      'YOUR_NVIDIA_KEY';
+      String.fromEnvironment('NVIDIA_API_KEY', defaultValue: '');
 
   String? _geminiApiKey;
   String? _nvidiaApiKey;
@@ -112,6 +113,29 @@ class AiService {
   String get selectedModel => _selectedModel;
   String? get geminiApiKey => _geminiApiKey;
   String? get nvidiaApiKey => _nvidiaApiKey;
+
+  bool _isValidKey(String? key) {
+    if (key == null) return false;
+    final k = key.trim();
+    return k.isNotEmpty && !k.startsWith('YOUR_');
+  }
+
+  String? _readEnvKey(String keyName) {
+    try {
+      final envFile = File('.env');
+      if (envFile.existsSync()) {
+        final lines = envFile.readAsLinesSync();
+        for (final line in lines) {
+          final trimmed = line.trim();
+          if (trimmed.startsWith('$keyName=')) {
+            final val = trimmed.substring('$keyName='.length).trim();
+            if (val.isNotEmpty) return val;
+          }
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
 
   Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
@@ -147,14 +171,16 @@ class AiService {
   }) async {
     final targetModel = model ?? _selectedModel;
 
-    // Determine effective API keys (Special users or users with empty BYOK use backend keys)
-    final effectiveGeminiKey = (_geminiApiKey != null && _geminiApiKey!.isNotEmpty)
-        ? _geminiApiKey!
-        : defaultGeminiKey;
+    // Determine effective API keys (User BYOK > .env > default key)
+    final envGemini = _readEnvKey('GEMINI_API_KEY');
+    final effectiveGeminiKey = _isValidKey(_geminiApiKey)
+        ? _geminiApiKey!.trim()
+        : (_isValidKey(envGemini) ? envGemini!.trim() : defaultGeminiKey);
 
-    final effectiveNvidiaKey = (_nvidiaApiKey != null && _nvidiaApiKey!.isNotEmpty)
-        ? _nvidiaApiKey!
-        : defaultNvidiaKey;
+    final envNvidia = _readEnvKey('NVIDIA_API_KEY');
+    final effectiveNvidiaKey = _isValidKey(_nvidiaApiKey)
+        ? _nvidiaApiKey!.trim()
+        : (_isValidKey(envNvidia) ? envNvidia!.trim() : defaultNvidiaKey);
 
     // Route: Google Gemini Models
     if (targetModel.startsWith('Gemini')) {

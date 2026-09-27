@@ -392,6 +392,12 @@ class AuthProvider extends ChangeNotifier {
     String? note,
   }) {
     if (_currentUser == null) return;
+    if (avatarUrl != null) {
+      try {
+        PaintingBinding.instance.imageCache.clear();
+        PaintingBinding.instance.imageCache.clearLiveImages();
+      } catch (_) {}
+    }
     _currentUser = _currentUser!.copyWith(
       displayName: displayName,
       username: username,

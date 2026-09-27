@@ -4,6 +4,8 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../widgets/common/miralo_list_tile.dart';
 
+import '../../services/stealth_notification_service.dart';
+
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
 
@@ -75,6 +77,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     value: _privateChatAlerts,
                     onChanged: (v) => setState(() => _privateChatAlerts = v),
                   ),
+                ),
+                MiraloListTile(
+                  icon: Icons.send_to_mobile,
+                  title: 'Test Push Notification Bar',
+                  subtitle: 'Send a test push alert to system notification shade',
+                  onTap: () {
+                    StealthNotificationService.showStealthInAppNotification(context);
+                  },
                 ),
               ],
             ),

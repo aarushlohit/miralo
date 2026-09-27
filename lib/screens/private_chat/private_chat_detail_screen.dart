@@ -24,7 +24,6 @@ import '../../widgets/chat/message_renderer.dart';
 import '../../widgets/chat/pinned_messages_banner.dart';
 import '../../widgets/chat/pinned_messages_sheet.dart';
 import '../../widgets/chat/reaction_sheet.dart';
-import '../../widgets/chat/typing_indicator.dart';
 import '../../widgets/common/miralo_avatar.dart';
 import 'group_profile_screen.dart';
 
@@ -55,10 +54,31 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
   List<int> _searchMatchIndices = [];
   int _currentMatchIndex = 0;
 
+  bool _showCloudNote = true;
+  Timer? _cloudNoteTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _scrollController.hasClients) {
+        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+      }
+    });
+    _cloudNoteTimer = Timer(const Duration(seconds: 4), () {
+      if (mounted) {
+        setState(() {
+          _showCloudNote = false;
+        });
+      }
+    });
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
     _highlightTimer?.cancel();
+    _cloudNoteTimer?.cancel();
     _scrollController.dispose();
     super.dispose();
   }
@@ -67,7 +87,23 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
     return _messageKeys.putIfAbsent(messageId, () => GlobalKey());
   }
 
-  void _scrollToMessage(String messageId) {
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutCubic,
+        ).then((_) {
+          if (mounted && _scrollController.hasClients) {
+            _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+          }
+        });
+      }
+    });
+  }
+
+  void _scrollToMessage(String messageId, {int? targetIndex, int totalCount = 1}) {
     final key = _messageKeys[messageId];
     if (key?.currentContext != null) {
       Scrollable.ensureVisible(
@@ -76,12 +112,28 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
         curve: Curves.easeInOut,
         alignment: 0.3,
       );
+    } else if (_scrollController.hasClients && targetIndex != null && totalCount > 1) {
+      final maxScroll = _scrollController.position.maxScrollExtent;
+      final targetScroll = (targetIndex / (totalCount - 1)) * maxScroll;
+      _scrollController.jumpTo(targetScroll.clamp(0.0, maxScroll));
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final newKey = _messageKeys[messageId];
+        if (newKey?.currentContext != null) {
+          Scrollable.ensureVisible(
+            newKey!.currentContext!,
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeInOut,
+            alignment: 0.3,
+          );
+        }
+      });
     }
+
     setState(() {
       _highlightedMessageId = messageId;
     });
     _highlightTimer?.cancel();
-    _highlightTimer = Timer(const Duration(seconds: 2), () {
+    _highlightTimer = Timer(const Duration(seconds: 3), () {
       if (mounted) {
         setState(() {
           _highlightedMessageId = null;
@@ -120,7 +172,7 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
     if (_searchMatchIndices.isEmpty) return;
     final matchMsgIndex = _searchMatchIndices[_currentMatchIndex];
     final msg = messages[matchMsgIndex];
-    _scrollToMessage(msg.id);
+    _scrollToMessage(msg.id, targetIndex: matchMsgIndex, totalCount: messages.length);
   }
 
   void _previousSearchMatch(List<PrivateMessageModel> messages) {
@@ -811,6 +863,49 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
     );
   }
 
+  void _showEditMessageDialog(BuildContext context, PrivateMessageModel msg, PrivateChatProvider chat) {
+    final controller = TextEditingController(text: msg.text);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isDark ? MiraloColors.darkSurfacePrimary : MiraloColors.lightSurfacePrimary,
+        title: Text(
+          'Edit Message',
+          style: MiraloTypography.bodyMedium(color: isDark ? MiraloColors.darkTextPrimary : MiraloColors.lightTextPrimary).copyWith(fontWeight: FontWeight.w600),
+        ),
+        content: TextField(
+          controller: controller,
+          maxLines: 3,
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: 'Enter updated message...',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: MiraloColors.accent,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              final newText = controller.text.trim();
+              if (newText.isNotEmpty && newText != msg.text) {
+                chat.editTextMessage(msg.id, newText);
+              }
+              Navigator.pop(ctx);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showMessageOptions(
     BuildContext context,
     PrivateMessageModel msg,
@@ -833,6 +928,11 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
               : (msg.type == 'image' ? '[Photo Attachment]' : '[Media]');
         });
       },
+      onEdit: (chat.isMyMessage(msg) &&
+              (msg.type == 'text' || msg.type == 'urgent' || msg.type == 'redacted') &&
+              DateTime.now().difference(msg.createdAt).inMinutes < 5)
+          ? () => _showEditMessageDialog(context, msg, chat)
+          : null,
       onDownload: (msg.mediaUrl != null || msg.imageBase64 != null)
           ? () => _downloadMessageMedia(context, msg)
           : null,
@@ -902,7 +1002,6 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
           ),
         );
       },
-      onDelete: () => chat.deleteMessage(msg.id),
     );
   }
 
@@ -1073,20 +1172,48 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                   ),
                 );
               },
-              onViewAll: () => PinnedMessagesSheet.show(
-                context,
-                pinnedMessages: pinnedMessages,
-                onTapMessage: (msg) => _scrollToMessage(msg.id),
-                onUnpinMessage: (msg) => chat.togglePinMessage(msg),
-                onUnpinAll: () => chat.clearAllPinnedMessages(contact?.id ?? chat.activeChatId ?? ''),
-              ),
             ),
-          if (isTyping)
-            Padding(
-              padding: const EdgeInsets.only(left: 12, bottom: 4),
-              child: MiraloTypingIndicator(
-                showBubble: true,
-                userName: contact.displayName,
+          if (_showCloudNote && contact?.note != null && contact!.note!.isNotEmpty)
+            AnimatedOpacity(
+              duration: const Duration(milliseconds: 300),
+              opacity: _showCloudNote ? 1.0 : 0.0,
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: isDark ? MiraloColors.darkSurfaceElevated : Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: MiraloColors.accent.withValues(alpha: 0.3), width: 1),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.08),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.cloud_outlined, size: 18, color: MiraloColors.accent),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        'Status Note: ${contact.note}',
+                        style: MiraloTypography.bodySmall(
+                          color: isDark ? MiraloColors.darkTextPrimary : MiraloColors.lightTextPrimary,
+                        ).copyWith(fontWeight: FontWeight.w600),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    GestureDetector(
+                      onTap: () => setState(() => _showCloudNote = false),
+                      child: Icon(Icons.close_rounded, size: 14, color: isDark ? Colors.white54 : Colors.black54),
+                    ),
+                  ],
+                ),
               ),
             ),
           Expanded(
@@ -1096,6 +1223,27 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
               itemBuilder: (context, index) {
                 final msg = messages[index];
                 final isMe = chat.isMyMessage(msg);
+
+                PrivateMessageModel? repliedMsg;
+                if (msg.replyToText != null && msg.replyToText!.isNotEmpty) {
+                  for (final m in messages) {
+                    if (m.text.isNotEmpty && m.text == msg.replyToText) {
+                      repliedMsg = m;
+                      break;
+                    }
+                    if (m.text.isEmpty &&
+                        msg.replyToText == '[Photo Attachment]' &&
+                        (m.type == 'image' || m.imageBase64 != null || m.mediaUrl != null)) {
+                      repliedMsg = m;
+                      break;
+                    }
+                    if (m.id == msg.replyToText) {
+                      repliedMsg = m;
+                      break;
+                    }
+                  }
+                }
+
                 return MessageRenderer(
                   key: _getMessageKey(msg.id),
                   id: msg.id,
@@ -1114,6 +1262,20 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                   fileSize: msg.fileSize,
                   status: msg.status,
                   replyToText: msg.replyToText,
+                  replyToImageBase64: repliedMsg?.imageBase64,
+                  replyToMediaUrl: repliedMsg?.mediaUrl,
+                  onTapReply: repliedMsg != null
+                      ? () => _scrollToMessage(repliedMsg!.id)
+                      : (msg.replyToText != null
+                          ? () {
+                              for (final m in messages) {
+                                if (m.text == msg.replyToText || m.id == msg.replyToText) {
+                                  _scrollToMessage(m.id);
+                                  break;
+                                }
+                              }
+                            }
+                          : null),
                   reactions: msg.reactions,
                   onReactionTap: (emoji) => chat.toggleReaction(msg.id, emoji),
                   onDownload: (msg.mediaUrl != null || msg.imageBase64 != null)
@@ -1395,6 +1557,7 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
               }
               chat.sendTextMessage(text, replyToText: _replyToText);
               if (_replyToText != null) setState(() => _replyToText = null);
+              _scrollToBottom();
             },
             onMediaSubmitted: (type, urlOrBase64, fileName, fileSize, captionText) {
               if (contact != null && chat.isBlocked(contact.id)) {
@@ -1421,6 +1584,7 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                 fileSize: fileSize,
               );
               if (_replyToText != null) setState(() => _replyToText = null);
+              _scrollToBottom();
             },
           ),
         ],

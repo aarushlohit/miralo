@@ -14,6 +14,7 @@ import 'giphy_picker_sheet.dart';
 /// Attachment sheet supporting Images (Camera & Photos), Documents (Any non-executable file), Voice Notes, and GIPHY GIFs.
 /// Attempts Cloudinary upload first, falling back directly to Base64 string for offline/free operation.
 class AttachmentSheet extends StatelessWidget {
+  final bool isImageOnly;
   final Function(String mediaUrlOrBase64, String fileName)? onImageSelected;
   final Function(String documentUrlOrBase64, String fileName, String fileSize)? onDocumentSelected;
   final Function(String audioUrlOrBase64, String durationText)? onVoiceNoteRecorded;
@@ -21,6 +22,7 @@ class AttachmentSheet extends StatelessWidget {
 
   const AttachmentSheet({
     super.key,
+    this.isImageOnly = false,
     this.onImageSelected,
     this.onDocumentSelected,
     this.onVoiceNoteRecorded,
@@ -29,6 +31,7 @@ class AttachmentSheet extends StatelessWidget {
 
   static Future<void> show(
     BuildContext context, {
+    bool isImageOnly = false,
     Function(String mediaUrlOrBase64, String fileName)? onImageSelected,
     Function(String documentUrlOrBase64, String fileName, String fileSize)? onDocumentSelected,
     Function(String audioUrlOrBase64, String durationText)? onVoiceNoteRecorded,
@@ -47,6 +50,7 @@ class AttachmentSheet extends StatelessWidget {
         ),
       ),
       builder: (_) => AttachmentSheet(
+        isImageOnly: isImageOnly,
         onImageSelected: onImageSelected,
         onDocumentSelected: onDocumentSelected,
         onVoiceNoteRecorded: onVoiceNoteRecorded,
@@ -196,86 +200,114 @@ class AttachmentSheet extends StatelessWidget {
               ),
             ),
             Text(
-              'Share Content',
+              isImageOnly ? 'Attach Image' : 'Share Content',
               style: MiraloTypography.titleMedium(color: textColor),
             ),
             const SizedBox(height: MiraloSpacing.xs),
             Text(
-              'Select media, files, or record a voice note',
+              isImageOnly
+                  ? 'Select a photo from Camera or Gallery (Max 1 image)'
+                  : 'Select media, files, or record a voice note',
               style: MiraloTypography.bodySmall(color: subColor),
             ),
             const SizedBox(height: MiraloSpacing.lg),
 
-            // Camera, Photos, Document, Voice Note & GIPHY GIF options
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                Expanded(
-                  child: _ImageActionTile(
-                    icon: Icons.insert_drive_file_rounded,
-                    label: 'File',
-                    bgColor: const Color(0xFFD97706).withValues(alpha: 0.15),
-                    iconColor: const Color(0xFFD97706),
-                    textColor: textColor,
-                    onTap: () => _pickDocument(context),
+            if (isImageOnly)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Expanded(
+                    child: _ImageActionTile(
+                      icon: Icons.camera_alt_rounded,
+                      label: 'Camera',
+                      bgColor: const Color(0xFFE11D48).withValues(alpha: 0.15),
+                      iconColor: const Color(0xFFE11D48),
+                      textColor: textColor,
+                      onTap: () => _pickImage(context, ImageSource.camera),
+                    ),
                   ),
-                ),
-                Expanded(
-                  child: _ImageActionTile(
-                    icon: Icons.camera_alt_rounded,
-                    label: 'Camera',
-                    bgColor: const Color(0xFFE11D48).withValues(alpha: 0.15),
-                    iconColor: const Color(0xFFE11D48),
-                    textColor: textColor,
-                    onTap: () => _pickImage(context, ImageSource.camera),
+                  Expanded(
+                    child: _ImageActionTile(
+                      icon: Icons.photo_library_rounded,
+                      label: 'Photos',
+                      bgColor: const Color(0xFF4F46E5).withValues(alpha: 0.15),
+                      iconColor: const Color(0xFF4F46E5),
+                      textColor: textColor,
+                      onTap: () => _pickImage(context, ImageSource.gallery),
+                    ),
                   ),
-                ),
-                Expanded(
-                  child: _ImageActionTile(
-                    icon: Icons.photo_library_rounded,
-                    label: 'Photos',
-                    bgColor: const Color(0xFF4F46E5).withValues(alpha: 0.15),
-                    iconColor: const Color(0xFF4F46E5),
-                    textColor: textColor,
-                    onTap: () => _pickImage(context, ImageSource.gallery),
+                ],
+              )
+            else
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Expanded(
+                    child: _ImageActionTile(
+                      icon: Icons.insert_drive_file_rounded,
+                      label: 'File',
+                      bgColor: const Color(0xFFD97706).withValues(alpha: 0.15),
+                      iconColor: const Color(0xFFD97706),
+                      textColor: textColor,
+                      onTap: () => _pickDocument(context),
+                    ),
                   ),
-                ),
-                Expanded(
-                  child: _ImageActionTile(
-                    icon: Icons.mic_rounded,
-                    label: 'Voice Note',
-                    bgColor: const Color(0xFF0D9488).withValues(alpha: 0.15),
-                    iconColor: const Color(0xFF0D9488),
-                    textColor: textColor,
-                    onTap: () {
-                      Navigator.pop(context);
-                      VoiceNoteRecorderSheet.show(
-                        context,
-                        onVoiceNoteRecorded: onVoiceNoteRecorded,
-                      );
-                    },
+                  Expanded(
+                    child: _ImageActionTile(
+                      icon: Icons.camera_alt_rounded,
+                      label: 'Camera',
+                      bgColor: const Color(0xFFE11D48).withValues(alpha: 0.15),
+                      iconColor: const Color(0xFFE11D48),
+                      textColor: textColor,
+                      onTap: () => _pickImage(context, ImageSource.camera),
+                    ),
                   ),
-                ),
-                Expanded(
-                  child: _ImageActionTile(
-                    icon: Icons.gif_box_rounded,
-                    label: 'GIF',
-                    bgColor: const Color(0xFF059669).withValues(alpha: 0.15),
-                    iconColor: const Color(0xFF059669),
-                    textColor: textColor,
-                    onTap: () {
-                      Navigator.pop(context);
-                      if (onGifSelected != null) {
-                        GiphyPickerSheet.show(
+                  Expanded(
+                    child: _ImageActionTile(
+                      icon: Icons.photo_library_rounded,
+                      label: 'Photos',
+                      bgColor: const Color(0xFF4F46E5).withValues(alpha: 0.15),
+                      iconColor: const Color(0xFF4F46E5),
+                      textColor: textColor,
+                      onTap: () => _pickImage(context, ImageSource.gallery),
+                    ),
+                  ),
+                  Expanded(
+                    child: _ImageActionTile(
+                      icon: Icons.mic_rounded,
+                      label: 'Voice Note',
+                      bgColor: const Color(0xFF0D9488).withValues(alpha: 0.15),
+                      iconColor: const Color(0xFF0D9488),
+                      textColor: textColor,
+                      onTap: () {
+                        Navigator.pop(context);
+                        VoiceNoteRecorderSheet.show(
                           context,
-                          onGifSelected: onGifSelected!,
+                          onVoiceNoteRecorded: onVoiceNoteRecorded,
                         );
-                      }
-                    },
+                      },
+                    ),
                   ),
-                ),
-              ],
-            ),
+                  Expanded(
+                    child: _ImageActionTile(
+                      icon: Icons.gif_box_rounded,
+                      label: 'GIF',
+                      bgColor: const Color(0xFF059669).withValues(alpha: 0.15),
+                      iconColor: const Color(0xFF059669),
+                      textColor: textColor,
+                      onTap: () {
+                        Navigator.pop(context);
+                        if (onGifSelected != null) {
+                          GiphyPickerSheet.show(
+                            context,
+                            onGifSelected: onGifSelected!,
+                          );
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ),
             const SizedBox(height: MiraloSpacing.lg),
 
             // Cancel

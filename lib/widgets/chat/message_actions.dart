@@ -16,7 +16,7 @@ class MessageActionsSheet extends StatelessWidget {
   final bool isPinned;
   final VoidCallback? onSaveToLibrary;
   final VoidCallback? onMoveToVault;
-  final VoidCallback? onDelete;
+  final VoidCallback? onEdit;
 
   const MessageActionsSheet({
     super.key,
@@ -32,7 +32,7 @@ class MessageActionsSheet extends StatelessWidget {
     this.isPinned = false,
     this.onSaveToLibrary,
     this.onMoveToVault,
-    this.onDelete,
+    this.onEdit,
   });
 
   static void show(
@@ -49,11 +49,12 @@ class MessageActionsSheet extends StatelessWidget {
     bool isPinned = false,
     VoidCallback? onSaveToLibrary,
     VoidCallback? onMoveToVault,
-    VoidCallback? onDelete,
+    VoidCallback? onEdit,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: isDark
           ? MiraloColors.darkSurfacePrimary
           : MiraloColors.lightSurfacePrimary,
@@ -75,7 +76,7 @@ class MessageActionsSheet extends StatelessWidget {
         isPinned: isPinned,
         onSaveToLibrary: onSaveToLibrary,
         onMoveToVault: onMoveToVault,
-        onDelete: onDelete,
+        onEdit: onEdit,
       ),
     );
   }
@@ -90,16 +91,21 @@ class MessageActionsSheet extends StatelessWidget {
         ? MiraloColors.darkBorder
         : MiraloColors.lightBorder;
 
+    final maxHeight = MediaQuery.of(context).size.height * 0.85;
+
     return SafeArea(
       top: false,
-      child: Padding(
+      child: Container(
+        constraints: BoxConstraints(maxHeight: maxHeight),
         padding: const EdgeInsets.symmetric(
           horizontal: MiraloSpacing.lg,
           vertical: MiraloSpacing.md,
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
             Center(
               child: Container(
                 width: 36,
@@ -119,6 +125,16 @@ class MessageActionsSheet extends StatelessWidget {
                 onTap: () {
                   Navigator.pop(context);
                   onReact?.call();
+                },
+              ),
+            if (onEdit != null)
+              _ActionRow(
+                icon: Icons.edit_outlined,
+                title: 'Edit Message (within 5m)',
+                textColor: textColor,
+                onTap: () {
+                  Navigator.pop(context);
+                  onEdit?.call();
                 },
               ),
             if (onReply != null)
@@ -206,22 +222,13 @@ class MessageActionsSheet extends StatelessWidget {
                   onMoveToVault?.call();
                 },
               ),
-            if (onDelete != null)
-              _ActionRow(
-                icon: Icons.delete_outline_rounded,
-                title: 'Delete Message',
-                textColor: MiraloColors.danger,
-                onTap: () {
-                  Navigator.pop(context);
-                  onDelete?.call();
-                },
-              ),
             const SizedBox(height: MiraloSpacing.sm),
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 class _ActionRow extends StatelessWidget {

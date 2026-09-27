@@ -21,6 +21,9 @@ class MessageRenderer extends StatelessWidget {
   final String? fileSize;
   final String? status;
   final String? replyToText;
+  final String? replyToImageBase64;
+  final String? replyToMediaUrl;
+  final VoidCallback? onTapReply;
   final Map<String, int>? reactions;
   final Function(String emoji)? onReactionTap;
   final VoidCallback? onLongPress;
@@ -48,6 +51,9 @@ class MessageRenderer extends StatelessWidget {
     this.fileSize,
     this.status,
     this.replyToText,
+    this.replyToImageBase64,
+    this.replyToMediaUrl,
+    this.onTapReply,
     this.reactions,
     this.onReactionTap,
     this.onLongPress,
@@ -168,21 +174,59 @@ class MessageRenderer extends StatelessWidget {
 
                         // Quoted reply box if retagged/replied
                         if (replyToText != null && replyToText!.isNotEmpty)
-                          Container(
-                            margin: const EdgeInsets.only(bottom: MiraloSpacing.xs),
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: isDark ? const Color(0xFF222222) : const Color(0xFFE2E6EE),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border(left: BorderSide(color: MiraloColors.accent, width: 3)),
-                            ),
-                            child: Text(
-                              replyToText!,
-                              style: MiraloTypography.bodySmall(
-                                color: isDark ? MiraloColors.darkTextSecondary : MiraloColors.lightTextSecondary,
+                          InkWell(
+                            onTap: onTapReply,
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              margin: const EdgeInsets.only(bottom: MiraloSpacing.xs),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: isDark ? const Color(0xFF222222) : const Color(0xFFE2E6EE),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border(left: BorderSide(color: MiraloColors.accent, width: 3)),
                               ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (replyToImageBase64 != null && replyToImageBase64!.isNotEmpty) ...[
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(4),
+                                      child: Image.memory(
+                                        base64Decode(replyToImageBase64!),
+                                        width: 36,
+                                        height: 36,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                  ] else if (replyToMediaUrl != null &&
+                                      replyToMediaUrl!.isNotEmpty &&
+                                      replyToMediaUrl!.startsWith('http')) ...[
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(4),
+                                      child: Image.network(
+                                        replyToMediaUrl!,
+                                        width: 36,
+                                        height: 36,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (context, error, stackTrace) =>
+                                            const Icon(Icons.image, size: 24, color: Colors.grey),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                  ],
+                                  Flexible(
+                                    child: Text(
+                                      replyToText!,
+                                      style: MiraloTypography.bodySmall(
+                                        color: isDark ? MiraloColors.darkTextSecondary : MiraloColors.lightTextSecondary,
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
 
@@ -246,11 +290,18 @@ class MessageRenderer extends StatelessWidget {
 
                         // Render text with styled @ mentions and @all highlights
                         if (text.isNotEmpty)
-                          _buildMessageText(
-                            text,
-                            MiraloTypography.bodyLarge(color: textPrimary).copyWith(height: 1.45),
-                            isDark,
-                          ),
+                          if (type == 'redacted')
+                            _RedactedMessageWidget(
+                              text: text,
+                              baseStyle: MiraloTypography.bodyLarge(color: textPrimary).copyWith(height: 1.45),
+                              isDark: isDark,
+                            )
+                          else
+                            _buildMessageText(
+                              text,
+                              MiraloTypography.bodyLarge(color: textPrimary).copyWith(height: 1.45),
+                              isDark,
+                            ),
 
                         const SizedBox(height: MiraloSpacing.xxs),
 
@@ -568,7 +619,7 @@ class MessageRenderer extends StatelessWidget {
     final matches = mentionRegex.allMatches(messageText);
 
     if (matches.isEmpty) {
-      return SelectableText(
+      return Text(
         messageText,
         style: baseStyle,
       );
@@ -609,9 +660,68 @@ class MessageRenderer extends StatelessWidget {
       ));
     }
 
-    return SelectableText.rich(
+    return Text.rich(
       TextSpan(children: spans),
       style: baseStyle,
+    );
+  }
+}
+
+class _RedactedMessageWidget extends StatefulWidget {
+  final String text;
+  final TextStyle baseStyle;
+  final bool isDark;
+
+  const _RedactedMessageWidget({
+    required this.text,
+    required this.baseStyle,
+    required this.isDark,
+  });
+
+  @override
+  State<_RedactedMessageWidget> createState() => _RedactedMessageWidgetState();
+}
+
+class _RedactedMessageWidgetState extends State<_RedactedMessageWidget> {
+  bool _revealed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => setState(() => _revealed = !_revealed),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: _revealed
+              ? (widget.isDark ? Colors.black45 : Colors.grey.shade200)
+              : (widget.isDark ? Colors.black : Colors.black87),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              _revealed ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+              size: 14,
+              color: _revealed ? Colors.grey : Colors.amber,
+            ),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                _revealed ? widget.text : '████████ [REDACTED - Tap to reveal]',
+                style: widget.baseStyle.copyWith(
+                  color: _revealed
+                      ? (widget.isDark ? Colors.white70 : Colors.black87)
+                      : Colors.amber,
+                  fontFamily: _revealed ? null : 'monospace',
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

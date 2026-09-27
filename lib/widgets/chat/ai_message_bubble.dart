@@ -15,6 +15,7 @@ import '../common/miralo_logo.dart';
 class AiMessageBubble extends StatelessWidget {
   final AiMessageModel message;
   final VoidCallback? onRegenerate;
+  final VoidCallback? onRetry;
   final Function(bool liked)? onLike;
   final Function(String editedText)? onEdit;
 
@@ -22,6 +23,7 @@ class AiMessageBubble extends StatelessWidget {
     super.key,
     required this.message,
     this.onRegenerate,
+    this.onRetry,
     this.onLike,
     this.onEdit,
   });
@@ -32,7 +34,12 @@ class AiMessageBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     return _isUser
         ? _UserMessage(message: message, onEdit: onEdit)
-        : _AiMessage(message: message, onLike: onLike, onRegenerate: onRegenerate);
+        : _AiMessage(
+            message: message,
+            onLike: onLike,
+            onRegenerate: onRegenerate,
+            onRetry: onRetry,
+          );
   }
 }
 
@@ -43,6 +50,65 @@ class _UserMessage extends StatelessWidget {
   final Function(String editedText)? onEdit;
   const _UserMessage({required this.message, this.onEdit});
 
+  void _showVersionHistory(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? AppColors.darkSurfacePrimary : AppColors.lightSurfacePrimary;
+    final textColor = isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
+    final versions = message.editVersions;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: bg,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.history_rounded, color: AppColors.accent, size: 20),
+            const SizedBox(width: 8),
+            Text('Prompt Edit History', style: TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.separated(
+            shrinkWrap: true,
+            itemCount: versions.length + 1,
+            separatorBuilder: (_, _) => const Divider(height: 12),
+            itemBuilder: (ctx, idx) {
+              final isCurrent = idx == versions.length;
+              final versionText = isCurrent ? message.text : versions[idx];
+              final label = isCurrent ? 'Version ${idx + 1} (Current)' : 'Version ${idx + 1}';
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      color: isCurrent ? AppColors.accent : AppColors.darkTextMuted,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    versionText,
+                    style: TextStyle(color: textColor, fontSize: 13),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -92,25 +158,51 @@ class _UserMessage extends StatelessWidget {
                   ],
                 ),
               ),
-              if (onEdit != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 2, right: 4),
-                  child: InkWell(
-                    onTap: () => onEdit?.call(message.text),
-                    borderRadius: BorderRadius.circular(4),
-                    child: Padding(
-                      padding: const EdgeInsets.all(4.0),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.edit_outlined, size: 13, color: mutedColor),
-                          const SizedBox(width: 3),
-                          Text('Edit', style: AppTypography.caption(color: mutedColor)),
-                        ],
+              Padding(
+                padding: const EdgeInsets.only(top: 2, right: 4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (message.isEdited || message.editVersions.isNotEmpty) ...[
+                      InkWell(
+                        onTap: () => _showVersionHistory(context),
+                        borderRadius: BorderRadius.circular(4),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.history_rounded, size: 12, color: AppColors.accent),
+                              const SizedBox(width: 2),
+                              Text(
+                                'v${message.editVersions.length + 1} (Edited)',
+                                style: AppTypography.caption(color: AppColors.accent),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
+                      const SizedBox(width: 8),
+                    ],
+                    if (onEdit != null)
+                      InkWell(
+                        onTap: () => onEdit?.call(message.text),
+                        borderRadius: BorderRadius.circular(4),
+                        child: Padding(
+                          padding: const EdgeInsets.all(4.0),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.edit_outlined, size: 13, color: mutedColor),
+                              const SizedBox(width: 3),
+                              Text('Edit', style: AppTypography.caption(color: mutedColor)),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
+              ),
             ],
           ),
         ),
@@ -125,9 +217,14 @@ class _AiMessage extends StatelessWidget {
   final AiMessageModel message;
   final Function(bool)? onLike;
   final VoidCallback? onRegenerate;
+  final VoidCallback? onRetry;
 
-  const _AiMessage(
-      {required this.message, this.onLike, this.onRegenerate});
+  const _AiMessage({
+    required this.message,
+    this.onLike,
+    this.onRegenerate,
+    this.onRetry,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -138,6 +235,7 @@ class _AiMessage extends StatelessWidget {
 
     final text = message.text;
     final isEmpty = text.trim().isEmpty;
+    final isError = message.isError;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -161,14 +259,50 @@ class _AiMessage extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
 
-          // Message content
-          if (isEmpty)
+          // Message content or Error / Retry box
+          if (isError) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.danger.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.danger.withValues(alpha: 0.3)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.error_outline_rounded, color: AppColors.danger, size: 18),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Plz try again later',
+                        style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.w600, fontSize: 13),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.danger,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    icon: const Icon(Icons.refresh_rounded, size: 16),
+                    label: const Text('Retry Prompt', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                    onPressed: onRetry ?? onRegenerate,
+                  ),
+                ],
+              ),
+            ),
+          ] else if (isEmpty)
             _StreamingIndicator(isDark: isDark)
           else
             _MessageContent(text: text, textColor: textColor, isDark: isDark),
 
           // Action row
-          if (!isEmpty) ...[
+          if (!isEmpty && !isError) ...[
             const SizedBox(height: AppSpacing.sm),
             _ActionRow(
               message: message,

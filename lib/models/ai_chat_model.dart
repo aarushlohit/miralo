@@ -5,6 +5,9 @@ class AiMessageModel {
   final DateTime timestamp;
   final bool? liked; // true = thumbs up, false = thumbs down, null = neutral
   final String? imageBase64;
+  final bool isError;
+  final bool isEdited;
+  final List<String> editVersions;
 
   AiMessageModel({
     required this.id,
@@ -13,6 +16,9 @@ class AiMessageModel {
     required this.timestamp,
     this.liked,
     this.imageBase64,
+    this.isError = false,
+    this.isEdited = false,
+    this.editVersions = const [],
   });
 
   AiMessageModel copyWith({
@@ -23,6 +29,9 @@ class AiMessageModel {
     bool? liked,
     bool clearLiked = false,
     String? imageBase64,
+    bool? isError,
+    bool? isEdited,
+    List<String>? editVersions,
   }) {
     return AiMessageModel(
       id: id ?? this.id,
@@ -31,6 +40,9 @@ class AiMessageModel {
       timestamp: timestamp ?? this.timestamp,
       liked: clearLiked ? null : (liked ?? this.liked),
       imageBase64: imageBase64 ?? this.imageBase64,
+      isError: isError ?? this.isError,
+      isEdited: isEdited ?? this.isEdited,
+      editVersions: editVersions ?? this.editVersions,
     );
   }
 
@@ -42,6 +54,9 @@ class AiMessageModel {
       'timestamp': timestamp.toIso8601String(),
       'liked': liked,
       'imageBase64': imageBase64,
+      'isError': isError,
+      'isEdited': isEdited,
+      'editVersions': editVersions,
     };
   }
 
@@ -53,6 +68,12 @@ class AiMessageModel {
       timestamp: DateTime.parse(json['timestamp'] as String),
       liked: json['liked'] as bool?,
       imageBase64: json['imageBase64'] as String?,
+      isError: json['isError'] as bool? ?? false,
+      isEdited: json['isEdited'] as bool? ?? false,
+      editVersions: (json['editVersions'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [],
     );
   }
 }

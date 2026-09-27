@@ -378,28 +378,45 @@ class AiChatProvider extends ChangeNotifier {
     );
     notifyListeners();
 
-    // Fetch response from real AiService (Gemini or NVIDIA NIM)
-    final fullResponse = await AiService.instance.sendPrompt(
-      prompt: prompt,
-      model: _selectedModel,
-      imageBase64: imageBase64,
-      isSpecialUser: isSpecialUser,
-    );
+    try {
+      // Fetch response from real AiService (Gemini or NVIDIA NIM)
+      final fullResponse = await AiService.instance.sendPrompt(
+        prompt: prompt,
+        model: _selectedModel,
+        imageBase64: imageBase64,
+        isSpecialUser: isSpecialUser,
+      );
 
-    final words = fullResponse.split(' ');
-    String currentText = '';
+      final words = fullResponse.split(' ');
+      String currentText = '';
 
-    for (int i = 0; i < words.length; i++) {
-      if (!_isStreaming) break; // Interrupted by stop indicator!
-      await Future.delayed(const Duration(milliseconds: 20));
-      currentText += (i == 0 ? '' : ' ') + words[i];
+      for (int i = 0; i < words.length; i++) {
+        if (!_isStreaming) break; // Interrupted by stop indicator!
+        await Future.delayed(const Duration(milliseconds: 20));
+        currentText += (i == 0 ? '' : ' ') + words[i];
 
+        final liveIndex = _conversations.indexWhere((c) => c.id == _activeChatId);
+        if (liveIndex != -1) {
+          final msgs = List<AiMessageModel>.from(_conversations[liveIndex].messages);
+          final asstIdx = msgs.indexWhere((m) => m.id == assistantMsgId);
+          if (asstIdx != -1) {
+            msgs[asstIdx] = msgs[asstIdx].copyWith(text: currentText, isError: false);
+            _conversations[liveIndex] = _conversations[liveIndex].copyWith(messages: msgs);
+            notifyListeners();
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('AI Chat API Error: $e');
       final liveIndex = _conversations.indexWhere((c) => c.id == _activeChatId);
       if (liveIndex != -1) {
         final msgs = List<AiMessageModel>.from(_conversations[liveIndex].messages);
         final asstIdx = msgs.indexWhere((m) => m.id == assistantMsgId);
         if (asstIdx != -1) {
-          msgs[asstIdx] = msgs[asstIdx].copyWith(text: currentText);
+          msgs[asstIdx] = msgs[asstIdx].copyWith(
+            text: 'Plz try again later',
+            isError: true,
+          );
           _conversations[liveIndex] = _conversations[liveIndex].copyWith(messages: msgs);
           notifyListeners();
         }
@@ -456,9 +473,7 @@ class AiChatProvider extends ChangeNotifier {
     );
   }
 
-  /// Edits a previous user prompt.
-  /// Discards the target user message and all subsequent messages in the conversation,
-  /// then resends the edited prompt.
+  /// Edits a previous user prompt in-place with version tracking & vanishes previous output
   Future<void> editUserPrompt(
     String messageId,
     String editedText, {
@@ -473,20 +488,161 @@ class AiChatProvider extends ChangeNotifier {
     if (msgIndex == -1) return;
 
     final targetMsg = currentChat.messages[msgIndex];
+    final newVersions = List<String>.from(targetMsg.editVersions)..add(targetMsg.text);
 
-    // Truncate message list up to target user message (removing target and subsequent messages)
-    final truncated = currentChat.messages.sublist(0, msgIndex);
+    final updatedUserMsg = targetMsg.copyWith(
+      text: editedText.trim(),
+      isEdited: true,
+      editVersions: newVersions,
+    );
+
+    final messages = List<AiMessageModel>.from(currentChat.messages);
+    messages[msgIndex] = updatedUserMsg;
+    // Vanish all previous responses after this prompt
+    final truncated = messages.sublist(0, msgIndex + 1);
+
     _conversations[chatIndex] = currentChat.copyWith(
       messages: truncated,
       updatedAt: DateTime.now(),
     );
     notifyListeners();
 
-    // Send the edited prompt
-    await sendPrompt(
-      editedText.trim(),
-      imageBase64: targetMsg.imageBase64,
-      isSpecialUser: isSpecialUser,
+    _isStreaming = true;
+    notifyListeners();
+
+    final assistantMsgId = 'msg_asst_${DateTime.now().millisecondsSinceEpoch}';
+    final assistantMsg = AiMessageModel(
+      id: assistantMsgId,
+      role: 'assistant',
+      text: '',
+      timestamp: DateTime.now(),
     );
+
+    _conversations[chatIndex] = _conversations[chatIndex].copyWith(
+      messages: List<AiMessageModel>.from(_conversations[chatIndex].messages)..add(assistantMsg),
+    );
+    notifyListeners();
+
+    try {
+      final fullResponse = await AiService.instance.sendPrompt(
+        prompt: editedText.trim(),
+        model: _selectedModel,
+        imageBase64: targetMsg.imageBase64,
+        isSpecialUser: isSpecialUser,
+      );
+
+      final words = fullResponse.split(' ');
+      String currentText = '';
+
+      for (int i = 0; i < words.length; i++) {
+        if (!_isStreaming) break;
+        await Future.delayed(const Duration(milliseconds: 20));
+        currentText += (i == 0 ? '' : ' ') + words[i];
+
+        final liveIndex = _conversations.indexWhere((c) => c.id == _activeChatId);
+        if (liveIndex != -1) {
+          final msgs = List<AiMessageModel>.from(_conversations[liveIndex].messages);
+          final asstIdx = msgs.indexWhere((m) => m.id == assistantMsgId);
+          if (asstIdx != -1) {
+            msgs[asstIdx] = msgs[asstIdx].copyWith(text: currentText, isError: false);
+            _conversations[liveIndex] = _conversations[liveIndex].copyWith(messages: msgs);
+            notifyListeners();
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('AI Chat API Error (on edit): $e');
+      final liveIndex = _conversations.indexWhere((c) => c.id == _activeChatId);
+      if (liveIndex != -1) {
+        final msgs = List<AiMessageModel>.from(_conversations[liveIndex].messages);
+        final asstIdx = msgs.indexWhere((m) => m.id == assistantMsgId);
+        if (asstIdx != -1) {
+          msgs[asstIdx] = msgs[asstIdx].copyWith(
+            text: 'Plz try again later',
+            isError: true,
+          );
+          _conversations[liveIndex] = _conversations[liveIndex].copyWith(messages: msgs);
+          notifyListeners();
+        }
+      }
+    }
+
+    _isStreaming = false;
+    _saveConversations();
+    notifyListeners();
+  }
+
+  /// Retries generating response for an assistant message that failed
+  Future<void> retryAssistantMessage(String assistantMsgId, {bool isSpecialUser = false}) async {
+    if (_activeChatId == null) return;
+    final chatIndex = _conversations.indexWhere((c) => c.id == _activeChatId);
+    if (chatIndex == -1) return;
+
+    final currentChat = _conversations[chatIndex];
+    final asstIdx = currentChat.messages.indexWhere((m) => m.id == assistantMsgId);
+    if (asstIdx == -1) return;
+
+    AiMessageModel? userMsg;
+    for (int i = asstIdx - 1; i >= 0; i--) {
+      if (currentChat.messages[i].role == 'user') {
+        userMsg = currentChat.messages[i];
+        break;
+      }
+    }
+    if (userMsg == null) return;
+
+    final msgs = List<AiMessageModel>.from(currentChat.messages);
+    msgs[asstIdx] = msgs[asstIdx].copyWith(text: '', isError: false);
+    _conversations[chatIndex] = currentChat.copyWith(messages: msgs);
+    _isStreaming = true;
+    notifyListeners();
+
+    try {
+      final fullResponse = await AiService.instance.sendPrompt(
+        prompt: userMsg.text,
+        model: _selectedModel,
+        imageBase64: userMsg.imageBase64,
+        isSpecialUser: isSpecialUser,
+      );
+
+      final words = fullResponse.split(' ');
+      String currentText = '';
+
+      for (int i = 0; i < words.length; i++) {
+        if (!_isStreaming) break;
+        await Future.delayed(const Duration(milliseconds: 20));
+        currentText += (i == 0 ? '' : ' ') + words[i];
+
+        final liveIndex = _conversations.indexWhere((c) => c.id == _activeChatId);
+        if (liveIndex != -1) {
+          final liveMsgs = List<AiMessageModel>.from(_conversations[liveIndex].messages);
+          final liveAsstIdx = liveMsgs.indexWhere((m) => m.id == assistantMsgId);
+          if (liveAsstIdx != -1) {
+            liveMsgs[liveAsstIdx] = liveMsgs[liveAsstIdx].copyWith(text: currentText, isError: false);
+            _conversations[liveIndex] = _conversations[liveIndex].copyWith(messages: liveMsgs);
+            notifyListeners();
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('AI Chat API Error (retry): $e');
+      final liveIndex = _conversations.indexWhere((c) => c.id == _activeChatId);
+      if (liveIndex != -1) {
+        final liveMsgs = List<AiMessageModel>.from(_conversations[liveIndex].messages);
+        final liveAsstIdx = liveMsgs.indexWhere((m) => m.id == assistantMsgId);
+        if (liveAsstIdx != -1) {
+          liveMsgs[liveAsstIdx] = liveMsgs[liveAsstIdx].copyWith(
+            text: 'Plz try again later',
+            isError: true,
+          );
+          _conversations[liveIndex] = _conversations[liveIndex].copyWith(messages: liveMsgs);
+          notifyListeners();
+        }
+      }
+    }
+
+    _isStreaming = false;
+    _saveConversations();
+    notifyListeners();
   }
 }

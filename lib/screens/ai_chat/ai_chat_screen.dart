@@ -23,6 +23,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final TextEditingController _composerController = TextEditingController();
   final FocusNode _composerFocusNode = FocusNode();
+  String? _editingMessageId;
 
   @override
   void dispose() {
@@ -31,13 +32,22 @@ class _AiChatScreenState extends State<AiChatScreen> {
     super.dispose();
   }
 
-  void _handleEdit(String editedText) {
-    // Prefill the composer field with the edited text so user can adjust & resend
+  void _handleEdit(String messageId, String editedText) {
+    setState(() {
+      _editingMessageId = messageId;
+    });
     _composerController.text = editedText;
     _composerController.selection = TextSelection.collapsed(
       offset: editedText.length,
     );
     _composerFocusNode.requestFocus();
+  }
+
+  void _cancelEdit() {
+    setState(() {
+      _editingMessageId = null;
+    });
+    _composerController.clear();
   }
 
   void _showModelSelector(BuildContext context, AiChatProvider ai) {
@@ -265,22 +275,62 @@ class _AiChatScreenState extends State<AiChatScreen> {
                   onRegenerate: i == chat.messages.length - 1
                       ? () => ai.regenerateLast(isSpecialUser: auth.isSpecialUser)
                       : null,
+                  onRetry: msg.isError
+                      ? () => ai.retryAssistantMessage(msg.id, isSpecialUser: auth.isSpecialUser)
+                      : null,
                   onEdit: msg.role == 'user'
-                      ? (editedText) => _handleEdit(editedText)
+                      ? (editedText) => _handleEdit(msg.id, editedText)
                       : null,
                 );
               },
             ),
-      composer: Composer(
-        isPrivate: false,
-        isSubmitting: ai.isStreaming,
-        hintText: 'Ask anything...',
-        controller: _composerController,
-        focusNode: _composerFocusNode,
-        onSubmitted: (prompt) =>
-            ai.sendPrompt(prompt, isSpecialUser: auth.isSpecialUser),
-        onSubmittedWithImage: (prompt, img) => ai.sendPrompt(prompt,
-            imageBase64: img, isSpecialUser: auth.isSpecialUser),
+      composer: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (_editingMessageId != null)
+            Container(
+              color: MiraloColors.accent.withValues(alpha: 0.12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              child: Row(
+                children: [
+                  const Icon(Icons.edit_note_rounded, size: 16, color: MiraloColors.accent),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Editing previous message prompt...',
+                      style: MiraloTypography.caption(color: MiraloColors.accent)
+                          .copyWith(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  InkWell(
+                    onTap: _cancelEdit,
+                    child: const Icon(Icons.close_rounded, size: 16, color: MiraloColors.accent),
+                  ),
+                ],
+              ),
+            ),
+          Composer(
+            isPrivate: false,
+            isSubmitting: ai.isStreaming,
+            hintText: _editingMessageId != null ? 'Edit prompt...' : 'Ask anything...',
+            controller: _composerController,
+            focusNode: _composerFocusNode,
+            onSubmitted: (prompt) {
+              if (_editingMessageId != null) {
+                final targetId = _editingMessageId!;
+                setState(() => _editingMessageId = null);
+                ai.editUserPrompt(targetId, prompt, isSpecialUser: auth.isSpecialUser);
+              } else {
+                ai.sendPrompt(prompt, isSpecialUser: auth.isSpecialUser);
+              }
+            },
+            onSubmittedWithImage: (prompt, img) {
+              setState(() => _editingMessageId = null);
+              ai.sendPrompt(prompt,
+                  imageBase64: img, isSpecialUser: auth.isSpecialUser);
+            },
+          ),
+        ],
       ),
     );
   }
