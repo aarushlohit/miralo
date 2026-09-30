@@ -11,10 +11,11 @@ class EncryptionService {
   static const String _prefix = 'e2ee_v1:';
 
   /// Derives a deterministic 256-bit (32-byte) key for a specific conversation channel
-  static Uint8List deriveChannelKey(String channelId, {String? userSecret}) {
+  static Uint8List deriveChannelKey(String channelId, {String? userSecret, bool useLegacySalt = false}) {
+    final saltPrefix = useLegacySalt ? 'miralo_e2ee_' : 'longcat_e2ee_';
     final salt = userSecret != null && userSecret.isNotEmpty
-        ? 'longcat_e2ee_salt_$userSecret'
-        : 'longcat_e2ee_global_salt_v1';
+        ? '${saltPrefix}salt_$userSecret'
+        : '${saltPrefix}global_salt_v1';
     final rawInput = '$salt:$channelId:$salt';
     final bytes = utf8.encode(rawInput);
     final digest = sha256.convert(bytes);
@@ -80,12 +81,19 @@ class EncryptionService {
       final macHex = parts[1];
       final cipherBase64 = parts[2];
 
-      final key = deriveChannelKey(channelId, userSecret: userSecret);
-
-      // Verify HMAC signature
       final macInput = utf8.encode('$nonceHex:$cipherBase64');
-      final hmac = Hmac(sha256, key);
-      final computedMac = hmac.convert(macInput).toString();
+
+      // 1. Try with primary key derivation salt (longcat_e2ee_)
+      var key = deriveChannelKey(channelId, userSecret: userSecret, useLegacySalt: false);
+      var hmac = Hmac(sha256, key);
+      var computedMac = hmac.convert(macInput).toString();
+
+      // 2. Fallback to legacy key derivation salt (miralo_e2ee_) if signature mismatch
+      if (computedMac != macHex) {
+        key = deriveChannelKey(channelId, userSecret: userSecret, useLegacySalt: true);
+        hmac = Hmac(sha256, key);
+        computedMac = hmac.convert(macInput).toString();
+      }
 
       if (computedMac != macHex) {
         return '🔒 [Encrypted message - Signature invalid]';
