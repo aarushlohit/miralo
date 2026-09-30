@@ -409,6 +409,8 @@ class PrivateChatProvider extends ChangeNotifier {
     return null;
   }
 
+  Map<String, List<PrivateMessageModel>> get messagesMap => Map.unmodifiable(_messages);
+
   List<PrivateMessageModel> get activeMessages {
     if (_activeChatId == null) return [];
     return _messages[_activeChatId] ?? [];
@@ -757,18 +759,18 @@ class PrivateChatProvider extends ChangeNotifier {
     return zipBytes;
   }
 
-  /// Prompts user to select a .zip backup file and restores chats & contacts
+  /// Prompts user to select a .json or .zip backup file and restores chats & contacts
   Future<bool> importChatsFromZipFile() async {
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['zip'],
+        allowedExtensions: ['json', 'zip'],
         withData: true,
       );
 
       if (result != null && result.files.isNotEmpty && result.files.first.bytes != null) {
-        final zipBytes = result.files.first.bytes!;
-        final backupData = await ChatBackupService.importChatsFromZip(zipBytes);
+        final fileBytes = result.files.first.bytes!;
+        final backupData = ChatBackupService.importChatsFromBytes(fileBytes);
 
         if (backupData != null) {
           final importedContacts = backupData['contacts'] as List<PrivateContactModel>? ?? [];

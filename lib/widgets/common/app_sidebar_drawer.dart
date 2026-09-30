@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/theme/app_colors.dart';
@@ -11,6 +12,7 @@ import '../../providers/ai_chat_provider.dart';
 import '../../providers/private_chat_provider.dart';
 import '../../providers/vault_provider.dart';
 import '../../providers/theme_provider.dart';
+import '../../services/chat_backup_service.dart';
 import '../private_chat/add_friend_sheet.dart';
 import 'longcat_avatar.dart';
 
@@ -555,6 +557,48 @@ class _AppSidebarDrawerState extends State<AppSidebarDrawer> {
                   onTap: () {
                     _close(context);
                     Navigator.pushNamed(context, AppRoutes.settings);
+                  },
+                ),
+
+                // Export Chat
+                _NavItem(
+                  icon: Icons.upload_file_outlined,
+                  label: 'Export Chat',
+                  onTap: () async {
+                    final jsonString = ChatBackupService.createBackupJson(
+                      contacts: privateChat.contacts,
+                      messages: privateChat.messagesMap,
+                    );
+                    Clipboard.setData(ClipboardData(text: jsonString));
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Chat data exported & copied to clipboard!'),
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    }
+                  },
+                ),
+
+                // Import Chat
+                _NavItem(
+                  icon: Icons.file_download_outlined,
+                  label: 'Import Chat',
+                  onTap: () async {
+                    _close(context);
+                    final success = await privateChat.importChatsFromZipFile();
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            success
+                                ? 'Chat history imported successfully!'
+                                : 'Failed to import chat or cancelled.',
+                          ),
+                        ),
+                      );
+                    }
                   },
                 ),
 

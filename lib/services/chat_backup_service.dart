@@ -58,26 +58,33 @@ class ChatBackupService {
     }
   }
 
-  /// Imports chats from a picked .zip file or raw zip bytes.
-  static Future<Map<String, dynamic>?> importChatsFromZip(Uint8List zipBytes) async {
+  /// Imports chats from a picked file (raw JSON bytes or ZIP archive bytes).
+  static Map<String, dynamic>? importChatsFromBytes(Uint8List fileBytes) {
     try {
-      final archive = ZipDecoder().decodeBytes(zipBytes);
-      ArchiveFile? jsonFile;
-
-      for (final file in archive) {
-        if (file.name.endsWith('.json')) {
-          jsonFile = file;
-          break;
+      // 1. Try decoding ZIP archive first
+      try {
+        final archive = ZipDecoder().decodeBytes(fileBytes);
+        for (final file in archive) {
+          if (file.name.endsWith('.json')) {
+            final jsonContent = utf8.decode(file.content as List<int>);
+            return parseBackupJson(jsonContent);
+          }
         }
-      }
+      } catch (_) {}
 
-      if (jsonFile == null) {
-        debugPrint('No JSON backup file found inside ZIP archive.');
-        return null;
-      }
+      // 2. Try raw JSON string
+      final jsonContent = utf8.decode(fileBytes);
+      return parseBackupJson(jsonContent);
+    } catch (e) {
+      debugPrint('Error importing chats from bytes: $e');
+      return null;
+    }
+  }
 
-      final jsonContent = utf8.decode(jsonFile.content as List<int>);
-      final rawMap = jsonDecode(jsonContent) as Map<String, dynamic>;
+  /// Parses backup JSON string into contacts and messages.
+  static Map<String, dynamic>? parseBackupJson(String jsonString) {
+    try {
+      final rawMap = jsonDecode(jsonString) as Map<String, dynamic>;
 
       final rawContacts = (rawMap['contacts'] as List? ?? []);
       final contacts = rawContacts
@@ -102,9 +109,14 @@ class ChatBackupService {
         'messages': messages,
       };
     } catch (e) {
-      debugPrint('Error importing chats from zip: $e');
+      debugPrint('Error parsing backup JSON: $e');
       return null;
     }
+  }
+
+  /// Legacy helper for importing chats from ZIP bytes
+  static Future<Map<String, dynamic>?> importChatsFromZip(Uint8List zipBytes) async {
+    return importChatsFromBytes(zipBytes);
   }
 
   /// Performs cloud auto-backup to Firebase Realtime Database.

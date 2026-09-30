@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/theme/longcat_tokens.dart';
+import '../../providers/private_chat_provider.dart';
 
 /// Unified Chat Header for both AI Chat and Private Chat.
 /// - AI mode: Menu/Back, Compact centered Model Selector pill, More options.
@@ -77,11 +79,36 @@ class ChatHeader extends StatelessWidget implements PreferredSizeWidget {
               tooltip: 'Back',
             )
           : (onMenu != null
-              ? IconButton(
-                  icon: const Icon(Icons.menu_rounded, size: 26),
-                  color: textPrimary,
-                  onPressed: onMenu,
-                  tooltip: 'Menu',
+              ? Consumer<PrivateChatProvider>(
+                  builder: (context, privateChat, _) {
+                    final hasUnread = privateChat.totalUnreadCount > 0;
+                    return Stack(
+                      clipBehavior: Clip.none,
+                      alignment: Alignment.center,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.menu_rounded, size: 26),
+                          color: textPrimary,
+                          onPressed: onMenu,
+                          tooltip: 'Menu',
+                        ),
+                        if (hasUnread)
+                          Positioned(
+                            top: 10,
+                            right: 10,
+                            child: Container(
+                              width: 9,
+                              height: 9,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF007AFF),
+                                shape: BoxShape.circle,
+                                border: Border.all(color: bg, width: 1.5),
+                              ),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
                 )
               : null),
       title: isPrivate
