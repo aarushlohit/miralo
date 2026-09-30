@@ -1715,8 +1715,8 @@ class PrivateChatProvider extends ChangeNotifier {
       msgType = 'urgent';
       finalContent = finalContent.substring(8).trim();
       StealthNotificationService.showUrgentNotification(
-        title: 'Miralo Urgent Notice',
-        body: 'miralo  reminds urgent critical  news check it out !!! ',
+        title: 'Longcat Urgent Notice',
+        body: 'longcat  reminds urgent critical  news check it out !!! ',
       );
     } else if (finalContent.toLowerCase().startsWith('/redact ') ||
         finalContent.toLowerCase().startsWith('/redacted ')) {
@@ -1724,7 +1724,7 @@ class PrivateChatProvider extends ChangeNotifier {
       final isShort = finalContent.toLowerCase().startsWith('/redact ');
       finalContent = finalContent.substring(isShort ? 8 : 10).trim();
       StealthNotificationService.showSystemPushNotification(
-        title: 'Miralo Redacted Notice',
+        title: 'Longcat Redacted Notice',
         body: finalContent,
       );
     }

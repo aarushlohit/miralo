@@ -3,13 +3,13 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 
-/// MIRALO AI — Bespoke Navigation Bar
+/// LONGCAT AI — Bespoke Navigation Bar
 /// Replaces generic Material AppBar with reference-accurate Apple/ChatGPT geometry:
 /// - 38–40px circular leading action (hamburger / back)
 /// - 18–20px semibold title or custom center widget (e.g. model selector pill)
 /// - Circular trailing action or avatar
 /// - Clean transparent surface, zero drop shadow
-class MiraloAppBar extends StatelessWidget implements PreferredSizeWidget {
+class LongcatAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String? title;
   final Widget? titleWidget;
   final Widget? leading;
@@ -20,7 +20,7 @@ class MiraloAppBar extends StatelessWidget implements PreferredSizeWidget {
   final bool showBottomBorder;
   final Color? backgroundColor;
 
-  const MiraloAppBar({
+  const LongcatAppBar({
     super.key,
     this.title,
     this.titleWidget,
@@ -112,8 +112,8 @@ class MiraloAppBar extends StatelessWidget implements PreferredSizeWidget {
   }
 }
 
-/// Standard circular icon button used in Miralo navigation bars and headers.
-class MiraloCircularIconButton extends StatelessWidget {
+/// Standard circular icon button used in Longcat navigation bars and headers.
+class LongcatCircularIconButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onPressed;
   final double size;
@@ -122,7 +122,7 @@ class MiraloCircularIconButton extends StatelessWidget {
   final Color? color;
   final Color? backgroundColor;
 
-  const MiraloCircularIconButton({
+  const LongcatCircularIconButton({
     super.key,
     required this.icon,
     required this.onPressed,

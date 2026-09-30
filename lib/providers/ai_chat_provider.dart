@@ -7,12 +7,12 @@ import '../models/ai_chat_model.dart';
 import '../services/ai_service.dart';
 
 class AiChatProvider extends ChangeNotifier {
-  static const String _prefConversationsKey = 'miralo_ai_conversations_v2';
+  static const String _prefConversationsKey = 'longcat_ai_conversations_v2';
   String? _currentUserId;
   StreamSubscription<DatabaseEvent>? _aiChatSubscription;
 
   String _getPrefKey() => _currentUserId != null && _currentUserId!.isNotEmpty
-      ? 'miralo_ai_conversations_$_currentUserId'
+      ? 'longcat_ai_conversations_$_currentUserId'
       : _prefConversationsKey;
 
   final List<AiChatModel> _conversations = [];
@@ -197,7 +197,7 @@ class AiChatProvider extends ChangeNotifier {
   void _seedDefaultChat() {
     final welcomeChat = AiChatModel(
       id: 'chat_default_welcome',
-      title: 'Welcome to MIRALO AI',
+      title: 'Welcome to LONGCAT AI',
       isPinned: true,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
@@ -206,7 +206,7 @@ class AiChatProvider extends ChangeNotifier {
           id: 'msg_welcome_asst',
           role: 'assistant',
           text:
-              'Welcome to MIRALO AI. Your intelligence workspace is ready.\n\n'
+              'Welcome to LONGCAT AI. Your intelligence workspace is ready.\n\n'
               '• Select from high-performance AI reasoning & vision models.\n'
               '• Use voice dictation or attach images for multimodal analysis.\n'
               '• All your conversations are strictly private.',

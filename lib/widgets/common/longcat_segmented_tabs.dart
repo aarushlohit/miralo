@@ -4,13 +4,13 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 
 /// Segmented tab bar — used in Library (All / Images / Videos / Files)
-class MiraloSegmentedTabs extends StatelessWidget {
+class LongcatSegmentedTabs extends StatelessWidget {
   final List<String> tabs;
   final int selectedIndex;
   final ValueChanged<int>? onTabChanged;
   final ValueChanged<int>? onTabSelected;
 
-  const MiraloSegmentedTabs({
+  const LongcatSegmentedTabs({
     super.key,
     required this.tabs,
     required this.selectedIndex,

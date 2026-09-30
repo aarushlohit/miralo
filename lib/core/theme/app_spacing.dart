@@ -1,4 +1,4 @@
-/// MIRALO AI — Spacing, Radius, Dimensions & Icon tokens per design specification
+/// LONGCAT AI — Spacing, Radius, Dimensions & Icon tokens per design specification
 class AppSpacing {
   AppSpacing._();
 
@@ -37,8 +37,8 @@ class AppSpacing {
 }
 
 /// Exact component dimensions (Spec section 20)
-class MiraloDimensions {
-  MiraloDimensions._();
+class LongcatDimensions {
+  LongcatDimensions._();
 
   static const double appHorizontalMargin = 20.0;
   static const double composerHeight = 54.0; // 52–56 px
@@ -59,8 +59,8 @@ class MiraloDimensions {
 }
 
 /// Icon sizes (Spec section 21)
-class MiraloIconSizes {
-  MiraloIconSizes._();
+class LongcatIconSizes {
+  LongcatIconSizes._();
 
   static const double sm = 16.0;
   static const double md = 20.0; // 20–22 px for navigation
@@ -69,6 +69,6 @@ class MiraloIconSizes {
 }
 
 /// Canonical aliases per section 27
-typedef MiraloSpacing = AppSpacing;
-typedef MiraloRadius = AppSpacing;
+typedef LongcatSpacing = AppSpacing;
+typedef LongcatRadius = AppSpacing;
 

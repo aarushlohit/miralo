@@ -6,9 +6,9 @@ import '../../core/theme/app_typography.dart';
 import '../../providers/ai_chat_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/ai_service.dart';
-import '../../widgets/common/miralo_button.dart';
-import '../../widgets/common/miralo_list_tile.dart';
-import '../../widgets/common/miralo_text_field.dart';
+import '../../widgets/common/longcat_button.dart';
+import '../../widgets/common/longcat_list_tile.dart';
+import '../../widgets/common/longcat_text_field.dart';
 
 class AiSettingsScreen extends StatefulWidget {
   const AiSettingsScreen({super.key});
@@ -135,13 +135,13 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
               ),
             ],
 
-            MiraloSectionHeader('DEFAULT MODEL (TEXT & MULTIMODAL)'),
-            MiraloSettingsGroup(
+            LongcatSectionHeader('DEFAULT MODEL (TEXT & MULTIMODAL)'),
+            LongcatSettingsGroup(
               children: ai.availableModels.map((m) {
                 final isSelected = ai.selectedModel == m;
                 final subtitle = AiModels.descriptionFor(m);
 
-                return MiraloListTile(
+                return LongcatListTile(
                   icon: isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked,
                   iconColor: isSelected ? AppColors.accent : textSecondary,
                   title: m,
@@ -154,7 +154,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
 
             const SizedBox(height: AppSpacing.xl),
 
-            MiraloSectionHeader('API KEYS (CLOUD INFERENCE)'),
+            LongcatSectionHeader('API KEYS (CLOUD INFERENCE)'),
             Text(
               isSpecial
                   ? 'Custom API keys (optional for special users). Leave empty to use system backend keys.'
@@ -163,7 +163,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
             ),
             const SizedBox(height: AppSpacing.sm),
 
-            MiraloTextField(
+            LongcatTextField(
               controller: _geminiKeyCtrl,
               hint: 'Gemini API Key',
               prefixIcon: Icons.vpn_key_outlined,
@@ -172,7 +172,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
             ),
             const SizedBox(height: AppSpacing.sm + 2),
 
-            MiraloTextField(
+            LongcatTextField(
               controller: _nvidiaKeyCtrl,
               hint: 'NVIDIA NIM API Key',
               prefixIcon: Icons.memory_outlined,
@@ -181,7 +181,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
             ),
             const SizedBox(height: AppSpacing.lg),
 
-            MiraloButton(
+            LongcatButton(
               label: 'Save API Keys',
               onPressed: _saveKeys,
             ),

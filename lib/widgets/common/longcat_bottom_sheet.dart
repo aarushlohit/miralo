@@ -4,12 +4,12 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 
 /// Standardized rounded bottom sheet with drag handle + optional title.
-class MiraloBottomSheet extends StatelessWidget {
+class LongcatBottomSheet extends StatelessWidget {
   final String? title;
   final List<Widget> children;
   final EdgeInsetsGeometry? padding;
 
-  const MiraloBottomSheet({
+  const LongcatBottomSheet({
     super.key,
     this.title,
     required this.children,
@@ -27,7 +27,7 @@ class MiraloBottomSheet extends StatelessWidget {
       isDismissible: isDismissible,
       enableDrag: true,
       isScrollControlled: true,
-      builder: (_) => MiraloBottomSheet(title: title, children: children),
+      builder: (_) => LongcatBottomSheet(title: title, children: children),
     );
   }
 
@@ -80,13 +80,13 @@ class MiraloBottomSheet extends StatelessWidget {
 }
 
 /// A clean action row item for bottom sheets
-class MiraloSheetAction extends StatelessWidget {
+class LongcatSheetAction extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color? color;
   final VoidCallback? onTap;
 
-  const MiraloSheetAction({
+  const LongcatSheetAction({
     super.key,
     required this.icon,
     required this.label,

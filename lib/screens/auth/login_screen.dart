@@ -10,9 +10,9 @@ import '../../providers/auth_provider.dart';
 import '../../providers/library_provider.dart';
 import '../../providers/private_chat_provider.dart';
 import '../../providers/vault_provider.dart';
-import '../../widgets/common/miralo_app_bar.dart';
-import '../../widgets/common/miralo_button.dart';
-import '../../widgets/common/miralo_text_field.dart';
+import '../../widgets/common/longcat_app_bar.dart';
+import '../../widgets/common/longcat_button.dart';
+import '../../widgets/common/longcat_text_field.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -149,8 +149,8 @@ class _LoginScreenState extends State<LoginScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            MiraloAppBar(
-              leading: MiraloCircularIconButton(
+            LongcatAppBar(
+              leading: LongcatCircularIconButton(
                 icon: Icons.arrow_back_ios_new_rounded,
                 iconSize: 16,
                 onPressed: () => Navigator.pop(context),
@@ -177,7 +177,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             Text('Welcome back',
                                 style: AppTypography.display(color: textPrimary)),
                             const SizedBox(height: AppSpacing.sm),
-                            Text('Sign in to MIRALO AI',
+                            Text('Sign in to LONGCAT AI',
                                 style: AppTypography.body(color: textSecondary)),
                             const SizedBox(height: AppSpacing.xl),
 
@@ -208,7 +208,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ],
 
               // Email or Username
-              MiraloTextField(
+              LongcatTextField(
                 controller: _emailController,
                 hint: 'Email or username',
                 prefixIcon: Icons.person_outline_rounded,
@@ -218,7 +218,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: AppSpacing.md),
 
               // Password
-              MiraloTextField(
+              LongcatTextField(
                 controller: _passwordController,
                 hint: 'Password',
                 prefixIcon: Icons.lock_outline,
@@ -229,7 +229,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: AppSpacing.lg),
 
-              MiraloButton(
+              LongcatButton(
                 label: 'Sign in',
                 isLoading: auth.isLoading,
                 onPressed: auth.isLoading ? null : _handleLogin,
@@ -256,10 +256,10 @@ class _LoginScreenState extends State<LoginScreen> {
               Row(
                 children: [
                   Expanded(
-                    child: MiraloButton(
+                    child: LongcatButton(
                       label: 'Google',
                       icon: Icons.g_mobiledata,
-                      variant: MiraloButtonVariant.secondary,
+                      variant: LongcatButtonVariant.secondary,
                       expand: false,
                       onPressed: () => Navigator.pushReplacementNamed(
                           context, AppRoutes.home),
@@ -267,10 +267,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
-                    child: MiraloButton(
+                    child: LongcatButton(
                       label: 'Apple',
                       icon: Icons.apple,
-                      variant: MiraloButtonVariant.secondary,
+                      variant: LongcatButtonVariant.secondary,
                       expand: false,
                       onPressed: () => Navigator.pushReplacementNamed(
                           context, AppRoutes.home),

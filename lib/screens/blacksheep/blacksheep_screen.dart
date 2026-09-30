@@ -6,8 +6,8 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../providers/vault_provider.dart';
 import '../../widgets/chat/image_viewer.dart';
-import '../../widgets/common/miralo_app_bar.dart';
-import '../../widgets/common/miralo_empty_state.dart';
+import '../../widgets/common/longcat_app_bar.dart';
+import '../../widgets/common/longcat_empty_state.dart';
 
 /// Blacksheep Screen — Displayed after unlocking with the secret PIN/passcode.
 /// Visualizes intruder access attempts with a red dot indicator on new unread logs.
@@ -36,8 +36,8 @@ class _BlacksheepScreenState extends State<BlacksheepScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            MiraloAppBar(
-              leading: MiraloCircularIconButton(
+            LongcatAppBar(
+              leading: LongcatCircularIconButton(
                 icon: Icons.arrow_back_ios_new_rounded,
                 iconSize: 16,
                 onPressed: () => Navigator.pop(context),
@@ -62,7 +62,7 @@ class _BlacksheepScreenState extends State<BlacksheepScreen> {
             ),
             Expanded(
               child: intruderLogs.isEmpty
-                  ? const MiraloEmptyState(
+                  ? const LongcatEmptyState(
                       icon: Icons.shield_outlined,
                       title: 'No Intruder Activity',
                       subtitle: 'Your workspace is secure. No unauthorized access or failed login attempts recorded.',

@@ -9,7 +9,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/library_provider.dart';
 import '../../providers/vault_provider.dart';
 import '../../providers/private_chat_provider.dart';
-import '../../widgets/common/miralo_logo.dart';
+import '../../widgets/common/longcat_logo.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -117,10 +117,10 @@ class _SplashScreenState extends State<SplashScreen>
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Bespoke Miralo orbital planet ring mark
-                  const MiraloLogo(size: 76),
+                  // Bespoke Longcat orbital planet ring mark
+                  const LongcatLogo(size: 76),
                   const SizedBox(height: 24),
-                  Text('MIRALO AI', style: AppTypography.wordmark(color: textColor)),
+                  Text('LONGCAT AI', style: AppTypography.wordmark(color: textColor)),
                   const SizedBox(height: 6),
                   Text('Your AI. Your Space.',
                       style: AppTypography.label(color: mutedColor)),

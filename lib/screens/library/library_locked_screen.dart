@@ -5,9 +5,9 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../providers/vault_provider.dart';
-import '../../widgets/common/miralo_app_bar.dart';
-import '../../widgets/common/miralo_logo.dart';
-import '../../widgets/common/miralo_pin_pad.dart';
+import '../../widgets/common/longcat_app_bar.dart';
+import '../../widgets/common/longcat_logo.dart';
+import '../../widgets/common/longcat_pin_pad.dart';
 
 /// Library Locked Screen — PIN entry for library vault.
 /// Uses SEPARATE vault.unlockLibrary() — independent from private chat.
@@ -21,7 +21,7 @@ class LibraryLockedScreen extends StatefulWidget {
 
 class _LibraryLockedScreenState extends State<LibraryLockedScreen> {
   final _passcodeCtrl = TextEditingController();
-  final _pinPadKey = GlobalKey<MiraloPinPadState>();
+  final _pinPadKey = GlobalKey<LongcatPinPadState>();
   String? _error;
   bool _isVerifying = false;
   bool _useTextField = false;
@@ -120,8 +120,8 @@ class _LibraryLockedScreenState extends State<LibraryLockedScreen> {
             ),
             child: Column(
               children: [
-                MiraloAppBar(
-                  leading: MiraloCircularIconButton(
+                LongcatAppBar(
+                  leading: LongcatCircularIconButton(
                     icon: Icons.arrow_back_ios_new_rounded,
                     iconSize: 16,
                     onPressed: () => Navigator.pop(context),
@@ -131,7 +131,7 @@ class _LibraryLockedScreenState extends State<LibraryLockedScreen> {
                 const SizedBox(height: AppSpacing.md),
 
                 // Vault orbital logo
-                const MiraloLogo(size: 64),
+                const LongcatLogo(size: 64),
 
                 const SizedBox(height: AppSpacing.lg),
 
@@ -309,7 +309,7 @@ class _LibraryLockedScreenState extends State<LibraryLockedScreen> {
                     ),
                   ),
                 ] else ...[
-                  MiraloPinPad(
+                  LongcatPinPad(
                     key: _pinPadKey,
                     title: '',
                     onComplete: _onVerifyPasscode,

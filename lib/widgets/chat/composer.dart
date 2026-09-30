@@ -8,7 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:record/record.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import '../../core/routes/app_routes.dart';
-import '../../core/theme/miralo_tokens.dart';
+import '../../core/theme/longcat_tokens.dart';
 import '../../models/private_contact_model.dart';
 import '../../providers/ai_chat_provider.dart';
 import '../../providers/private_chat_provider.dart';
@@ -1098,10 +1098,10 @@ class _ComposerState extends State<Composer> {
         width: 44,
         height: 44,
         decoration: BoxDecoration(
-          color: MiraloColors.accent.withValues(alpha: 0.15),
+          color: LongcatColors.accent.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(8),
         ),
-        child: const Icon(Icons.insert_drive_file_rounded, color: MiraloColors.accent, size: 24),
+        child: const Icon(Icons.insert_drive_file_rounded, color: LongcatColors.accent, size: 24),
       );
     }
   }
@@ -1120,17 +1120,17 @@ class _ComposerState extends State<Composer> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final bg = isDark
-        ? MiraloColors.darkSurfaceInput
-        : MiraloColors.lightSurfaceInput;
+        ? LongcatColors.darkSurfaceInput
+        : LongcatColors.lightSurfaceInput;
     final border = isDark
-        ? MiraloColors.darkBorder
-        : MiraloColors.lightBorder;
+        ? LongcatColors.darkBorder
+        : LongcatColors.lightBorder;
     final textPrimary = isDark
-        ? MiraloColors.darkTextPrimary
-        : MiraloColors.lightTextPrimary;
+        ? LongcatColors.darkTextPrimary
+        : LongcatColors.lightTextPrimary;
     final textMuted = isDark
-        ? MiraloColors.darkTextMuted
-        : MiraloColors.lightTextMuted;
+        ? LongcatColors.darkTextMuted
+        : LongcatColors.lightTextMuted;
 
     final hint = widget.hintText ??
         (_pendingAttachment != null
@@ -1141,8 +1141,8 @@ class _ComposerState extends State<Composer> {
 
     return Container(
       padding: const EdgeInsets.symmetric(
-        horizontal: MiraloSpacing.md,
-        vertical: MiraloSpacing.xs,
+        horizontal: LongcatSpacing.md,
+        vertical: LongcatSpacing.xs,
       ),
       child: SafeArea(
         top: false,
@@ -1159,7 +1159,7 @@ class _ComposerState extends State<Composer> {
                   child: const LinearProgressIndicator(
                     minHeight: 3,
                     backgroundColor: Colors.transparent,
-                    valueColor: AlwaysStoppedAnimation<Color>(MiraloColors.accent),
+                    valueColor: AlwaysStoppedAnimation<Color>(LongcatColors.accent),
                   ),
                 ),
               ),
@@ -1239,7 +1239,7 @@ class _ComposerState extends State<Composer> {
                         children: [
                           Text(
                             _pendingAttachment!.fileName,
-                            style: MiraloTypography.bodyMedium(color: textPrimary)
+                            style: LongcatTypography.bodyMedium(color: textPrimary)
                                 .copyWith(fontWeight: FontWeight.w600),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -1247,7 +1247,7 @@ class _ComposerState extends State<Composer> {
                           const SizedBox(height: 2),
                           Text(
                             _pendingAttachment!.fileSize,
-                            style: MiraloTypography.bodySmall(color: textMuted),
+                            style: LongcatTypography.bodySmall(color: textMuted),
                           ),
                         ],
                       ),
@@ -1278,7 +1278,7 @@ class _ComposerState extends State<Composer> {
                 constraints: const BoxConstraints(minHeight: 52),
                 decoration: BoxDecoration(
                   color: bg,
-                  borderRadius: BorderRadius.circular(MiraloRadius.composer),
+                  borderRadius: BorderRadius.circular(LongcatRadius.composer),
                   border: Border.all(
                     color: isDark ? const Color(0x12FFFFFF) : border,
                     width: 0.6,
@@ -1294,7 +1294,7 @@ class _ComposerState extends State<Composer> {
                             ? Icons.attach_file_rounded
                             : Icons.add_rounded,
                       ),
-                      color: _pendingAttachment != null ? MiraloColors.accent : textMuted,
+                      color: _pendingAttachment != null ? LongcatColors.accent : textMuted,
                       iconSize: 22,
                       onPressed: _showAttachmentSheet,
                       tooltip: widget.isPrivate ? 'Share media / files' : 'Attach image',
@@ -1304,7 +1304,7 @@ class _ComposerState extends State<Composer> {
                     if (widget.isGroup)
                       IconButton(
                         icon: const Icon(Icons.alternate_email_rounded),
-                        color: _currentMentionQuery != null ? MiraloColors.accent : textMuted,
+                        color: _currentMentionQuery != null ? LongcatColors.accent : textMuted,
                         iconSize: 20,
                         tooltip: 'Mention all (@all)',
                         onPressed: () {
@@ -1330,10 +1330,10 @@ class _ComposerState extends State<Composer> {
                         focusNode: _focusNode,
                         maxLines: 5,
                         minLines: 1,
-                        style: MiraloTypography.bodyMedium(color: textPrimary),
+                        style: LongcatTypography.bodyMedium(color: textPrimary),
                         decoration: InputDecoration(
                           hintText: hint,
-                          hintStyle: MiraloTypography.bodyMedium(color: textMuted),
+                          hintStyle: LongcatTypography.bodyMedium(color: textMuted),
                           border: InputBorder.none,
                           enabledBorder: InputBorder.none,
                           focusedBorder: InputBorder.none,
@@ -1366,7 +1366,7 @@ class _ComposerState extends State<Composer> {
                               width: 36,
                               height: 36,
                               decoration: const BoxDecoration(
-                                color: MiraloColors.danger,
+                                color: LongcatColors.danger,
                                 shape: BoxShape.circle,
                               ),
                               child: IconButton(
@@ -1389,10 +1389,10 @@ class _ComposerState extends State<Composer> {
                                   height: 36,
                                   decoration: BoxDecoration(
                                     color: canSend
-                                        ? MiraloColors.accent
+                                        ? LongcatColors.accent
                                         : (isDark
-                                            ? MiraloColors.darkSurfaceSecondary
-                                            : MiraloColors.lightSurfaceSecondary),
+                                            ? LongcatColors.darkSurfaceSecondary
+                                            : LongcatColors.lightSurfaceSecondary),
                                     shape: BoxShape.circle,
                                   ),
                                   child: IconButton(
@@ -1450,15 +1450,15 @@ class _ComposerState extends State<Composer> {
                                     height: 36,
                                     decoration: BoxDecoration(
                                       color: isDark
-                                          ? MiraloColors.darkSurfaceSecondary
-                                          : MiraloColors.lightSurfaceSecondary,
+                                          ? LongcatColors.darkSurfaceSecondary
+                                          : LongcatColors.lightSurfaceSecondary,
                                       shape: BoxShape.circle,
                                     ),
                                     child: const Center(
                                       child: Icon(
                                         Icons.mic_rounded,
                                         size: 20,
-                                        color: MiraloColors.accent,
+                                        color: LongcatColors.accent,
                                       ),
                                     ),
                                   ),
@@ -1482,7 +1482,7 @@ class _ComposerState extends State<Composer> {
       padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF201515) : const Color(0xFFFDE8E8),
-        borderRadius: BorderRadius.circular(MiraloRadius.composer),
+        borderRadius: BorderRadius.circular(LongcatRadius.composer),
         border: Border.all(
           color: Colors.redAccent.withValues(alpha: 0.3),
           width: 0.8,
@@ -1501,7 +1501,7 @@ class _ComposerState extends State<Composer> {
           const SizedBox(width: 8),
           Text(
             '$minutes:$secs',
-            style: MiraloTypography.bodyMedium(color: Colors.redAccent)
+            style: LongcatTypography.bodyMedium(color: Colors.redAccent)
                 .copyWith(fontWeight: FontWeight.w600),
           ),
           const SizedBox(width: 12),
@@ -1514,7 +1514,7 @@ class _ComposerState extends State<Composer> {
                       const SizedBox(width: 4),
                       Text(
                         'Recording locked (Hands-free)',
-                        style: MiraloTypography.bodySmall(color: Colors.redAccent)
+                        style: LongcatTypography.bodySmall(color: Colors.redAccent)
                             .copyWith(fontWeight: FontWeight.w500),
                       ),
                     ],
@@ -1533,7 +1533,7 @@ class _ComposerState extends State<Composer> {
                           _isSlideCancelled
                               ? 'Release to cancel'
                               : (_dragOffsetY < -30 ? 'Locking...' : '< Slide to cancel | ^ Lock'),
-                          style: MiraloTypography.bodySmall(
+                          style: LongcatTypography.bodySmall(
                             color: _isSlideCancelled
                                 ? Colors.redAccent
                                 : (isDark ? Colors.white60 : Colors.black54),
@@ -1553,7 +1553,7 @@ class _ComposerState extends State<Composer> {
               icon: Container(
                 padding: const EdgeInsets.all(4),
                 decoration: const BoxDecoration(
-                  color: MiraloColors.accent,
+                  color: LongcatColors.accent,
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(Icons.stop_rounded, color: Colors.white, size: 16),
@@ -1582,8 +1582,8 @@ class _ComposerState extends State<Composer> {
       height: 54,
       padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
-        color: isDark ? MiraloColors.darkSurface : MiraloColors.lightSurface,
-        borderRadius: BorderRadius.circular(MiraloRadius.composer),
+        color: isDark ? LongcatColors.darkSurface : LongcatColors.lightSurface,
+        borderRadius: BorderRadius.circular(LongcatRadius.composer),
         border: Border.all(
           color: isDark ? const Color(0x1AFFFFFF) : const Color(0x1A000000),
           width: 0.8,
@@ -1593,7 +1593,7 @@ class _ComposerState extends State<Composer> {
         children: [
           // Discard / Trash button
           IconButton(
-            icon: const Icon(Icons.delete_outline_rounded, color: MiraloColors.danger, size: 22),
+            icon: const Icon(Icons.delete_outline_rounded, color: LongcatColors.danger, size: 22),
             onPressed: _discardReviewVoiceNote,
             tooltip: 'Discard voice note',
           ),
@@ -1602,14 +1602,14 @@ class _ComposerState extends State<Composer> {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: MiraloColors.accent.withValues(alpha: 0.12),
+              color: LongcatColors.accent.withValues(alpha: 0.12),
               shape: BoxShape.circle,
             ),
             child: IconButton(
               padding: EdgeInsets.zero,
               icon: Icon(
                 _isReviewPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                color: MiraloColors.accent,
+                color: LongcatColors.accent,
                 size: 22,
               ),
               onPressed: _toggleReviewPlayback,
@@ -1628,9 +1628,9 @@ class _ComposerState extends State<Composer> {
                     trackHeight: 2.5,
                     thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
                     overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
-                    activeTrackColor: MiraloColors.accent,
+                    activeTrackColor: LongcatColors.accent,
                     inactiveTrackColor: isDark ? Colors.white24 : Colors.black12,
-                    thumbColor: MiraloColors.accent,
+                    thumbColor: LongcatColors.accent,
                   ),
                   child: Slider(
                     min: 0.0,
@@ -1648,7 +1648,7 @@ class _ComposerState extends State<Composer> {
                     children: [
                       Text(
                         _formatDuration(_reviewPosition),
-                        style: MiraloTypography.labelSmall(color: textMuted).copyWith(fontSize: 10),
+                        style: LongcatTypography.labelSmall(color: textMuted).copyWith(fontSize: 10),
                       ),
                       Text(
                         _formatDuration(
@@ -1656,7 +1656,7 @@ class _ComposerState extends State<Composer> {
                               ? _reviewDuration
                               : Duration(seconds: _recordedReviewSeconds),
                         ),
-                        style: MiraloTypography.labelSmall(color: textMuted).copyWith(fontSize: 10),
+                        style: LongcatTypography.labelSmall(color: textMuted).copyWith(fontSize: 10),
                       ),
                     ],
                   ),
@@ -1679,7 +1679,7 @@ class _ComposerState extends State<Composer> {
                   width: 36,
                   height: 36,
                   decoration: const BoxDecoration(
-                    color: MiraloColors.accent,
+                    color: LongcatColors.accent,
                     shape: BoxShape.circle,
                   ),
                   child: IconButton(
@@ -1709,7 +1709,7 @@ class _ComposerState extends State<Composer> {
       margin: const EdgeInsets.only(bottom: 8),
       constraints: const BoxConstraints(maxHeight: 220),
       decoration: BoxDecoration(
-        color: isDark ? MiraloColors.darkSurfaceElevated : MiraloColors.lightSurfacePrimary,
+        color: isDark ? LongcatColors.darkSurfaceElevated : LongcatColors.lightSurfacePrimary,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: border, width: 0.8),
         boxShadow: [
@@ -1730,11 +1730,11 @@ class _ComposerState extends State<Composer> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               child: Row(
                 children: [
-                  const Icon(Icons.flash_on_rounded, size: 14, color: MiraloColors.accent),
+                  const Icon(Icons.flash_on_rounded, size: 14, color: LongcatColors.accent),
                   const SizedBox(width: 6),
                   Text(
                     'Available Commands',
-                    style: MiraloTypography.labelMedium(color: MiraloColors.accent).copyWith(
+                    style: LongcatTypography.labelMedium(color: LongcatColors.accent).copyWith(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
@@ -1742,7 +1742,7 @@ class _ComposerState extends State<Composer> {
                   const Spacer(),
                   Text(
                     'Tap to select',
-                    style: MiraloTypography.bodySmall(color: textMuted).copyWith(fontSize: 11),
+                    style: LongcatTypography.bodySmall(color: textMuted).copyWith(fontSize: 11),
                   ),
                 ],
               ),
@@ -1770,15 +1770,15 @@ class _ComposerState extends State<Composer> {
                             width: 28,
                             height: 28,
                             decoration: BoxDecoration(
-                              color: MiraloColors.accent.withValues(alpha: 0.12),
+                              color: LongcatColors.accent.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(6),
                             ),
-                            child: Icon(cmd.icon, size: 16, color: MiraloColors.accent),
+                            child: Icon(cmd.icon, size: 16, color: LongcatColors.accent),
                           ),
                           const SizedBox(width: 10),
                           Text(
                             cmd.command,
-                            style: MiraloTypography.bodyMedium(color: textPrimary).copyWith(
+                            style: LongcatTypography.bodyMedium(color: textPrimary).copyWith(
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -1786,7 +1786,7 @@ class _ComposerState extends State<Composer> {
                           Expanded(
                             child: Text(
                               cmd.description,
-                              style: MiraloTypography.bodySmall(color: textMuted),
+                              style: LongcatTypography.bodySmall(color: textMuted),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -1816,7 +1816,7 @@ class _ComposerState extends State<Composer> {
       margin: const EdgeInsets.only(bottom: 8),
       constraints: const BoxConstraints(maxHeight: 220),
       decoration: BoxDecoration(
-        color: isDark ? MiraloColors.darkSurfaceElevated : MiraloColors.lightSurfacePrimary,
+        color: isDark ? LongcatColors.darkSurfaceElevated : LongcatColors.lightSurfacePrimary,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: border, width: 0.8),
         boxShadow: [
@@ -1837,11 +1837,11 @@ class _ComposerState extends State<Composer> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               child: Row(
                 children: [
-                  const Icon(Icons.alternate_email_rounded, size: 14, color: MiraloColors.accent),
+                  const Icon(Icons.alternate_email_rounded, size: 14, color: LongcatColors.accent),
                   const SizedBox(width: 6),
                   Text(
                     'Group Mentions',
-                    style: MiraloTypography.labelMedium(color: MiraloColors.accent).copyWith(
+                    style: LongcatTypography.labelMedium(color: LongcatColors.accent).copyWith(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
@@ -1849,7 +1849,7 @@ class _ComposerState extends State<Composer> {
                   const Spacer(),
                   Text(
                     'Tap to mention',
-                    style: MiraloTypography.bodySmall(color: textMuted).copyWith(fontSize: 11),
+                    style: LongcatTypography.bodySmall(color: textMuted).copyWith(fontSize: 11),
                   ),
                 ],
               ),
@@ -1878,8 +1878,8 @@ class _ComposerState extends State<Composer> {
                             height: 28,
                             decoration: BoxDecoration(
                               color: opt.isAll
-                                  ? MiraloColors.accent
-                                  : MiraloColors.accent.withValues(alpha: 0.15),
+                                  ? LongcatColors.accent
+                                  : LongcatColors.accent.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(14),
                             ),
                             child: opt.isAll
@@ -1890,7 +1890,7 @@ class _ComposerState extends State<Composer> {
                                           ? opt.displayName[0].toUpperCase()
                                           : '@',
                                       style: const TextStyle(
-                                        color: MiraloColors.accent,
+                                        color: LongcatColors.accent,
                                         fontWeight: FontWeight.bold,
                                         fontSize: 13,
                                       ),
@@ -1900,16 +1900,16 @@ class _ComposerState extends State<Composer> {
                           const SizedBox(width: 10),
                           Text(
                             '@${opt.label}',
-                            style: MiraloTypography.bodyMedium(color: textPrimary).copyWith(
+                            style: LongcatTypography.bodyMedium(color: textPrimary).copyWith(
                               fontWeight: FontWeight.w700,
-                              color: opt.isAll ? MiraloColors.accent : textPrimary,
+                              color: opt.isAll ? LongcatColors.accent : textPrimary,
                             ),
                           ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               opt.displayName,
-                              style: MiraloTypography.bodySmall(color: textMuted),
+                              style: LongcatTypography.bodySmall(color: textMuted),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),

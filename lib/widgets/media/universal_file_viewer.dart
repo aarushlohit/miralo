@@ -5,16 +5,16 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
-import '../../core/theme/miralo_tokens.dart';
+import '../../core/theme/longcat_tokens.dart';
 import '../../services/download_service.dart';
 import '../chat/voice_note_player.dart';
 
-/// Inbuilt Universal File Viewer for Miralo.
+/// Inbuilt Universal File Viewer for Longcat.
 /// - Inbuilt pinch & double-tap zoom for Images.
 /// - Inbuilt interactive audio preview for Voice Notes & Audio.
 /// - Rich preview cards for Videos, PDFs, and Documents.
 /// - One-tap 'Open with System App' using open_filex.
-/// - One-tap 'Save to Miralo' saving to /Download/Miralo/Category.
+/// - One-tap 'Save to Longcat' saving to /Download/Longcat/Category.
 class UniversalFileViewer extends StatefulWidget {
   final String? filePath;
   final String? fileUrl;
@@ -188,7 +188,7 @@ class _UniversalFileViewerState extends State<UniversalFileViewer> {
     }
   }
 
-  Future<void> _saveToMiraloFolder() async {
+  Future<void> _saveToLongcatFolder() async {
     if (_resolvedBytes == null) {
       await _resolveBytes();
     }
@@ -223,9 +223,9 @@ class _UniversalFileViewerState extends State<UniversalFileViewer> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = MiraloColors.darkBackground;
-    final textPrimary = MiraloColors.darkTextPrimary;
-    final textMuted = MiraloColors.darkTextMuted;
+    final bg = LongcatColors.darkBackground;
+    final textPrimary = LongcatColors.darkTextPrimary;
+    final textMuted = LongcatColors.darkTextMuted;
 
     return Scaffold(
       backgroundColor: bg,
@@ -270,7 +270,7 @@ class _UniversalFileViewerState extends State<UniversalFileViewer> {
                     value: 'vault',
                     child: Row(
                       children: [
-                        Icon(Icons.shield_outlined, size: 18, color: MiraloColors.accent),
+                        Icon(Icons.shield_outlined, size: 18, color: LongcatColors.accent),
                         SizedBox(width: 8),
                         Text('Save to Encrypted Vault'),
                       ],
@@ -281,7 +281,7 @@ class _UniversalFileViewerState extends State<UniversalFileViewer> {
                     value: 'delete',
                     child: Row(
                       children: [
-                        Icon(Icons.delete_outline_rounded, size: 18, color: MiraloColors.danger),
+                        Icon(Icons.delete_outline_rounded, size: 18, color: LongcatColors.danger),
                         SizedBox(width: 8),
                         Text('Delete File'),
                       ],
@@ -300,7 +300,7 @@ class _UniversalFileViewerState extends State<UniversalFileViewer> {
             Container(
               color: Colors.black45,
               child: const Center(
-                child: CircularProgressIndicator(color: MiraloColors.accent),
+                child: CircularProgressIndicator(color: LongcatColors.accent),
               ),
             ),
           // Bottom action dock
@@ -315,7 +315,7 @@ class _UniversalFileViewerState extends State<UniversalFileViewer> {
                     icon: const Icon(Icons.open_in_new_rounded, size: 18),
                     label: const Text('Open'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: MiraloColors.accent,
+                      backgroundColor: LongcatColors.accent,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -333,9 +333,9 @@ class _UniversalFileViewerState extends State<UniversalFileViewer> {
                   ),
                   child: IconButton(
                     icon: const Icon(Icons.download_rounded, color: Colors.white, size: 22),
-                    tooltip: 'Save to Miralo/$_category',
+                    tooltip: 'Save to Longcat/$_category',
                     padding: const EdgeInsets.all(14),
-                    onPressed: _saveToMiraloFolder,
+                    onPressed: _saveToLongcatFolder,
                   ),
                 ),
               ],
@@ -389,10 +389,10 @@ class _UniversalFileViewerState extends State<UniversalFileViewer> {
                 width: 72,
                 height: 72,
                 decoration: BoxDecoration(
-                  color: MiraloColors.accent.withValues(alpha: 0.15),
+                  color: LongcatColors.accent.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.mic_rounded, color: MiraloColors.accent, size: 36),
+                child: const Icon(Icons.mic_rounded, color: LongcatColors.accent, size: 36),
               ),
               const SizedBox(height: 16),
               Text(
@@ -485,7 +485,7 @@ class _UniversalFileViewerState extends State<UniversalFileViewer> {
               width: 72,
               height: 72,
               decoration: BoxDecoration(
-                color: MiraloColors.accentBlue.withValues(alpha: 0.15),
+                color: LongcatColors.accentBlue.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -494,7 +494,7 @@ class _UniversalFileViewerState extends State<UniversalFileViewer> {
                     : (widget.fileName.toLowerCase().endsWith('.zip')
                         ? Icons.folder_zip_rounded
                         : Icons.description_rounded),
-                color: MiraloColors.accentBlue,
+                color: LongcatColors.accentBlue,
                 size: 36,
               ),
             ),
@@ -519,11 +519,11 @@ class _UniversalFileViewerState extends State<UniversalFileViewer> {
               child: const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.shield_outlined, size: 14, color: MiraloColors.accent),
+                  Icon(Icons.shield_outlined, size: 14, color: LongcatColors.accent),
                   SizedBox(width: 6),
                   Text(
-                    'Miralo Encrypted Storage',
-                    style: TextStyle(color: MiraloColors.accent, fontSize: 12, fontWeight: FontWeight.w600),
+                    'Longcat Encrypted Storage',
+                    style: TextStyle(color: LongcatColors.accent, fontSize: 12, fontWeight: FontWeight.w600),
                   ),
                 ],
               ),

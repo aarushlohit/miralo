@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import '../../core/theme/miralo_tokens.dart';
+import '../../core/theme/longcat_tokens.dart';
 import '../../models/private_message_model.dart';
-import '../common/miralo_avatar.dart';
+import '../common/longcat_avatar.dart';
 
 /// Modal bottom sheet displaying all pinned messages in the chat (up to 6).
 class PinnedMessagesSheet extends StatelessWidget {
@@ -31,11 +31,11 @@ class PinnedMessagesSheet extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: isDark
-          ? MiraloColors.darkSurfacePrimary
-          : MiraloColors.lightSurfacePrimary,
+          ? LongcatColors.darkSurfacePrimary
+          : LongcatColors.lightSurfacePrimary,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
-          top: Radius.circular(MiraloRadius.bottomSheet),
+          top: Radius.circular(LongcatRadius.bottomSheet),
         ),
       ),
       builder: (_) => DraggableScrollableSheet(
@@ -90,10 +90,10 @@ class PinnedMessagesSheet extends StatelessWidget {
         width: 44,
         height: 44,
         decoration: BoxDecoration(
-          color: MiraloColors.accent.withValues(alpha: 0.12),
+          color: LongcatColors.accent.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(8),
         ),
-        child: const Icon(Icons.mic_rounded, color: MiraloColors.accent, size: 22),
+        child: const Icon(Icons.mic_rounded, color: LongcatColors.accent, size: 22),
       );
     }
     if (msg.type == 'file' || msg.fileName != null) {
@@ -101,30 +101,30 @@ class PinnedMessagesSheet extends StatelessWidget {
         width: 44,
         height: 44,
         decoration: BoxDecoration(
-          color: MiraloColors.accent.withValues(alpha: 0.12),
+          color: LongcatColors.accent.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(8),
         ),
-        child: const Icon(Icons.description_rounded, color: MiraloColors.accent, size: 22),
+        child: const Icon(Icons.description_rounded, color: LongcatColors.accent, size: 22),
       );
     }
     return Container(
       width: 44,
       height: 44,
       decoration: BoxDecoration(
-        color: MiraloColors.accent.withValues(alpha: 0.12),
+        color: LongcatColors.accent.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: const Icon(Icons.chat_bubble_outline_rounded, color: MiraloColors.accent, size: 20),
+      child: const Icon(Icons.chat_bubble_outline_rounded, color: LongcatColors.accent, size: 20),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textPrimary = isDark ? MiraloColors.darkTextPrimary : MiraloColors.lightTextPrimary;
-    final textMuted = isDark ? MiraloColors.darkTextMuted : MiraloColors.lightTextMuted;
-    final border = isDark ? MiraloColors.darkBorder : MiraloColors.lightBorder;
-    final surfaceSecondary = isDark ? MiraloColors.darkSurfaceSecondary : MiraloColors.lightSurfaceSecondary;
+    final textPrimary = isDark ? LongcatColors.darkTextPrimary : LongcatColors.lightTextPrimary;
+    final textMuted = isDark ? LongcatColors.darkTextMuted : LongcatColors.lightTextMuted;
+    final border = isDark ? LongcatColors.darkBorder : LongcatColors.lightBorder;
+    final surfaceSecondary = isDark ? LongcatColors.darkSurfaceSecondary : LongcatColors.lightSurfaceSecondary;
 
     return SafeArea(
       top: false,
@@ -135,7 +135,7 @@ class PinnedMessagesSheet extends StatelessWidget {
             child: Container(
               width: 36,
               height: 4,
-              margin: const EdgeInsets.symmetric(vertical: MiraloSpacing.sm),
+              margin: const EdgeInsets.symmetric(vertical: LongcatSpacing.sm),
               decoration: BoxDecoration(
                 color: border,
                 borderRadius: BorderRadius.circular(2),
@@ -146,28 +146,28 @@ class PinnedMessagesSheet extends StatelessWidget {
           // Header
           Padding(
             padding: const EdgeInsets.symmetric(
-              horizontal: MiraloSpacing.lg,
-              vertical: MiraloSpacing.xs,
+              horizontal: LongcatSpacing.lg,
+              vertical: LongcatSpacing.xs,
             ),
             child: Row(
               children: [
-                const Icon(Icons.push_pin_rounded, color: MiraloColors.accent, size: 20),
+                const Icon(Icons.push_pin_rounded, color: LongcatColors.accent, size: 20),
                 const SizedBox(width: 8),
                 Text(
                   'Pinned Messages',
-                  style: MiraloTypography.titleMedium(color: textPrimary),
+                  style: LongcatTypography.titleMedium(color: textPrimary),
                 ),
                 const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: MiraloColors.accent.withValues(alpha: 0.15),
+                    color: LongcatColors.accent.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     '${pinnedMessages.length}/6',
                     style: TextStyle(
-                      color: MiraloColors.accent,
+                      color: LongcatColors.accent,
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                     ),
@@ -182,7 +182,7 @@ class PinnedMessagesSheet extends StatelessWidget {
                     },
                     child: Text(
                       'Unpin all',
-                      style: MiraloTypography.labelMedium(color: MiraloColors.danger),
+                      style: LongcatTypography.labelMedium(color: LongcatColors.danger),
                     ),
                   ),
               ],
@@ -202,22 +202,22 @@ class PinnedMessagesSheet extends StatelessWidget {
                         const SizedBox(height: 12),
                         Text(
                           'No pinned messages',
-                          style: MiraloTypography.bodyMedium(color: textPrimary)
+                          style: LongcatTypography.bodyMedium(color: textPrimary)
                               .copyWith(fontWeight: FontWeight.w600),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           'Long press any message and tap "Pin Message" to pin up to 6 messages.',
-                          style: MiraloTypography.bodySmall(color: textMuted),
+                          style: LongcatTypography.bodySmall(color: textMuted),
                           textAlign: TextAlign.center,
                         ),
                       ],
                     ),
                   )
                 : ListView.separated(
-                    padding: const EdgeInsets.all(MiraloSpacing.md),
+                    padding: const EdgeInsets.all(LongcatSpacing.md),
                     itemCount: pinnedMessages.length,
-                    separatorBuilder: (context, index) => const SizedBox(height: MiraloSpacing.sm),
+                    separatorBuilder: (context, index) => const SizedBox(height: LongcatSpacing.sm),
                     itemBuilder: (ctx, idx) {
                       final msg = pinnedMessages[idx];
                       final senderName = msg.isMe ? 'You' : (msg.senderName ?? 'User');
@@ -240,7 +240,7 @@ class PinnedMessagesSheet extends StatelessWidget {
                                   _buildMediaThumbnail(msg),
                                   const SizedBox(width: 12),
                                 ] else ...[
-                                  MiraloAvatar(name: senderName, size: 36),
+                                  LongcatAvatar(name: senderName, size: 36),
                                   const SizedBox(width: 12),
                                 ],
                                 Expanded(
@@ -251,13 +251,13 @@ class PinnedMessagesSheet extends StatelessWidget {
                                         children: [
                                           Text(
                                             senderName,
-                                            style: MiraloTypography.labelMedium(color: textPrimary)
+                                            style: LongcatTypography.labelMedium(color: textPrimary)
                                                 .copyWith(fontWeight: FontWeight.w700),
                                           ),
                                           const SizedBox(width: 6),
                                           Text(
                                             _formatTime(msg.pinnedAt ?? msg.createdAt),
-                                            style: MiraloTypography.bodySmall(color: textMuted)
+                                            style: LongcatTypography.bodySmall(color: textMuted)
                                                 .copyWith(fontSize: 11),
                                           ),
                                         ],
@@ -273,7 +273,7 @@ class PinnedMessagesSheet extends StatelessWidget {
                                                     : (msg.type == 'voice'
                                                         ? '🎤 Voice note'
                                                         : '📎 Document'))),
-                                        style: MiraloTypography.bodyMedium(color: textPrimary),
+                                        style: LongcatTypography.bodyMedium(color: textPrimary),
                                         maxLines: 2,
                                         overflow: TextOverflow.ellipsis,
                                       ),
@@ -283,7 +283,7 @@ class PinnedMessagesSheet extends StatelessWidget {
                                 if (onUnpinMessage != null)
                                   IconButton(
                                     icon: const Icon(Icons.push_pin_outlined, size: 20),
-                                    color: MiraloColors.accent,
+                                    color: LongcatColors.accent,
                                     tooltip: 'Unpin',
                                     onPressed: () {
                                       onUnpinMessage!(msg);

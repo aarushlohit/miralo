@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:miralo/services/giphy_service.dart';
+import 'package:longcat/services/giphy_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

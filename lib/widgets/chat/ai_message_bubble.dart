@@ -7,7 +7,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../models/ai_chat_model.dart';
 
-import '../common/miralo_logo.dart';
+import '../common/longcat_logo.dart';
 
 /// ChatGPT-style AI message bubble.
 /// AI messages: full-width, left-aligned, no bubble — just text on background.
@@ -133,7 +133,7 @@ class _UserMessage extends StatelessWidget {
                     horizontal: AppSpacing.md, vertical: AppSpacing.sm + 4),
                 decoration: BoxDecoration(
                   color: bg,
-                  borderRadius: BorderRadius.circular(MiraloDimensions.standardRadius),
+                  borderRadius: BorderRadius.circular(LongcatDimensions.standardRadius),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
@@ -243,16 +243,16 @@ class _AiMessage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // MIRALO logo mark + label
+          // LONGCAT logo mark + label
           Row(
             children: [
-              MiraloLogo(
+              LongcatLogo(
                 size: 20,
                 showGlow: false,
                 showSparkle: false,
               ),
               const SizedBox(width: AppSpacing.sm),
-              Text('MIRALO AI',
+              Text('LONGCAT AI',
                   style: AppTypography.label(color: mutedColor)
                       .copyWith(fontWeight: FontWeight.w600)),
             ],

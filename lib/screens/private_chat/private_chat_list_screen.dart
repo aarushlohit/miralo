@@ -11,11 +11,11 @@ import '../../providers/library_provider.dart';
 import '../../providers/private_chat_provider.dart';
 import '../../providers/vault_provider.dart';
 import '../../widgets/chat/image_viewer.dart';
-import '../../widgets/common/miralo_app_bar.dart';
-import '../../widgets/common/miralo_avatar.dart';
-import '../../widgets/common/miralo_empty_state.dart';
-import '../../widgets/common/miralo_logo.dart';
-import '../../widgets/common/miralo_segmented_tabs.dart';
+import '../../widgets/common/longcat_app_bar.dart';
+import '../../widgets/common/longcat_avatar.dart';
+import '../../widgets/common/longcat_empty_state.dart';
+import '../../widgets/common/longcat_logo.dart';
+import '../../widgets/common/longcat_segmented_tabs.dart';
 
 import '../../widgets/private_chat/add_friend_sheet.dart';
 import 'group_profile_screen.dart';
@@ -87,8 +87,8 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
         body: SafeArea(
           child: Column(
             children: [
-              MiraloAppBar(
-                leading: MiraloCircularIconButton(
+              LongcatAppBar(
+                leading: LongcatCircularIconButton(
                   icon: Icons.arrow_back_ios_new_rounded,
                   iconSize: 16,
                   onPressed: () => Navigator.pop(context),
@@ -103,7 +103,7 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const MiraloLogo(size: 64),
+                        const LongcatLogo(size: 64),
                         const SizedBox(height: AppSpacing.lg),
                         Text('Private Workspace',
                             style: AppTypography.heading2(
@@ -132,7 +132,7 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
                               const Icon(Icons.lock_outline_rounded,
                                   size: 14, color: AppColors.accent),
                               const SizedBox(width: AppSpacing.sm),
-                              Text('Protected by Miralo Vault',
+                              Text('Protected by Longcat Vault',
                                   style: AppTypography.caption(
                                       color: AppColors.accent)),
                             ],
@@ -168,9 +168,9 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // MiraloAppBar
-            MiraloAppBar(
-              leading: MiraloCircularIconButton(
+            // LongcatAppBar
+            LongcatAppBar(
+              leading: LongcatCircularIconButton(
                 icon: Icons.arrow_back_ios_new_rounded,
                 iconSize: 16,
                 onPressed: () => Navigator.pop(context),
@@ -178,7 +178,7 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
               title: 'Private Space',
               actions: [
                 if (_selectedTabIndex == 0) ...[
-                  MiraloCircularIconButton(
+                  LongcatCircularIconButton(
                     icon: Icons.search_rounded,
                     iconSize: 18,
                     onPressed: () => setState(() {
@@ -190,7 +190,7 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
                     }),
                   ),
                   const SizedBox(width: AppSpacing.sm),
-                  MiraloCircularIconButton(
+                  LongcatCircularIconButton(
                     icon: Icons.person_add_alt_1_rounded,
                     iconSize: 18,
                     onPressed: () => _showAddFriend(context, chat, auth),
@@ -267,7 +267,7 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
                   ),
                   const SizedBox(width: AppSpacing.sm),
                 ],
-                MiraloCircularIconButton(
+                LongcatCircularIconButton(
                   icon: Icons.lock_outline_rounded,
                   iconSize: 18,
                   onPressed: () {
@@ -281,7 +281,7 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
             // Segmented Tab Switcher (Chats vs Images)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
-              child: MiraloSegmentedTabs(
+              child: LongcatSegmentedTabs(
                 tabs: const ['Chats', 'Images'],
                 selectedIndex: _selectedTabIndex,
                 onTabSelected: (idx) => setState(() => _selectedTabIndex = idx),
@@ -424,7 +424,7 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
         // Contact list
         Expanded(
           child: contacts.isEmpty
-              ? MiraloEmptyState(
+              ? LongcatEmptyState(
                   icon: Icons.chat_bubble_outline,
                   title: _query.isEmpty ? 'No contacts' : 'No results',
                   subtitle: _query.isEmpty
@@ -482,13 +482,13 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
                                              ),
                                            );
                                          },
-                                         child: MiraloAvatar(
+                                         child: LongcatAvatar(
                                            name: contact.displayName,
                                            imageUrl: contact.avatarUrl,
                                            size: 50,
                                          ),
                                        )
-                                     : MiraloAvatar(
+                                     : LongcatAvatar(
                                          name: contact.displayName,
                                          imageUrl: contact.avatarUrl,
                                          size: 50,
@@ -636,7 +636,7 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
                   Stack(
                     clipBehavior: Clip.none,
                     children: [
-                      MiraloAvatar(
+                      LongcatAvatar(
                         name: auth.currentUser?.displayName ?? 'You',
                         imageUrl: auth.currentUser?.avatarUrl,
                         size: 50,
@@ -690,7 +690,7 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    MiraloAvatar(
+                    LongcatAvatar(
                       name: c.displayName,
                       imageUrl: c.avatarUrl,
                       size: 50,
@@ -780,7 +780,7 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
     final library = Provider.of<LibraryProvider>(context, listen: false);
 
     if (images.isEmpty) {
-      return const MiraloEmptyState(
+      return const LongcatEmptyState(
         icon: Icons.photo_library_outlined,
         title: 'No Chat Images',
         subtitle: 'Photos and images received in your private chats will appear here.',

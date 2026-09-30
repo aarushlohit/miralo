@@ -10,8 +10,8 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../providers/library_provider.dart';
 import '../../services/cloudinary_service.dart';
-import '../../widgets/common/miralo_app_bar.dart';
-import '../../widgets/common/miralo_empty_state.dart';
+import '../../widgets/common/longcat_app_bar.dart';
+import '../../widgets/common/longcat_empty_state.dart';
 import '../../widgets/library/file_card.dart';
 
 class LibraryFolderScreen extends StatelessWidget {
@@ -304,8 +304,8 @@ class LibraryFolderScreen extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            MiraloAppBar(
-              leading: MiraloCircularIconButton(
+            LongcatAppBar(
+              leading: LongcatCircularIconButton(
                 icon: Icons.arrow_back_ios_new_rounded,
                 iconSize: 16,
                 onPressed: () => Navigator.pop(context),
@@ -314,7 +314,7 @@ class LibraryFolderScreen extends StatelessWidget {
             ),
             Expanded(
               child: items.isEmpty
-                  ? const MiraloEmptyState(
+                  ? const LongcatEmptyState(
                       icon: Icons.folder_open_outlined,
                       title: 'This folder is empty',
                       subtitle:

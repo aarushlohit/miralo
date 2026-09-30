@@ -35,7 +35,7 @@ class ChatBackupService {
 
       final archive = Archive()
         ..addFile(
-          ArchiveFile('miralo_chat_backup.json', jsonBytes.length, jsonBytes),
+          ArchiveFile('longcat_chat_backup.json', jsonBytes.length, jsonBytes),
         );
 
       final zipBytes = ZipEncoder().encode(archive);
@@ -44,7 +44,7 @@ class ChatBackupService {
       final resultBytes = Uint8List.fromList(zipBytes);
 
       // Attempt Cloudinary Auto-Backup as raw file
-      final fileName = 'miralo_chat_backup_${DateTime.now().millisecondsSinceEpoch}.zip';
+      final fileName = 'longcat_chat_backup_${DateTime.now().millisecondsSinceEpoch}.zip';
       CloudinaryService.uploadFileBytes(
         fileBytes: resultBytes,
         fileName: fileName,

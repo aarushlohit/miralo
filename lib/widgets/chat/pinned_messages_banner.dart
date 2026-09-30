@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/miralo_tokens.dart';
+import '../../core/theme/longcat_tokens.dart';
 import '../../models/private_message_model.dart';
 
 /// WhatsApp-style sticky banner at the top of a DM or Group Chat
@@ -82,11 +82,11 @@ class _PinnedMessagesBannerState extends State<PinnedMessagesBanner> {
     final activeMsg = widget.pinnedMessages[safeIndex];
 
     final bg = isDark
-        ? MiraloColors.darkSurfacePrimary.withValues(alpha: 0.95)
-        : MiraloColors.lightSurfacePrimary.withValues(alpha: 0.95);
-    final borderColor = isDark ? MiraloColors.darkBorder : MiraloColors.lightBorder;
-    final textPrimary = isDark ? MiraloColors.darkTextPrimary : MiraloColors.lightTextPrimary;
-    final textMuted = isDark ? MiraloColors.darkTextMuted : MiraloColors.lightTextMuted;
+        ? LongcatColors.darkSurfacePrimary.withValues(alpha: 0.95)
+        : LongcatColors.lightSurfacePrimary.withValues(alpha: 0.95);
+    final borderColor = isDark ? LongcatColors.darkBorder : LongcatColors.lightBorder;
+    final textPrimary = isDark ? LongcatColors.darkTextPrimary : LongcatColors.lightTextPrimary;
+    final textMuted = isDark ? LongcatColors.darkTextMuted : LongcatColors.lightTextMuted;
 
     return Container(
       width: double.infinity,
@@ -112,7 +112,7 @@ class _PinnedMessagesBannerState extends State<PinnedMessagesBanner> {
                       margin: const EdgeInsets.symmetric(horizontal: 1.5),
                       decoration: BoxDecoration(
                         color: isActive
-                            ? MiraloColors.accent
+                            ? LongcatColors.accent
                             : (isDark ? Colors.white24 : Colors.black12),
                         borderRadius: BorderRadius.circular(1.5),
                       ),
@@ -136,7 +136,7 @@ class _PinnedMessagesBannerState extends State<PinnedMessagesBanner> {
                       width: 3,
                       height: 32,
                       decoration: BoxDecoration(
-                        color: MiraloColors.accent,
+                        color: LongcatColors.accent,
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -147,13 +147,13 @@ class _PinnedMessagesBannerState extends State<PinnedMessagesBanner> {
                       width: 28,
                       height: 28,
                       decoration: BoxDecoration(
-                        color: MiraloColors.accent.withValues(alpha: 0.12),
+                        color: LongcatColors.accent.withValues(alpha: 0.12),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
                         Icons.push_pin_rounded,
                         size: 14,
-                        color: MiraloColors.accent,
+                        color: LongcatColors.accent,
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -168,15 +168,15 @@ class _PinnedMessagesBannerState extends State<PinnedMessagesBanner> {
                             children: [
                               Text(
                                 'Pinned message',
-                                style: MiraloTypography.labelMedium(
-                                  color: MiraloColors.accent,
+                                style: LongcatTypography.labelMedium(
+                                  color: LongcatColors.accent,
                                 ).copyWith(fontWeight: FontWeight.w700, fontSize: 11),
                               ),
                               if (count > 1) ...[
                                 const SizedBox(width: 4),
                                 Text(
                                   '• ${safeIndex + 1}/$count',
-                                  style: MiraloTypography.bodySmall(
+                                  style: LongcatTypography.bodySmall(
                                     color: textMuted,
                                   ).copyWith(fontSize: 11),
                                 ),
@@ -184,7 +184,7 @@ class _PinnedMessagesBannerState extends State<PinnedMessagesBanner> {
                               const SizedBox(width: 6),
                               Text(
                                 '(${_getSenderLabel(activeMsg)})',
-                                style: MiraloTypography.bodySmall(
+                                style: LongcatTypography.bodySmall(
                                   color: textMuted,
                                 ).copyWith(fontSize: 11),
                               ),
@@ -193,7 +193,7 @@ class _PinnedMessagesBannerState extends State<PinnedMessagesBanner> {
                           const SizedBox(height: 1),
                           Text(
                             _formatSnippet(activeMsg),
-                            style: MiraloTypography.bodySmall(
+                            style: LongcatTypography.bodySmall(
                               color: textPrimary,
                             ).copyWith(fontWeight: FontWeight.w500),
                             maxLines: 1,

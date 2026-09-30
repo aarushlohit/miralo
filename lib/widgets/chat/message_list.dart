@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/miralo_tokens.dart';
+import '../../core/theme/longcat_tokens.dart';
 
 /// Shared scrollable message list for AI Chat and Private Chat.
 class MessageList extends StatefulWidget {
@@ -105,8 +105,8 @@ class _MessageListState extends State<MessageList> {
         ListView.builder(
           controller: _scrollController,
           padding: const EdgeInsets.only(
-            top: MiraloSpacing.md,
-            bottom: MiraloSpacing.lg,
+            top: LongcatSpacing.md,
+            bottom: LongcatSpacing.lg,
           ),
           itemCount: widget.itemCount,
           itemBuilder: widget.itemBuilder,
@@ -121,7 +121,7 @@ class _MessageListState extends State<MessageList> {
               child: Material(
                 elevation: 4,
                 shape: const CircleBorder(),
-                color: isDark ? MiraloColors.darkSurfaceElevated : MiraloColors.lightSurfacePrimary,
+                color: isDark ? LongcatColors.darkSurfaceElevated : LongcatColors.lightSurfacePrimary,
                 child: InkWell(
                   customBorder: const CircleBorder(),
                   onTap: _scrollToBottom,
@@ -130,13 +130,13 @@ class _MessageListState extends State<MessageList> {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: isDark ? MiraloColors.darkBorderHighlight : MiraloColors.lightBorderHighlight,
+                        color: isDark ? LongcatColors.darkBorderHighlight : LongcatColors.lightBorderHighlight,
                         width: 1,
                       ),
                     ),
                     child: Icon(
                       Icons.keyboard_arrow_down_rounded,
-                      color: isDark ? MiraloColors.darkTextPrimary : MiraloColors.lightTextPrimary,
+                      color: isDark ? LongcatColors.darkTextPrimary : LongcatColors.lightTextPrimary,
                       size: 24,
                     ),
                   ),

@@ -5,7 +5,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 
 /// Numeric PIN pad used for Library Vault and private credential entry.
-class MiraloPinPad extends StatefulWidget {
+class LongcatPinPad extends StatefulWidget {
   final int pinLength;
   final String? title;
   final ValueChanged<String>? onCompleted;
@@ -14,7 +14,7 @@ class MiraloPinPad extends StatefulWidget {
   final String? errorText;
   final bool showBiometric;
 
-  const MiraloPinPad({
+  const LongcatPinPad({
     super.key,
     this.pinLength = 4,
     this.title,
@@ -26,10 +26,10 @@ class MiraloPinPad extends StatefulWidget {
   });
 
   @override
-  State<MiraloPinPad> createState() => MiraloPinPadState();
+  State<LongcatPinPad> createState() => LongcatPinPadState();
 }
 
-class MiraloPinPadState extends State<MiraloPinPad> {
+class LongcatPinPadState extends State<LongcatPinPad> {
   String _pin = '';
 
   void _onDigit(String digit) {

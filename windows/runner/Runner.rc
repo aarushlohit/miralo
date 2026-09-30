@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.miralo.ai" "\0"
-            VALUE "FileDescription", "miralo" "\0"
+            VALUE "CompanyName", "com.longcat.ai" "\0"
+            VALUE "FileDescription", "longcat" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "miralo" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 com.miralo.ai. All rights reserved." "\0"
-            VALUE "OriginalFilename", "miralo.exe" "\0"
-            VALUE "ProductName", "miralo" "\0"
+            VALUE "InternalName", "longcat" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 com.longcat.ai. All rights reserved." "\0"
+            VALUE "OriginalFilename", "longcat.exe" "\0"
+            VALUE "ProductName", "longcat" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

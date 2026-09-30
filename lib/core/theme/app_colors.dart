@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// MIRALO AI — Centralized Color Tokens
+/// LONGCAT AI — Centralized Color Tokens
 /// Dark ChatGPT-style blue accent (#2878E8). Deep blue-black bg.
 /// No purple. No lavender. No cyan. No neon.
 class AppColors {
@@ -105,4 +105,4 @@ class AppColors {
 }
 
 /// Token standard alias
-typedef MiraloColors = AppColors;
+typedef LongcatColors = AppColors;

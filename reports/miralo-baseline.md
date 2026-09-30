@@ -1,8 +1,8 @@
-# Miralo — Real Verification Baseline Report
+# Longcat — Real Verification Baseline Report
 
 **Execution Timestamp:** 2026-09-21T16:51:00+05:30  
 **Environment:** Fedora Linux 44 (x86_64), Flutter 3.47.1, Dart 3.13.1  
-**Repository Path:** `/home/aarush/Myoffice/Personal Projects/miralo`
+**Repository Path:** `/home/aarush/Myoffice/Personal Projects/longcat`
 
 ---
 
@@ -17,7 +17,7 @@ Working tree has untracked build artifacts in `android/build/` (which should be 
 ## 2. Flutter Static Analysis
 ```bash
 $ flutter analyze
-Analyzing miralo...
+Analyzing longcat...
 No issues found! (ran in 4.5s)
 ```
 - **Issues Found:** 0 errors, 0 warnings, 0 lints.

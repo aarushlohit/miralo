@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
-import '../../widgets/common/miralo_list_tile.dart';
+import '../../widgets/common/longcat_list_tile.dart';
 
 class DataControlsScreen extends StatelessWidget {
   const DataControlsScreen({super.key});
@@ -97,10 +97,10 @@ class DataControlsScreen extends StatelessWidget {
 
             const SizedBox(height: AppSpacing.lg),
 
-            MiraloSectionHeader('ACTIONS & EXPORTS'),
-            MiraloSettingsGroup(
+            LongcatSectionHeader('ACTIONS & EXPORTS'),
+            LongcatSettingsGroup(
               children: [
-                MiraloListTile(
+                LongcatListTile(
                   icon: Icons.download_outlined,
                   title: 'Export All Data',
                   subtitle: 'Download complete chat and library archive',
@@ -110,7 +110,7 @@ class DataControlsScreen extends StatelessWidget {
                     );
                   },
                 ),
-                MiraloListTile(
+                LongcatListTile(
                   icon: Icons.cleaning_services_outlined,
                   title: 'Clear Cached Previews',
                   subtitle: 'Frees 18.2 MB of temporary thumbnails',
@@ -121,7 +121,7 @@ class DataControlsScreen extends StatelessWidget {
                     );
                   },
                 ),
-                MiraloListTile(
+                LongcatListTile(
                   icon: Icons.delete_forever_outlined,
                   title: 'Delete Account & Vaults',
                   destructive: true,

@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:miralo/models/private_contact_model.dart';
-import 'package:miralo/models/private_message_model.dart';
-import 'package:miralo/widgets/chat/chat_header.dart';
-import 'package:miralo/widgets/chat/composer.dart';
-import 'package:miralo/widgets/chat/message_actions.dart';
-import 'package:miralo/widgets/chat/message_renderer.dart';
-import 'package:miralo/widgets/chat/pinned_messages_banner.dart';
-import 'package:miralo/widgets/chat/pinned_messages_sheet.dart';
-import 'package:miralo/screens/images/private_images_screen.dart';
+import 'package:longcat/models/private_contact_model.dart';
+import 'package:longcat/models/private_message_model.dart';
+import 'package:longcat/widgets/chat/chat_header.dart';
+import 'package:longcat/widgets/chat/composer.dart';
+import 'package:longcat/widgets/chat/message_actions.dart';
+import 'package:longcat/widgets/chat/message_renderer.dart';
+import 'package:longcat/widgets/chat/pinned_messages_banner.dart';
+import 'package:longcat/widgets/chat/pinned_messages_sheet.dart';
+import 'package:longcat/screens/images/private_images_screen.dart';
 import 'package:provider/provider.dart';
-import 'package:miralo/providers/library_provider.dart';
-import 'package:miralo/providers/vault_provider.dart';
-import 'package:miralo/providers/ai_chat_provider.dart';
-import 'package:miralo/providers/private_chat_provider.dart';
+import 'package:longcat/providers/library_provider.dart';
+import 'package:longcat/providers/vault_provider.dart';
+import 'package:longcat/providers/ai_chat_provider.dart';
+import 'package:longcat/providers/private_chat_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

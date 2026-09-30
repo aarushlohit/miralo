@@ -1,6 +1,6 @@
 {
-    "name": "miralo",
-    "short_name": "miralo",
+    "name": "longcat",
+    "short_name": "longcat",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

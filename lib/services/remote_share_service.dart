@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
-import '../core/theme/miralo_tokens.dart';
+import '../core/theme/longcat_tokens.dart';
 import '../providers/vault_provider.dart';
 import '../screens/share/share_target_picker_screen.dart';
 
@@ -136,17 +136,17 @@ class _RemoteShareModalState extends State<_RemoteShareModal> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textPrimary = isDark ? MiraloColors.darkTextPrimary : MiraloColors.lightTextPrimary;
-    final textSecondary = isDark ? MiraloColors.darkTextSecondary : MiraloColors.lightTextSecondary;
+    final textPrimary = isDark ? LongcatColors.darkTextPrimary : LongcatColors.lightTextPrimary;
+    final textSecondary = isDark ? LongcatColors.darkTextSecondary : LongcatColors.lightTextSecondary;
 
     return AlertDialog(
-      backgroundColor: isDark ? MiraloColors.darkSurfacePrimary : MiraloColors.lightSurfacePrimary,
+      backgroundColor: isDark ? LongcatColors.darkSurfacePrimary : LongcatColors.lightSurfacePrimary,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       title: Row(
         children: [
-          const Icon(Icons.security_rounded, color: MiraloColors.accent, size: 22),
+          const Icon(Icons.security_rounded, color: LongcatColors.accent, size: 22),
           const SizedBox(width: 8),
-          Text('External Share Security', style: MiraloTypography.titleMedium(color: textPrimary)),
+          Text('External Share Security', style: LongcatTypography.titleMedium(color: textPrimary)),
         ],
       ),
       content: SingleChildScrollView(
@@ -155,8 +155,8 @@ class _RemoteShareModalState extends State<_RemoteShareModal> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Enter your Secret Key or Passcode to authorize sharing external files into Miralo.',
-              style: MiraloTypography.bodySmall(color: textSecondary),
+              'Enter your Secret Key or Passcode to authorize sharing external files into Longcat.',
+              style: LongcatTypography.bodySmall(color: textSecondary),
             ),
             const SizedBox(height: 16),
             TextField(
@@ -166,7 +166,7 @@ class _RemoteShareModalState extends State<_RemoteShareModal> {
               decoration: InputDecoration(
                 labelText: 'Secret Passcode / Key',
                 errorText: _errorMessage,
-                prefixIcon: const Icon(Icons.lock_outline_rounded, color: MiraloColors.accent, size: 18),
+                prefixIcon: const Icon(Icons.lock_outline_rounded, color: LongcatColors.accent, size: 18),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
               onSubmitted: (_) => _verifySecret(),
@@ -182,7 +182,7 @@ class _RemoteShareModalState extends State<_RemoteShareModal> {
         ElevatedButton(
           onPressed: _isLoading ? null : _verifySecret,
           style: ElevatedButton.styleFrom(
-            backgroundColor: MiraloColors.accent,
+            backgroundColor: LongcatColors.accent,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
           child: _isLoading

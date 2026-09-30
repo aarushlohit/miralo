@@ -7,18 +7,18 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/vault_provider.dart';
-import '../../widgets/common/miralo_button.dart';
-import '../../widgets/common/miralo_logo.dart';
-import '../../widgets/common/miralo_text_field.dart';
+import '../../widgets/common/longcat_button.dart';
+import '../../widgets/common/longcat_logo.dart';
+import '../../widgets/common/longcat_text_field.dart';
 
 /// Complete 7-Step Onboarding Flow per Specification Section 24:
-/// 1. Intro: MIRALO logo, MIRALO AI, Your AI. Your Space.
+/// 1. Intro: LONGCAT logo, LONGCAT AI, Your AI. Your Space.
 /// 2. Value Prop: Your conversations. Your space.
 /// 3. Create Account: Name, Email, Password, Confirm password.
 /// 4. Welcome Architecture: AI conversations, Private conversations, Secure Library.
 /// 5. Create Private Chat Passcode ("This passcode unlocks your private conversations.")
 /// 6. Create Library Vault Passcode ("This passcode protects your private files and media.")
-/// 7. Setup Complete: "Open MIRALO AI".
+/// 7. Setup Complete: "Open LONGCAT AI".
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
 
@@ -184,7 +184,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ],
         ),
         content: const Text(
-          'Miralo requires camera permission for intruder detection and photo capture. '
+          'Longcat requires camera permission for intruder detection and photo capture. '
           'You cannot finish onboarding without granting camera access.',
         ),
         actions: [
@@ -294,9 +294,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 horizontal: AppSpacing.screenH,
                 vertical: AppSpacing.md,
               ),
-              child: MiraloButton(
+              child: LongcatButton(
                 label: _currentStep == 6
-                    ? 'Open MIRALO AI'
+                    ? 'Open LONGCAT AI'
                     : _currentStep == 2
                         ? 'Create account'
                         : _currentStep == 4 || _currentStep == 5
@@ -318,10 +318,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const MiraloLogo(size: 64, isIconOnly: true),
+          const LongcatLogo(size: 64, isIconOnly: true),
           const SizedBox(height: AppSpacing.xl),
           Text(
-            'MIRALO AI',
+            'LONGCAT AI',
             style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.w700,
@@ -346,7 +346,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const MiraloLogo(size: 52, isIconOnly: true),
+          const LongcatLogo(size: 52, isIconOnly: true),
           const SizedBox(height: AppSpacing.xl),
           Text(
             'Your conversations.\nYour space.',
@@ -374,7 +374,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           const SizedBox(height: AppSpacing.md),
           Text('Create account', style: AppTypography.heading1(color: textPrimary)),
           const SizedBox(height: 4),
-          Text('Set up your credentials for MIRALO AI', style: AppTypography.bodySmall(color: textSecondary)),
+          Text('Set up your credentials for LONGCAT AI', style: AppTypography.bodySmall(color: textSecondary)),
           const SizedBox(height: AppSpacing.lg),
 
           if (_accountError != null) ...[
@@ -389,26 +389,26 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
           ],
 
-          MiraloTextField(
+          LongcatTextField(
             controller: _nameController,
             hint: 'Full name',
             prefixIcon: Icons.person_outline,
           ),
           const SizedBox(height: AppSpacing.sm + 2),
-          MiraloTextField(
+          LongcatTextField(
             controller: _usernameController,
             hint: 'Username (e.g. aarushlohit)',
             prefixIcon: Icons.alternate_email_rounded,
           ),
           const SizedBox(height: AppSpacing.sm + 2),
-          MiraloTextField(
+          LongcatTextField(
             controller: _emailController,
             hint: 'Email',
             prefixIcon: Icons.email_outlined,
             keyboardType: TextInputType.emailAddress,
           ),
           const SizedBox(height: AppSpacing.sm + 2),
-          MiraloTextField(
+          LongcatTextField(
             controller: _passController,
             hint: 'Password',
             prefixIcon: Icons.lock_outline,
@@ -416,7 +416,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             showToggleObscure: true,
           ),
           const SizedBox(height: AppSpacing.sm + 2),
-          MiraloTextField(
+          LongcatTextField(
             controller: _confirmPassController,
             hint: 'Confirm password',
             prefixIcon: Icons.lock_outline,
@@ -440,7 +440,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'Welcome to MIRALO AI',
+            'Welcome to LONGCAT AI',
             style: AppTypography.heading1(color: textPrimary),
             textAlign: TextAlign.center,
           ),
@@ -501,7 +501,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: surface,
-        borderRadius: BorderRadius.circular(MiraloDimensions.standardRadius),
+        borderRadius: BorderRadius.circular(LongcatDimensions.standardRadius),
         border: Border.all(color: border, width: 0.8),
       ),
       child: Row(
@@ -569,7 +569,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ),
           const SizedBox(height: AppSpacing.xl),
 
-          MiraloTextField(
+          LongcatTextField(
             controller: _privatePasscodeController,
             hint: 'Secret phrase or passcode (e.g. 1234)',
             prefixIcon: Icons.lock_outline,
@@ -623,7 +623,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ),
           const SizedBox(height: AppSpacing.xl),
 
-          MiraloTextField(
+          LongcatTextField(
             controller: _libraryPasscodeController,
             hint: 'Any text, phrase or PIN (e.g. "safe2025")',
             prefixIcon: Icons.pin_outlined,

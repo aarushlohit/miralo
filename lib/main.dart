@@ -41,5 +41,5 @@ void main() async {
     ),
   );
 
-  runApp(MiraloApp(vault: vault, auth: auth));
+  runApp(LongcatApp(vault: vault, auth: auth));
 }

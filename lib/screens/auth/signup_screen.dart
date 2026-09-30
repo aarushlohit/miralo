@@ -6,9 +6,9 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../providers/auth_provider.dart';
-import '../../widgets/common/miralo_app_bar.dart';
-import '../../widgets/common/miralo_button.dart';
-import '../../widgets/common/miralo_text_field.dart';
+import '../../widgets/common/longcat_app_bar.dart';
+import '../../widgets/common/longcat_button.dart';
+import '../../widgets/common/longcat_text_field.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -93,8 +93,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            MiraloAppBar(
-              leading: MiraloCircularIconButton(
+            LongcatAppBar(
+              leading: LongcatCircularIconButton(
                 icon: Icons.arrow_back_ios_new_rounded,
                 iconSize: 16,
                 onPressed: () => Navigator.pop(context),
@@ -122,7 +122,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                 style: AppTypography.display(color: textPrimary)),
                             const SizedBox(height: AppSpacing.sm),
                             Text(
-                              'Join MIRALO AI for private, intelligent workflows.',
+                              'Join LONGCAT AI for private, intelligent workflows.',
                               style: AppTypography.body(color: textSecondary),
                             ),
                             const SizedBox(height: AppSpacing.xl),
@@ -154,21 +154,21 @@ class _SignUpScreenState extends State<SignUpScreen> {
               ],
 
               // Form fields
-              MiraloTextField(
+              LongcatTextField(
                 controller: _nameController,
                 hint: 'Display name',
                 prefixIcon: Icons.person_outline,
                 textInputAction: TextInputAction.next,
               ),
               const SizedBox(height: AppSpacing.md),
-              MiraloTextField(
+              LongcatTextField(
                 controller: _usernameController,
                 hint: 'Username (e.g. aarushlohit)',
                 prefixIcon: Icons.alternate_email_rounded,
                 textInputAction: TextInputAction.next,
               ),
               const SizedBox(height: AppSpacing.md),
-              MiraloTextField(
+              LongcatTextField(
                 controller: _emailController,
                 hint: 'Email',
                 prefixIcon: Icons.mail_outline,
@@ -176,7 +176,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 textInputAction: TextInputAction.next,
               ),
               const SizedBox(height: AppSpacing.md),
-              MiraloTextField(
+              LongcatTextField(
                 controller: _passwordController,
                 hint: 'Password',
                 prefixIcon: Icons.lock_outline,
@@ -185,7 +185,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 textInputAction: TextInputAction.next,
               ),
               const SizedBox(height: AppSpacing.md),
-              MiraloTextField(
+              LongcatTextField(
                 controller: _confirmController,
                 hint: 'Confirm password',
                 prefixIcon: Icons.lock_outline,
@@ -197,7 +197,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               const SizedBox(height: AppSpacing.lg),
 
               // Primary CTA
-              MiraloButton(
+              LongcatButton(
                 label: 'Create account',
                 isLoading: auth.isLoading,
                 onPressed: auth.isLoading ? null : _handleSignUp,
@@ -224,10 +224,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
               Row(
                 children: [
                   Expanded(
-                    child: MiraloButton(
+                    child: LongcatButton(
                       label: 'Google',
                       icon: Icons.g_mobiledata,
-                      variant: MiraloButtonVariant.secondary,
+                      variant: LongcatButtonVariant.secondary,
                       expand: false,
                       onPressed: () => Navigator.pushReplacementNamed(
                           context, AppRoutes.securitySetup),
@@ -235,10 +235,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
-                    child: MiraloButton(
+                    child: LongcatButton(
                       label: 'Apple',
                       icon: Icons.apple,
-                      variant: MiraloButtonVariant.secondary,
+                      variant: LongcatButtonVariant.secondary,
                       expand: false,
                       onPressed: () => Navigator.pushReplacementNamed(
                           context, AppRoutes.securitySetup),

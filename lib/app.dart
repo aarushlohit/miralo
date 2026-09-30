@@ -35,10 +35,10 @@ import 'screens/emergency/emergency_screen.dart';
 
 import 'services/remote_share_service.dart';
 
-class MiraloApp extends StatelessWidget {
+class LongcatApp extends StatelessWidget {
   final VaultProvider vault;
   final AuthProvider? auth;
-  const MiraloApp({super.key, required this.vault, this.auth});
+  const LongcatApp({super.key, required this.vault, this.auth});
 
   @override
   Widget build(BuildContext context) {
@@ -57,7 +57,7 @@ class MiraloApp extends StatelessWidget {
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, _) {
           return MaterialApp(
-            title: 'MIRALO AI',
+            title: 'LONGCAT AI',
             debugShowCheckedModeBanner: false,
             themeMode: themeProvider.themeMode,
             theme: AppTheme.lightTheme,

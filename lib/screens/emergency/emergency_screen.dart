@@ -9,8 +9,8 @@ import '../../providers/auth_provider.dart';
 import '../../providers/library_provider.dart';
 import '../../providers/private_chat_provider.dart';
 import '../../providers/vault_provider.dart';
-import '../../widgets/common/miralo_button.dart';
-import '../../widgets/common/miralo_list_tile.dart';
+import '../../widgets/common/longcat_button.dart';
+import '../../widgets/common/longcat_list_tile.dart';
 
 class EmergencyScreen extends StatelessWidget {
   const EmergencyScreen({super.key});
@@ -149,9 +149,9 @@ class EmergencyScreen extends StatelessWidget {
               const SizedBox(height: AppSpacing.xl),
 
               // Quick Exit Button
-              MiraloButton(
+              LongcatButton(
                 label: 'Exit to AI Chat',
-                variant: MiraloButtonVariant.destructive,
+                variant: LongcatButtonVariant.destructive,
                 icon: Icons.exit_to_app_rounded,
                 onPressed: () => _executeQuickExit(context),
               ),
@@ -166,10 +166,10 @@ class EmergencyScreen extends StatelessWidget {
               const SizedBox(height: AppSpacing.xxl),
 
               // Destructive Actions
-              MiraloSectionHeader('PERMANENT DATA WIPE'),
-              MiraloSettingsGroup(
+              LongcatSectionHeader('PERMANENT DATA WIPE'),
+              LongcatSettingsGroup(
                 children: [
-                  MiraloListTile(
+                  LongcatListTile(
                     icon: Icons.chat_bubble_outline,
                     title: 'Wipe All Private Chats',
                     subtitle: 'Erases all contacts, message logs, and reactions',
@@ -190,7 +190,7 @@ class EmergencyScreen extends StatelessWidget {
                       );
                     },
                   ),
-                  MiraloListTile(
+                  LongcatListTile(
                     icon: Icons.folder_delete_outlined,
                     title: 'Wipe Secure Library Vault',
                     subtitle: 'Destroys all encrypted documents and media',
@@ -211,7 +211,7 @@ class EmergencyScreen extends StatelessWidget {
                       );
                     },
                   ),
-                  MiraloListTile(
+                  LongcatListTile(
                     icon: Icons.power_settings_new,
                     title: 'Complete Reset & Sign Out',
                     subtitle: 'Full device purge and session termination',

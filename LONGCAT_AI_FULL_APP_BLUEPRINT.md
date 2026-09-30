@@ -1,4 +1,4 @@
-# MIRALO AI — Full Application Blueprint
+# LONGCAT AI — Full Application Blueprint
 
 **Version:** MVP v1.0  
 **Platform:** Flutter mobile application  
@@ -9,15 +9,15 @@
 
 ## 1. Product Overview
 
-Miralo AI is a premium, mobile-first AI assistant built around a clean ChatGPT-style conversation experience.
+Longcat AI is a premium, mobile-first AI assistant built around a clean ChatGPT-style conversation experience.
 
-The primary purpose of the application is to let users communicate with an external AI model through a polished interface. Miralo AI does not train or host its own model in the mobile app. It connects to an AI backend, which communicates with configured model providers.
+The primary purpose of the application is to let users communicate with an external AI model through a polished interface. Longcat AI does not train or host its own model in the mobile app. It connects to an AI backend, which communicates with configured model providers.
 
-Miralo AI also contains an optional private communication layer. The private layer is unlocked by entering a user-configured secret phrase or number directly into the **same normal AI message composer**. Once unlocked, private contacts become available through the sidebar. The user can select a person and chat using the same unified Miralo AI conversation interface.
+Longcat AI also contains an optional private communication layer. The private layer is unlocked by entering a user-configured secret phrase or number directly into the **same normal AI message composer**. Once unlocked, private contacts become available through the sidebar. The user can select a person and chat using the same unified Longcat AI conversation interface.
 
 The application must never look like two unrelated apps.
 
-> **Miralo AI = Premium AI chat + discreet private communication + independently protected personal library.**
+> **Longcat AI = Premium AI chat + discreet private communication + independently protected personal library.**
 
 ---
 
@@ -88,7 +88,7 @@ The application must never look like two unrelated apps.
 ## High-Level Areas
 
 ```text
-MIRALO AI
+LONGCAT AI
 │
 ├── Authentication
 │
@@ -126,7 +126,7 @@ MIRALO AI
 
 # 5. Navigation Model
 
-Miralo AI uses a full-screen conversation layout with a ChatGPT-style sidebar or drawer.
+Longcat AI uses a full-screen conversation layout with a ChatGPT-style sidebar or drawer.
 
 ## Main Navigation
 
@@ -174,8 +174,8 @@ Introduce the application without overwhelming the user.
 
 ### UI
 
-- Miralo AI logo
-- Miralo AI wordmark
+- Longcat AI logo
+- Longcat AI wordmark
 - Short tagline
 - Get Started button
 - Sign In button
@@ -183,7 +183,7 @@ Introduce the application without overwhelming the user.
 ### Suggested Copy
 
 ```text
-MIRALO AI
+LONGCAT AI
 
 Your AI. Your Space.
 
@@ -264,7 +264,7 @@ Explain the two independent security credentials.
 ```text
 Set up your private access
 
-Miralo AI uses two separate credentials.
+Longcat AI uses two separate credentials.
 
 Private Chat Secret
 Protects private conversations and private media.
@@ -342,7 +342,7 @@ You can unlock one without unlocking the other.
 
 Action:
 
-- Continue to Miralo AI
+- Continue to Longcat AI
 
 ---
 
@@ -355,13 +355,13 @@ This is the default application screen.
 ### Header
 
 - Hamburger menu
-- Centered title: Miralo AI
+- Centered title: Longcat AI
 - New Chat icon
 - Optional account avatar
 
 ### Main Content
 
-- Small Miralo AI logo
+- Small Longcat AI logo
 - Welcome headline
 - Minimal supporting text
 
@@ -387,7 +387,7 @@ Do not use large feature cards.
 ### Composer
 
 ```text
-[ + ]  Ask MIRALO AI...                 [Send]
+[ + ]  Ask LONGCAT AI...                 [Send]
 ```
 
 Optional:
@@ -434,7 +434,7 @@ Support:
 The composer remains fixed above the keyboard.
 
 ```text
-[ + ]  Ask MIRALO AI...       [Mic] [Send]
+[ + ]  Ask LONGCAT AI...       [Mic] [Send]
 ```
 
 ### AI Message Actions
@@ -597,7 +597,7 @@ A safer implementation can use a recognizable local command prefix internally, b
 ## Sidebar Before Unlock
 
 ```text
-MIRALO AI
+LONGCAT AI
 
 + New Chat
 
@@ -625,7 +625,7 @@ Do not show:
 The sidebar expands naturally.
 
 ```text
-MIRALO AI
+LONGCAT AI
 
 + New Chat
 
@@ -687,14 +687,14 @@ Only the conversation context changes.
 Header:
 
 ```text
-Miralo AI
+Longcat AI
 GPT-style model
 ```
 
 Composer:
 
 ```text
-Ask MIRALO AI...
+Ask LONGCAT AI...
 ```
 
 ---
@@ -973,7 +973,7 @@ The reaction bar should be compact, subtle, and consistent with the overall desi
 
 ## Screen P10 — Images
 
-This section contains images belonging to Miralo’s private communication system.
+This section contains images belonging to Longcat’s private communication system.
 
 It must not automatically show the entire device gallery.
 
@@ -1847,7 +1847,7 @@ ToastMessage
 ```text
 Flutter App
     ↓
-Miralo Backend
+Longcat Backend
     ↓
 Authentication Validation
     ↓
@@ -2397,7 +2397,7 @@ User returns to empty chat/list
 
 The most important requirement is:
 
-> **Miralo AI must always look like Miralo AI.**
+> **Longcat AI must always look like Longcat AI.**
 
 Before private unlock:
 
@@ -2420,12 +2420,12 @@ The Library is independently protected. The emergency action returns to a normal
 
 # Final Product Summary
 
-Miralo AI is a premium AI API wrapper with a unified ChatGPT-style interface. Users can chat with external AI models, manage conversations, and choose models through a secure backend.
+Longcat AI is a premium AI API wrapper with a unified ChatGPT-style interface. Users can chat with external AI models, manage conversations, and choose models through a secure backend.
 
-By entering a private secret phrase into the ordinary AI message composer, users can discreetly access private person-to-person conversations from the sidebar. Those conversations use the same Miralo AI chat interface and support text, images, camera capture, GIFs, and reactions.
+By entering a private secret phrase into the ordinary AI message composer, users can discreetly access private person-to-person conversations from the sidebar. Those conversations use the same Longcat AI chat interface and support text, images, camera capture, GIFs, and reactions.
 
 A separate Library Vault PIN protects personal files, images, videos, and documents. Private media does not automatically save to the device gallery or get sent to the AI.
 
 Quick Exit and `/urgent` return users to the last normal AI chat, while `/clear` clears the current private chat. Hide Mode removes identifying information from the visible interface and notifications.
 
-**Miralo AI is simple in appearance, powerful in capability, and privacy-oriented by design.**
+**Longcat AI is simple in appearance, powerful in capability, and privacy-oriented by design.**

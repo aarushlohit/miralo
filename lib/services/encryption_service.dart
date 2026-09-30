@@ -3,7 +3,7 @@ import 'dart:math';
 import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 
-/// Military-grade End-to-End Encryption (E2EE) Service for Miralo Private Chats.
+/// Military-grade End-to-End Encryption (E2EE) Service for Longcat Private Chats.
 /// All private messages, media captions, and attachments are encrypted locally
 /// on the sender's device before being written to Firebase Realtime Database.
 /// Only the intended recipient holding the channel key can decrypt and read them.
@@ -13,8 +13,8 @@ class EncryptionService {
   /// Derives a deterministic 256-bit (32-byte) key for a specific conversation channel
   static Uint8List deriveChannelKey(String channelId, {String? userSecret}) {
     final salt = userSecret != null && userSecret.isNotEmpty
-        ? 'miralo_e2ee_salt_$userSecret'
-        : 'miralo_e2ee_global_salt_v1';
+        ? 'longcat_e2ee_salt_$userSecret'
+        : 'longcat_e2ee_global_salt_v1';
     final rawInput = '$salt:$channelId:$salt';
     final bytes = utf8.encode(rawInput);
     final digest = sha256.convert(bytes);

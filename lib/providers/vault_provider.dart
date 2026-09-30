@@ -54,7 +54,7 @@ class VaultProvider extends ChangeNotifier {
 
   /// Cryptographic salt + SHA-256 for OWASP Mobile Security Compliance
   static String hashSecret(String secret, String salt) {
-    final bytes = utf8.encode('miralo_salt_${salt}_${secret.trim()}');
+    final bytes = utf8.encode('longcat_salt_${salt}_${secret.trim()}');
     return sha256.convert(bytes).toString();
   }
 

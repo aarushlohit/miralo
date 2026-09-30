@@ -4,7 +4,7 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import '../../core/theme/miralo_tokens.dart';
+import '../../core/theme/longcat_tokens.dart';
 import '../../services/cloudinary_service.dart';
 import '../../services/file_security_service.dart';
 import 'voice_note_recorder_sheet.dart';
@@ -42,11 +42,11 @@ class AttachmentSheet extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: isDark
-          ? MiraloColors.darkSurfacePrimary
-          : MiraloColors.lightSurfacePrimary,
+          ? LongcatColors.darkSurfacePrimary
+          : LongcatColors.lightSurfacePrimary,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
-          top: Radius.circular(MiraloRadius.bottomSheet),
+          top: Radius.circular(LongcatRadius.bottomSheet),
         ),
       ),
       builder: (_) => AttachmentSheet(
@@ -161,14 +161,14 @@ class AttachmentSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor = isDark
-        ? MiraloColors.darkTextPrimary
-        : MiraloColors.lightTextPrimary;
+        ? LongcatColors.darkTextPrimary
+        : LongcatColors.lightTextPrimary;
     final subColor = isDark
-        ? MiraloColors.darkTextSecondary
-        : MiraloColors.lightTextSecondary;
+        ? LongcatColors.darkTextSecondary
+        : LongcatColors.lightTextSecondary;
     final border = isDark
-        ? MiraloColors.darkBorder
-        : MiraloColors.lightBorder;
+        ? LongcatColors.darkBorder
+        : LongcatColors.lightBorder;
 
     return SafeArea(
       top: false,
@@ -179,10 +179,10 @@ class AttachmentSheet extends StatelessWidget {
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
           padding: EdgeInsets.fromLTRB(
-            MiraloSpacing.md,
-            MiraloSpacing.md,
-            MiraloSpacing.md,
-            MediaQuery.of(context).viewInsets.bottom + MiraloSpacing.md,
+            LongcatSpacing.md,
+            LongcatSpacing.md,
+            LongcatSpacing.md,
+            MediaQuery.of(context).viewInsets.bottom + LongcatSpacing.md,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -192,7 +192,7 @@ class AttachmentSheet extends StatelessWidget {
               child: Container(
                 width: 36,
                 height: 4,
-                margin: const EdgeInsets.only(bottom: MiraloSpacing.md),
+                margin: const EdgeInsets.only(bottom: LongcatSpacing.md),
                 decoration: BoxDecoration(
                   color: border,
                   borderRadius: BorderRadius.circular(2),
@@ -201,16 +201,16 @@ class AttachmentSheet extends StatelessWidget {
             ),
             Text(
               isImageOnly ? 'Attach Image' : 'Share Content',
-              style: MiraloTypography.titleMedium(color: textColor),
+              style: LongcatTypography.titleMedium(color: textColor),
             ),
-            const SizedBox(height: MiraloSpacing.xs),
+            const SizedBox(height: LongcatSpacing.xs),
             Text(
               isImageOnly
                   ? 'Select a photo from Camera or Gallery (Max 1 image)'
                   : 'Select media, files, or record a voice note',
-              style: MiraloTypography.bodySmall(color: subColor),
+              style: LongcatTypography.bodySmall(color: subColor),
             ),
-            const SizedBox(height: MiraloSpacing.lg),
+            const SizedBox(height: LongcatSpacing.lg),
 
             if (isImageOnly)
               Row(
@@ -308,7 +308,7 @@ class AttachmentSheet extends StatelessWidget {
                   ),
                 ],
               ),
-            const SizedBox(height: MiraloSpacing.lg),
+            const SizedBox(height: LongcatSpacing.lg),
 
             // Cancel
             SizedBox(
@@ -316,7 +316,7 @@ class AttachmentSheet extends StatelessWidget {
               child: TextButton(
                 onPressed: () => Navigator.pop(context),
                 child: Text('Cancel',
-                    style: MiraloTypography.bodyMedium(color: subColor)),
+                    style: LongcatTypography.bodyMedium(color: subColor)),
               ),
             ),
           ],
@@ -348,11 +348,11 @@ class _ImageActionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: MiraloRadius.r16,
+      borderRadius: LongcatRadius.r16,
       child: Container(
         padding: const EdgeInsets.symmetric(
           horizontal: 2,
-          vertical: MiraloSpacing.sm,
+          vertical: LongcatSpacing.sm,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -364,12 +364,12 @@ class _ImageActionTile extends StatelessWidget {
                 color: bgColor,
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: iconColor ?? MiraloColors.accent, size: 24),
+              child: Icon(icon, color: iconColor ?? LongcatColors.accent, size: 24),
             ),
-            const SizedBox(height: MiraloSpacing.xs),
+            const SizedBox(height: LongcatSpacing.xs),
             Text(
               label,
-              style: MiraloTypography.labelMedium(color: textColor).copyWith(fontSize: 11),
+              style: LongcatTypography.labelMedium(color: textColor).copyWith(fontSize: 11),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,

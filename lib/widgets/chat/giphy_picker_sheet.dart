@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../../core/theme/miralo_tokens.dart';
+import '../../core/theme/longcat_tokens.dart';
 import '../../services/giphy_service.dart';
 
 /// Interactive modal sheet to search and browse GIFs via GIPHY API with
@@ -22,11 +22,11 @@ class GiphyPickerSheet extends StatefulWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: isDark
-          ? MiraloColors.darkSurfacePrimary
-          : MiraloColors.lightSurfacePrimary,
+          ? LongcatColors.darkSurfacePrimary
+          : LongcatColors.lightSurfacePrimary,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
-          top: Radius.circular(MiraloRadius.bottomSheet),
+          top: Radius.circular(LongcatRadius.bottomSheet),
         ),
       ),
       builder: (_) => GiphyPickerSheet(onGifSelected: onGifSelected),
@@ -148,17 +148,17 @@ class _GiphyPickerSheetState extends State<GiphyPickerSheet> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor = isDark
-        ? MiraloColors.darkTextPrimary
-        : MiraloColors.lightTextPrimary;
+        ? LongcatColors.darkTextPrimary
+        : LongcatColors.lightTextPrimary;
     final subColor = isDark
-        ? MiraloColors.darkTextSecondary
-        : MiraloColors.lightTextSecondary;
+        ? LongcatColors.darkTextSecondary
+        : LongcatColors.lightTextSecondary;
     final bgSurface = isDark
-        ? MiraloColors.darkSurfaceSecondary
-        : MiraloColors.lightSurfaceSecondary;
+        ? LongcatColors.darkSurfaceSecondary
+        : LongcatColors.lightSurfaceSecondary;
     final border = isDark
-        ? MiraloColors.darkBorder
-        : MiraloColors.lightBorder;
+        ? LongcatColors.darkBorder
+        : LongcatColors.lightBorder;
 
     final mediaQuery = MediaQuery.of(context);
     final sheetHeight = mediaQuery.size.height * 0.75;
@@ -186,20 +186,20 @@ class _GiphyPickerSheetState extends State<GiphyPickerSheet> {
           // Header
           Padding(
             padding: const EdgeInsets.symmetric(
-              horizontal: MiraloSpacing.md,
-              vertical: MiraloSpacing.xs,
+              horizontal: LongcatSpacing.md,
+              vertical: LongcatSpacing.xs,
             ),
             child: Row(
               children: [
                 const Icon(
                   Icons.gif_box_rounded,
-                  color: MiraloColors.accent,
+                  color: LongcatColors.accent,
                   size: 26,
                 ),
                 const SizedBox(width: 8),
                 Text(
                   'GIPHY GIFs',
-                  style: MiraloTypography.titleMedium(color: textColor),
+                  style: LongcatTypography.titleMedium(color: textColor),
                 ),
                 const Spacer(),
                 Container(
@@ -211,7 +211,7 @@ class _GiphyPickerSheetState extends State<GiphyPickerSheet> {
                   ),
                   child: Text(
                     '100/hr quota',
-                    style: MiraloTypography.bodySmall(color: subColor).copyWith(fontSize: 11),
+                    style: LongcatTypography.bodySmall(color: subColor).copyWith(fontSize: 11),
                   ),
                 ),
                 const SizedBox(width: 6),
@@ -228,16 +228,16 @@ class _GiphyPickerSheetState extends State<GiphyPickerSheet> {
           // Search Input Bar
           Padding(
             padding: const EdgeInsets.symmetric(
-              horizontal: MiraloSpacing.md,
-              vertical: MiraloSpacing.xs,
+              horizontal: LongcatSpacing.md,
+              vertical: LongcatSpacing.xs,
             ),
             child: TextField(
               controller: _searchController,
               onChanged: _onSearchChanged,
-              style: MiraloTypography.bodyMedium(color: textColor),
+              style: LongcatTypography.bodyMedium(color: textColor),
               decoration: InputDecoration(
                 hintText: 'Search GIPHY...',
-                hintStyle: MiraloTypography.bodyMedium(color: subColor),
+                hintStyle: LongcatTypography.bodyMedium(color: subColor),
                 prefixIcon: Icon(Icons.search_rounded, color: subColor, size: 20),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
@@ -253,16 +253,16 @@ class _GiphyPickerSheetState extends State<GiphyPickerSheet> {
                 fillColor: bgSurface,
                 contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(MiraloRadius.sm),
+                  borderRadius: BorderRadius.circular(LongcatRadius.sm),
                   borderSide: BorderSide(color: border, width: 0.8),
                 ),
                 enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(MiraloRadius.sm),
+                  borderRadius: BorderRadius.circular(LongcatRadius.sm),
                   borderSide: BorderSide(color: border, width: 0.8),
                 ),
                 focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(MiraloRadius.sm),
-                  borderSide: const BorderSide(color: MiraloColors.accent, width: 1.2),
+                  borderRadius: BorderRadius.circular(LongcatRadius.sm),
+                  borderSide: const BorderSide(color: LongcatColors.accent, width: 1.2),
                 ),
               ),
             ),
@@ -272,8 +272,8 @@ class _GiphyPickerSheetState extends State<GiphyPickerSheet> {
           if (_rateLimitError != null)
             Container(
               margin: const EdgeInsets.symmetric(
-                horizontal: MiraloSpacing.md,
-                vertical: MiraloSpacing.xs,
+                horizontal: LongcatSpacing.md,
+                vertical: LongcatSpacing.xs,
               ),
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
@@ -288,7 +288,7 @@ class _GiphyPickerSheetState extends State<GiphyPickerSheet> {
                   Expanded(
                     child: Text(
                       _rateLimitError!,
-                      style: MiraloTypography.bodySmall(
+                      style: LongcatTypography.bodySmall(
                         color: isDark ? Colors.amber.shade300 : Colors.amber.shade900,
                       ).copyWith(fontWeight: FontWeight.w500),
                     ),
@@ -303,7 +303,7 @@ class _GiphyPickerSheetState extends State<GiphyPickerSheet> {
                 ? const Center(
                     child: CircularProgressIndicator(
                       strokeWidth: 2.5,
-                      color: MiraloColors.accent,
+                      color: LongcatColors.accent,
                     ),
                   )
                 : (_gifs.isEmpty
@@ -312,12 +312,12 @@ class _GiphyPickerSheetState extends State<GiphyPickerSheet> {
                           _rateLimitError != null
                               ? 'Rate limit cooldown active'
                               : 'No GIFs found',
-                          style: MiraloTypography.bodyMedium(color: subColor),
+                          style: LongcatTypography.bodyMedium(color: subColor),
                         ),
                       )
                     : GridView.builder(
                         controller: _scrollController,
-                        padding: const EdgeInsets.all(MiraloSpacing.md),
+                        padding: const EdgeInsets.all(LongcatSpacing.md),
                         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 2,
                           crossAxisSpacing: 8,
@@ -331,7 +331,7 @@ class _GiphyPickerSheetState extends State<GiphyPickerSheet> {
                               child: _isLoading
                                   ? const CircularProgressIndicator(
                                       strokeWidth: 2,
-                                      color: MiraloColors.accent,
+                                      color: LongcatColors.accent,
                                     )
                                   : const SizedBox.shrink(),
                             );
@@ -359,7 +359,7 @@ class _GiphyPickerSheetState extends State<GiphyPickerSheet> {
                                             ? progress.cumulativeBytesLoaded /
                                                 progress.expectedTotalBytes!
                                             : null,
-                                        color: MiraloColors.accent,
+                                        color: LongcatColors.accent,
                                       ),
                                     );
                                   },

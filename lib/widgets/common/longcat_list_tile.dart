@@ -5,7 +5,7 @@ import '../../core/theme/app_typography.dart';
 
 /// Settings-style list tile with leading icon, title, optional subtitle,
 /// and trailing chevron or custom widget.
-class MiraloListTile extends StatelessWidget {
+class LongcatListTile extends StatelessWidget {
   final IconData? leadingIcon;
   final IconData? icon;
   final Color? iconColor;
@@ -18,7 +18,7 @@ class MiraloListTile extends StatelessWidget {
   final VoidCallback? onTap;
   final EdgeInsetsGeometry? padding;
 
-  const MiraloListTile({
+  const LongcatListTile({
     super.key,
     this.leadingIcon,
     this.icon,
@@ -113,9 +113,9 @@ class MiraloListTile extends StatelessWidget {
 }
 
 /// Section header for settings groups
-class MiraloSectionHeader extends StatelessWidget {
+class LongcatSectionHeader extends StatelessWidget {
   final String title;
-  const MiraloSectionHeader(this.title, {super.key});
+  const LongcatSectionHeader(this.title, {super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -133,12 +133,12 @@ class MiraloSectionHeader extends StatelessWidget {
   }
 }
 
-/// Grouped card that wraps a list of MiraloListTiles with dividers
-class MiraloSettingsGroup extends StatelessWidget {
+/// Grouped card that wraps a list of LongcatListTiles with dividers
+class LongcatSettingsGroup extends StatelessWidget {
   final List<Widget> children;
   final String? header;
 
-  const MiraloSettingsGroup({
+  const LongcatSettingsGroup({
     super.key,
     required this.children,
     this.header,
@@ -154,7 +154,7 @@ class MiraloSettingsGroup extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (header != null) MiraloSectionHeader(header!),
+        if (header != null) LongcatSectionHeader(header!),
         Container(
           margin: const EdgeInsets.symmetric(horizontal: AppSpacing.screenH),
           decoration: BoxDecoration(

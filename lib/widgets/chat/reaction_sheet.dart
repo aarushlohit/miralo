@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/miralo_tokens.dart';
+import '../../core/theme/longcat_tokens.dart';
 
 class EmojiCategory {
   final String title;
@@ -175,7 +175,7 @@ class ReactionSheet extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: isDark ? MiraloColors.darkSurfacePrimary : MiraloColors.lightSurfacePrimary,
+      backgroundColor: isDark ? LongcatColors.darkSurfacePrimary : LongcatColors.lightSurfacePrimary,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -187,11 +187,11 @@ class ReactionSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = isDark
-        ? MiraloColors.darkSurfaceSecondary
-        : MiraloColors.lightSurfacePrimary;
+        ? LongcatColors.darkSurfaceSecondary
+        : LongcatColors.lightSurfacePrimary;
     final border = isDark
-        ? MiraloColors.darkBorder
-        : MiraloColors.lightBorder;
+        ? LongcatColors.darkBorder
+        : LongcatColors.lightBorder;
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -205,9 +205,9 @@ class ReactionSheet extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
                 color: bg,
-                borderRadius: BorderRadius.circular(MiraloRadius.bottomSheet),
+                borderRadius: BorderRadius.circular(LongcatRadius.bottomSheet),
                 border: Border.all(color: border),
-                boxShadow: MiraloElevation.medium(isDark),
+                boxShadow: LongcatElevation.medium(isDark),
               ),
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
@@ -295,14 +295,14 @@ class _FullEmojiPickerSheetState extends State<FullEmojiPickerSheet> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = isDark
-        ? MiraloColors.darkSurfacePrimary
-        : MiraloColors.lightSurfacePrimary;
+        ? LongcatColors.darkSurfacePrimary
+        : LongcatColors.lightSurfacePrimary;
     final textColor = isDark
-        ? MiraloColors.darkTextPrimary
-        : MiraloColors.lightTextPrimary;
+        ? LongcatColors.darkTextPrimary
+        : LongcatColors.lightTextPrimary;
     final mutedColor = isDark
-        ? MiraloColors.darkTextMuted
-        : MiraloColors.lightTextMuted;
+        ? LongcatColors.darkTextMuted
+        : LongcatColors.lightTextMuted;
 
     final emojis = _displayedEmojis;
 
@@ -401,7 +401,7 @@ class _FullEmojiPickerSheetState extends State<FullEmojiPickerSheet> {
                         margin: const EdgeInsets.only(right: 4),
                         decoration: BoxDecoration(
                           color: isSelected
-                              ? MiraloColors.accent.withValues(alpha: 0.2)
+                              ? LongcatColors.accent.withValues(alpha: 0.2)
                               : Colors.transparent,
                           borderRadius: BorderRadius.circular(10),
                         ),

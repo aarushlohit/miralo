@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 import 'app_spacing.dart';
 
-/// MIRALO AI — Material3 Theme
+/// LONGCAT AI — Material3 Theme
 /// Accent: dark ChatGPT-style blue. No purple.
 class AppTheme {
   AppTheme._();

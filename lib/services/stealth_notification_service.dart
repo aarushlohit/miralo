@@ -7,10 +7,10 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 class StealthNotificationService {
   StealthNotificationService._();
 
-  static const String stealthTitle = 'Miralo AI';
-  static const String stealthBody = 'Miralo AI spawns !!!';
-  static const String channelId = 'miralo_stealth_notifications';
-  static const String channelName = 'Miralo AI Notifications';
+  static const String stealthTitle = 'Longcat AI';
+  static const String stealthBody = 'Longcat AI spawns !!!';
+  static const String channelId = 'longcat_stealth_notifications';
+  static const String channelName = 'Longcat AI Notifications';
   static const String channelDescription =
       'Discreet push notifications in notification bar for incoming messages and AI alerts';
 
@@ -30,7 +30,7 @@ class StealthNotificationService {
       requestSoundPermission: true,
     );
     const linuxSettings =
-        LinuxInitializationSettings(defaultActionName: 'Open Miralo');
+        LinuxInitializationSettings(defaultActionName: 'Open Longcat');
 
     const initSettings = InitializationSettings(
       android: androidSettings,
@@ -123,7 +123,7 @@ class StealthNotificationService {
   /// Pushes an urgent real-time notification to the status bar
   static Future<void> showUrgentNotification({
     String title = 'Urgent Notice',
-    String body = 'miralo  reminds urgent critical  news check it out !!! ',
+    String body = 'longcat  reminds urgent critical  news check it out !!! ',
   }) async {
     await showSystemPushNotification(
       title: title,

@@ -6,7 +6,7 @@ import '../../core/theme/app_typography.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/private_chat_provider.dart';
 import '../../providers/vault_provider.dart';
-import '../../widgets/common/miralo_list_tile.dart';
+import '../../widgets/common/longcat_list_tile.dart';
 
 class PrivacySecurityScreen extends StatelessWidget {
   const PrivacySecurityScreen({super.key});
@@ -170,22 +170,22 @@ class PrivacySecurityScreen extends StatelessWidget {
             const SizedBox(height: AppSpacing.lg),
 
             // Credentials & Locks
-            MiraloSectionHeader('CREDENTIALS & LOCKS'),
-            MiraloSettingsGroup(
+            LongcatSectionHeader('CREDENTIALS & LOCKS'),
+            LongcatSettingsGroup(
               children: [
-                MiraloListTile(
+                LongcatListTile(
                   icon: Icons.vpn_key_outlined,
                   title: 'Private Chat Secret',
                   subtitle: 'Enter in normal AI composer to reveal contacts',
                   onTap: () => _showChangeSecretDialog(context, vault),
                 ),
-                MiraloListTile(
+                LongcatListTile(
                   icon: Icons.shield_outlined,
                   title: 'Library Vault PIN',
                   subtitle: 'Independent code for encrypted files & media',
                   onTap: () => _showChangePinDialog(context, vault),
                 ),
-                MiraloListTile(
+                LongcatListTile(
                   icon: Icons.timer_outlined,
                   title: 'Auto-lock Inactivity',
                   subtitle: '${vault.autoLockMinutes} minutes timeout',
@@ -210,10 +210,10 @@ class PrivacySecurityScreen extends StatelessWidget {
             const SizedBox(height: AppSpacing.lg),
 
             // Device Hygiene
-            MiraloSectionHeader('DEVICE HYGIENE'),
-            MiraloSettingsGroup(
+            LongcatSectionHeader('DEVICE HYGIENE'),
+            LongcatSettingsGroup(
               children: [
-                MiraloListTile(
+                LongcatListTile(
                   icon: Icons.cleaning_services_outlined,
                   title: 'Clear Cached Media',
                   subtitle: 'Frees 24.8 MB of temporary previews',
@@ -224,7 +224,7 @@ class PrivacySecurityScreen extends StatelessWidget {
                     );
                   },
                 ),
-                MiraloListTile(
+                LongcatListTile(
                   icon: Icons.phonelink_erase_outlined,
                   title: 'Sign Out Other Sessions',
                   destructive: true,
@@ -241,10 +241,10 @@ class PrivacySecurityScreen extends StatelessWidget {
             const SizedBox(height: AppSpacing.lg),
 
             // Chat Privacy & Presence
-            MiraloSectionHeader('CHAT PRIVACY & PRESENCE'),
-            MiraloSettingsGroup(
+            LongcatSectionHeader('CHAT PRIVACY & PRESENCE'),
+            LongcatSettingsGroup(
               children: [
-                MiraloListTile(
+                LongcatListTile(
                   icon: Icons.wifi_tethering_rounded,
                   title: 'Share Online Status',
                   subtitle: 'Allows contacts to see when you are active',
@@ -255,7 +255,7 @@ class PrivacySecurityScreen extends StatelessWidget {
                     onChanged: (val) => chat.updatePrivacySettings(showOnlineStatus: val),
                   ),
                 ),
-                MiraloListTile(
+                LongcatListTile(
                   icon: Icons.history_rounded,
                   title: 'Share Last Seen',
                   subtitle: 'Shows when you were last active in chat',
@@ -266,7 +266,7 @@ class PrivacySecurityScreen extends StatelessWidget {
                     onChanged: (val) => chat.updatePrivacySettings(showLastSeen: val),
                   ),
                 ),
-                MiraloListTile(
+                LongcatListTile(
                   icon: Icons.done_all_rounded,
                   title: 'Send Read Receipts',
                   subtitle: 'Shows blue double checkmarks when messages are seen',

@@ -1,8 +1,8 @@
-# MIRALO AI — APP FEATURES
+# LONGCAT AI — APP FEATURES
 
 ## 1. Product Overview
 
-MIRALO AI is a premium, privacy-focused AI assistant and private communication application.
+LONGCAT AI is a premium, privacy-focused AI assistant and private communication application.
 
 The app combines:
 
@@ -733,7 +733,7 @@ The first release must not include:
 
 ## 26. Success Criteria
 
-MIRALO AI is successful when:
+LONGCAT AI is successful when:
 
 - The app feels as simple as ChatGPT
 - Private features do not look suspicious or overdesigned

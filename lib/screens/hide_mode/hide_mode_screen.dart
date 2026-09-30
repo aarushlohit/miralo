@@ -4,7 +4,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../providers/vault_provider.dart';
-import '../../widgets/common/miralo_list_tile.dart';
+import '../../widgets/common/longcat_list_tile.dart';
 
 class HideModeScreen extends StatelessWidget {
   const HideModeScreen({super.key});
@@ -114,10 +114,10 @@ class HideModeScreen extends StatelessWidget {
             const SizedBox(height: AppSpacing.lg),
 
             // Granular Settings
-            MiraloSectionHeader('MASKING RULES'),
-            MiraloSettingsGroup(
+            LongcatSectionHeader('MASKING RULES'),
+            LongcatSettingsGroup(
               children: [
-                MiraloListTile(
+                LongcatListTile(
                   icon: Icons.person_outline,
                   title: 'Hide Username',
                   subtitle: 'Replace your account name with "User"',
@@ -127,7 +127,7 @@ class HideModeScreen extends StatelessWidget {
                     onChanged: (v) => vault.updateHideMode(hideUsername: v),
                   ),
                 ),
-                MiraloListTile(
+                LongcatListTile(
                   icon: Icons.account_circle_outlined,
                   title: 'Hide Profile Picture',
                   subtitle: 'Display generic shield icon instead',
@@ -137,7 +137,7 @@ class HideModeScreen extends StatelessWidget {
                     onChanged: (v) => vault.updateHideMode(hideProfilePicture: v),
                   ),
                 ),
-                MiraloListTile(
+                LongcatListTile(
                   icon: Icons.badge_outlined,
                   title: 'Hide Private Contact Names',
                   subtitle: 'Display "Protected Contact" instead of names',
@@ -147,7 +147,7 @@ class HideModeScreen extends StatelessWidget {
                     onChanged: (v) => vault.updateHideMode(hidePrivateChatNames: v),
                   ),
                 ),
-                MiraloListTile(
+                LongcatListTile(
                   icon: Icons.chat_bubble_outline,
                   title: 'Hide Message Previews',
                   subtitle: 'Show bullet points for last message text',
@@ -157,7 +157,7 @@ class HideModeScreen extends StatelessWidget {
                     onChanged: (v) => vault.updateHideMode(hideMessagePreviews: v),
                   ),
                 ),
-                MiraloListTile(
+                LongcatListTile(
                   icon: Icons.notifications_none_outlined,
                   title: 'Discreet Notifications',
                   subtitle: 'Hide content in lock screen banners',
@@ -173,7 +173,7 @@ class HideModeScreen extends StatelessWidget {
             const SizedBox(height: AppSpacing.lg),
 
             // Live Preview Card
-            MiraloSectionHeader('CASUAL VIEWER SIMULATION'),
+            LongcatSectionHeader('CASUAL VIEWER SIMULATION'),
             Container(
               padding: const EdgeInsets.all(AppSpacing.md),
               decoration: BoxDecoration(

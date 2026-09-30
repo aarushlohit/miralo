@@ -12,9 +12,9 @@ import '../../providers/private_chat_provider.dart';
 import '../../providers/vault_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../private_chat/add_friend_sheet.dart';
-import 'miralo_avatar.dart';
+import 'longcat_avatar.dart';
 
-/// MIRALO AI Sidebar Drawer — Clean ChatGPT-inspired design.
+/// LONGCAT AI Sidebar Drawer — Clean ChatGPT-inspired design.
 ///
 /// Upgraded Features:
 /// - Real-time chat search & filtering directly in the drawer.
@@ -325,10 +325,10 @@ class _AppSidebarDrawerState extends State<AppSidebarDrawer> {
                 AppSpacing.md, AppSpacing.sm, AppSpacing.sm, AppSpacing.xs),
             child: Row(
               children: [
-                // MIRALO wordmark
+                // LONGCAT wordmark
                 Expanded(
                   child: Text(
-                    'MIRALO AI',
+                    'LONGCAT AI',
                     style: AppTypography.wordmark(color: textPrimary),
                   ),
                 ),
@@ -413,7 +413,7 @@ class _AppSidebarDrawerState extends State<AppSidebarDrawer> {
                   margin: const EdgeInsets.only(bottom: AppSpacing.xs),
                   decoration: BoxDecoration(
                     color: isDark ? AppColors.darkSurfaceSecondary : AppColors.lightSurfaceSecondary,
-                    borderRadius: BorderRadius.circular(MiraloDimensions.standardRadius),
+                    borderRadius: BorderRadius.circular(LongcatDimensions.standardRadius),
                     border: Border.all(color: border, width: 0.6),
                   ),
                   child: InkWell(
@@ -422,7 +422,7 @@ class _AppSidebarDrawerState extends State<AppSidebarDrawer> {
                       _close(context);
                       Navigator.pushNamed(context, AppRoutes.home);
                     },
-                    borderRadius: BorderRadius.circular(MiraloDimensions.standardRadius),
+                    borderRadius: BorderRadius.circular(LongcatDimensions.standardRadius),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
                           horizontal: AppSpacing.md, vertical: 12),
@@ -760,7 +760,7 @@ class _AppSidebarDrawerState extends State<AppSidebarDrawer> {
                     _close(context);
                     Navigator.pushNamed(context, AppRoutes.settingsProfile);
                   },
-                  child: MiraloAvatar(
+                  child: LongcatAvatar(
                     name: user?.displayName ?? 'User',
                     size: 36,
                   ),
@@ -1037,7 +1037,7 @@ class _ContactItem extends StatelessWidget {
             horizontal: AppSpacing.sm, vertical: 8),
         child: Row(
           children: [
-            MiraloAvatar(
+            LongcatAvatar(
               name: name,
               size: 28,
               isOnline: isOnline,

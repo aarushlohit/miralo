@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../core/theme/miralo_tokens.dart';
+import '../../core/theme/longcat_tokens.dart';
 import 'image_viewer.dart';
 import 'voice_note_player.dart';
 
@@ -74,20 +74,20 @@ class MessageRenderer extends StatelessWidget {
 
     // Neutral message surfaces — identical geometry and neutral palette
     final bg = isMe
-        ? (isDark ? MiraloColors.darkSurfaceElevated : MiraloColors.lightSurfaceSecondary)
-        : (isDark ? MiraloColors.darkSurfacePrimary : MiraloColors.lightSurfacePrimary);
+        ? (isDark ? LongcatColors.darkSurfaceElevated : LongcatColors.lightSurfaceSecondary)
+        : (isDark ? LongcatColors.darkSurfacePrimary : LongcatColors.lightSurfacePrimary);
 
     final border = isMe
-        ? (isDark ? MiraloColors.darkBorderHighlight : MiraloColors.lightBorderHighlight)
-        : (isDark ? MiraloColors.darkBorder : MiraloColors.lightBorder);
+        ? (isDark ? LongcatColors.darkBorderHighlight : LongcatColors.lightBorderHighlight)
+        : (isDark ? LongcatColors.darkBorder : LongcatColors.lightBorder);
 
     final textPrimary = isDark
-        ? MiraloColors.darkTextPrimary
-        : MiraloColors.lightTextPrimary;
+        ? LongcatColors.darkTextPrimary
+        : LongcatColors.lightTextPrimary;
 
     final textMuted = isDark
-        ? MiraloColors.darkTextMuted
-        : MiraloColors.lightTextMuted;
+        ? LongcatColors.darkTextMuted
+        : LongcatColors.lightTextMuted;
 
     final isVoiceNote = type == 'voice' || (fileName != null && fileName!.contains('Voice Note'));
     final isImage = type == 'image' ||
@@ -107,8 +107,8 @@ class MessageRenderer extends StatelessWidget {
 
     final bubble = Padding(
       padding: const EdgeInsets.symmetric(
-        horizontal: MiraloSpacing.md,
-        vertical: MiraloSpacing.xs,
+        horizontal: LongcatSpacing.md,
+        vertical: LongcatSpacing.xs,
       ),
       child: Row(
         mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
@@ -120,7 +120,7 @@ class MessageRenderer extends StatelessWidget {
               constraints: const BoxConstraints(maxWidth: 520),
               decoration: BoxDecoration(
                 color: isHighlighted
-                    ? (isDark ? MiraloColors.accent.withValues(alpha: 0.18) : MiraloColors.accent.withValues(alpha: 0.12))
+                    ? (isDark ? LongcatColors.accent.withValues(alpha: 0.18) : LongcatColors.accent.withValues(alpha: 0.12))
                     : bg,
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(20),
@@ -130,7 +130,7 @@ class MessageRenderer extends StatelessWidget {
                 ),
                 border: Border.all(
                   color: isHighlighted
-                      ? MiraloColors.accent
+                      ? LongcatColors.accent
                       : (isDark
                           ? (isMe ? const Color(0x12FFFFFF) : const Color(0x0CFFFFFF))
                           : border),
@@ -139,7 +139,7 @@ class MessageRenderer extends StatelessWidget {
                 boxShadow: isHighlighted
                     ? [
                         BoxShadow(
-                          color: MiraloColors.accent.withValues(alpha: 0.25),
+                          color: LongcatColors.accent.withValues(alpha: 0.25),
                           blurRadius: 10,
                           spreadRadius: 1,
                         ),
@@ -153,8 +153,8 @@ class MessageRenderer extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: MiraloSpacing.md,
-                      vertical: MiraloSpacing.sm + 2,
+                      horizontal: LongcatSpacing.md,
+                      vertical: LongcatSpacing.sm + 2,
                     ),
                     child: Column(
                       crossAxisAlignment:
@@ -163,11 +163,11 @@ class MessageRenderer extends StatelessWidget {
                         // Optional sender name for group / contact context
                         if (!isMe && senderName != null && senderName!.isNotEmpty)
                           Padding(
-                            padding: const EdgeInsets.only(bottom: MiraloSpacing.xxs),
+                            padding: const EdgeInsets.only(bottom: LongcatSpacing.xxs),
                             child: Text(
                               senderName!,
-                              style: MiraloTypography.labelMedium(
-                                color: MiraloColors.accent,
+                              style: LongcatTypography.labelMedium(
+                                color: LongcatColors.accent,
                               ),
                             ),
                           ),
@@ -178,12 +178,12 @@ class MessageRenderer extends StatelessWidget {
                             onTap: onTapReply,
                             borderRadius: BorderRadius.circular(8),
                             child: Container(
-                              margin: const EdgeInsets.only(bottom: MiraloSpacing.xs),
+                              margin: const EdgeInsets.only(bottom: LongcatSpacing.xs),
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                               decoration: BoxDecoration(
                                 color: isDark ? const Color(0xFF222222) : const Color(0xFFE2E6EE),
                                 borderRadius: BorderRadius.circular(8),
-                                border: Border(left: BorderSide(color: MiraloColors.accent, width: 3)),
+                                border: Border(left: BorderSide(color: LongcatColors.accent, width: 3)),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -218,8 +218,8 @@ class MessageRenderer extends StatelessWidget {
                                   Flexible(
                                     child: Text(
                                       replyToText!,
-                                      style: MiraloTypography.bodySmall(
-                                        color: isDark ? MiraloColors.darkTextSecondary : MiraloColors.lightTextSecondary,
+                                      style: LongcatTypography.bodySmall(
+                                        color: isDark ? LongcatColors.darkTextSecondary : LongcatColors.lightTextSecondary,
                                       ),
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
@@ -233,7 +233,7 @@ class MessageRenderer extends StatelessWidget {
                         // Render Voice Note if type == 'voice'
                         if (isVoiceNote && (imageUrl != null || imageBase64 != null))
                           Padding(
-                            padding: const EdgeInsets.only(bottom: MiraloSpacing.xs),
+                            padding: const EdgeInsets.only(bottom: LongcatSpacing.xs),
                             child: VoiceNotePlayer(
                               audioUrlOrBase64: imageUrl ?? imageBase64 ?? '',
                               durationText: fileSize,
@@ -248,7 +248,7 @@ class MessageRenderer extends StatelessWidget {
                             borderRadius: BorderRadius.circular(12),
                             onTap: () => _showDocumentActions(context),
                             child: Container(
-                              margin: const EdgeInsets.only(bottom: MiraloSpacing.xs),
+                              margin: const EdgeInsets.only(bottom: LongcatSpacing.xs),
                               padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
                                 color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.04),
@@ -261,7 +261,7 @@ class MessageRenderer extends StatelessWidget {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Icon(Icons.insert_drive_file_rounded, color: MiraloColors.accent, size: 28),
+                                  const Icon(Icons.insert_drive_file_rounded, color: LongcatColors.accent, size: 28),
                                   const SizedBox(width: 8),
                                   Flexible(
                                     child: Column(
@@ -269,14 +269,14 @@ class MessageRenderer extends StatelessWidget {
                                       children: [
                                         Text(
                                           fileName ?? 'Attached Document',
-                                          style: MiraloTypography.bodyMedium(color: textPrimary),
+                                          style: LongcatTypography.bodyMedium(color: textPrimary),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                         ),
                                         if (fileSize != null)
                                           Text(
                                             fileSize!,
-                                            style: MiraloTypography.bodySmall(color: textMuted),
+                                            style: LongcatTypography.bodySmall(color: textMuted),
                                           ),
                                       ],
                                     ),
@@ -293,17 +293,17 @@ class MessageRenderer extends StatelessWidget {
                           if (type == 'redacted')
                             _RedactedMessageWidget(
                               text: text,
-                              baseStyle: MiraloTypography.bodyLarge(color: textPrimary).copyWith(height: 1.45),
+                              baseStyle: LongcatTypography.bodyLarge(color: textPrimary).copyWith(height: 1.45),
                               isDark: isDark,
                             )
                           else
                             _buildMessageText(
                               text,
-                              MiraloTypography.bodyLarge(color: textPrimary).copyWith(height: 1.45),
+                              LongcatTypography.bodyLarge(color: textPrimary).copyWith(height: 1.45),
                               isDark,
                             ),
 
-                        const SizedBox(height: MiraloSpacing.xxs),
+                        const SizedBox(height: LongcatSpacing.xxs),
 
                         // Timestamp, status, and pin indicator
                         Row(
@@ -312,7 +312,7 @@ class MessageRenderer extends StatelessWidget {
                             if (isEdited) ...[
                               Text(
                                 'edited ',
-                                style: MiraloTypography.bodySmall(color: textMuted).copyWith(
+                                style: LongcatTypography.bodySmall(color: textMuted).copyWith(
                                   fontStyle: FontStyle.italic,
                                   fontSize: 11,
                                 ),
@@ -320,14 +320,14 @@ class MessageRenderer extends StatelessWidget {
                             ],
                             Text(
                               _formatTime(createdAt),
-                              style: MiraloTypography.bodySmall(color: textMuted),
+                              style: LongcatTypography.bodySmall(color: textMuted),
                             ),
                             if (isPinned) ...[
                               const SizedBox(width: 4),
                               const Icon(
                                 Icons.push_pin_rounded,
                                 size: 12,
-                                color: MiraloColors.accent,
+                                color: LongcatColors.accent,
                               ),
                             ],
                             if (isStarred) ...[
@@ -348,7 +348,7 @@ class MessageRenderer extends StatelessWidget {
                                         : Icons.done_rounded),
                                 size: 14,
                                 color: (status == 'seen' || status == 'read')
-                                    ? MiraloColors.accent
+                                    ? LongcatColors.accent
                                     : textMuted,
                               ),
                             ],
@@ -384,7 +384,7 @@ class MessageRenderer extends StatelessWidget {
               ),
               child: Text(
                 dateHeader!,
-                style: MiraloTypography.caption(color: textMuted).copyWith(
+                style: LongcatTypography.caption(color: textMuted).copyWith(
                   fontWeight: FontWeight.w600,
                   fontSize: 11,
                 ),
@@ -401,9 +401,9 @@ class MessageRenderer extends StatelessWidget {
 
   Widget _buildImageAttachment(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: MiraloSpacing.xs),
+      padding: const EdgeInsets.only(bottom: LongcatSpacing.xs),
       child: ClipRRect(
-        borderRadius: MiraloRadius.r12,
+        borderRadius: LongcatRadius.r12,
         child: GestureDetector(
           onTap: () {
             ImageViewer.show(
@@ -451,16 +451,16 @@ class MessageRenderer extends StatelessWidget {
     return Container(
       width: 240,
       height: 160,
-      color: MiraloColors.darkSurfaceSecondary,
+      color: LongcatColors.darkSurfaceSecondary,
       child: const Center(
-        child: Icon(Icons.image_outlined, color: MiraloColors.darkTextMuted, size: 36),
+        child: Icon(Icons.image_outlined, color: LongcatColors.darkTextMuted, size: 36),
       ),
     );
   }
 
   Widget _buildReactionsRow(BuildContext context, bool isDark) {
     return Padding(
-      padding: const EdgeInsets.only(top: MiraloSpacing.xs),
+      padding: const EdgeInsets.only(top: LongcatSpacing.xs),
       child: Wrap(
         spacing: 4,
         runSpacing: 4,
@@ -472,11 +472,11 @@ class MessageRenderer extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
                 color: isDark
-                    ? MiraloColors.darkSurfaceSecondary
-                    : MiraloColors.lightSurfaceTertiary,
+                    ? LongcatColors.darkSurfaceSecondary
+                    : LongcatColors.lightSurfaceTertiary,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: isDark ? MiraloColors.darkBorder : MiraloColors.lightBorder,
+                  color: isDark ? LongcatColors.darkBorder : LongcatColors.lightBorder,
                 ),
               ),
               child: Row(
@@ -487,10 +487,10 @@ class MessageRenderer extends StatelessWidget {
                     const SizedBox(width: 3),
                     Text(
                       '${entry.value}',
-                      style: MiraloTypography.bodySmall(
+                      style: LongcatTypography.bodySmall(
                         color: isDark
-                            ? MiraloColors.darkTextSecondary
-                            : MiraloColors.lightTextSecondary,
+                            ? LongcatColors.darkTextSecondary
+                            : LongcatColors.lightTextSecondary,
                       ),
                     ),
                   ],
@@ -511,19 +511,19 @@ class MessageRenderer extends StatelessWidget {
 
   void _showDocumentActions(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? MiraloColors.darkSurfacePrimary : MiraloColors.lightSurfacePrimary;
-    final textColor = isDark ? MiraloColors.darkTextPrimary : MiraloColors.lightTextPrimary;
-    final subColor = isDark ? MiraloColors.darkTextSecondary : MiraloColors.lightTextSecondary;
+    final bg = isDark ? LongcatColors.darkSurfacePrimary : LongcatColors.lightSurfacePrimary;
+    final textColor = isDark ? LongcatColors.darkTextPrimary : LongcatColors.lightTextPrimary;
+    final subColor = isDark ? LongcatColors.darkTextSecondary : LongcatColors.lightTextSecondary;
 
     showModalBottomSheet(
       context: context,
       backgroundColor: bg,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(MiraloRadius.bottomSheet)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(LongcatRadius.bottomSheet)),
       ),
       builder: (ctx) => SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(MiraloSpacing.md),
+          padding: const EdgeInsets.all(LongcatSpacing.md),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -531,16 +531,16 @@ class MessageRenderer extends StatelessWidget {
                 child: Container(
                   width: 36,
                   height: 4,
-                  margin: const EdgeInsets.only(bottom: MiraloSpacing.md),
+                  margin: const EdgeInsets.only(bottom: LongcatSpacing.md),
                   decoration: BoxDecoration(
-                    color: isDark ? MiraloColors.darkBorder : MiraloColors.lightBorder,
+                    color: isDark ? LongcatColors.darkBorder : LongcatColors.lightBorder,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
               ),
               Row(
                 children: [
-                  const Icon(Icons.insert_drive_file_rounded, color: MiraloColors.accent, size: 36),
+                  const Icon(Icons.insert_drive_file_rounded, color: LongcatColors.accent, size: 36),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -548,25 +548,25 @@ class MessageRenderer extends StatelessWidget {
                       children: [
                         Text(
                           fileName ?? 'Attached Document',
-                          style: MiraloTypography.titleMedium(color: textColor),
+                          style: LongcatTypography.titleMedium(color: textColor),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                         Text(
                           '${fileSize ?? ''} • ${imageUrl != null && imageUrl!.startsWith('http') ? 'Cloudinary Hosted' : 'Encrypted Storage'}',
-                          style: MiraloTypography.bodySmall(color: subColor),
+                          style: LongcatTypography.bodySmall(color: subColor),
                         ),
                       ],
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: MiraloSpacing.md),
+              const SizedBox(height: LongcatSpacing.md),
               const Divider(height: 1),
               if (imageUrl != null && imageUrl!.startsWith('http'))
                 ListTile(
-                  leading: const Icon(Icons.link_rounded, color: MiraloColors.accent),
-                  title: Text('Copy Cloudinary Download Link', style: MiraloTypography.bodyMedium(color: textColor)),
+                  leading: const Icon(Icons.link_rounded, color: LongcatColors.accent),
+                  title: Text('Copy Cloudinary Download Link', style: LongcatTypography.bodyMedium(color: textColor)),
                   onTap: () {
                     Clipboard.setData(ClipboardData(text: imageUrl!));
                     Navigator.pop(ctx);
@@ -577,8 +577,8 @@ class MessageRenderer extends StatelessWidget {
                 ),
               if (onSaveToLibrary != null)
                 ListTile(
-                  leading: const Icon(Icons.bookmark_add_outlined, color: MiraloColors.accent),
-                  title: Text('Save to Library Vault', style: MiraloTypography.bodyMedium(color: textColor)),
+                  leading: const Icon(Icons.bookmark_add_outlined, color: LongcatColors.accent),
+                  title: Text('Save to Library Vault', style: LongcatTypography.bodyMedium(color: textColor)),
                   onTap: () {
                     Navigator.pop(ctx);
                     onSaveToLibrary?.call();
@@ -586,16 +586,16 @@ class MessageRenderer extends StatelessWidget {
                 ),
               if (onMoveToVault != null)
                 ListTile(
-                  leading: const Icon(Icons.lock_outline_rounded, color: MiraloColors.accent),
-                  title: Text('Move to Library Vault (Delete from chat)', style: MiraloTypography.bodyMedium(color: textColor)),
+                  leading: const Icon(Icons.lock_outline_rounded, color: LongcatColors.accent),
+                  title: Text('Move to Library Vault (Delete from chat)', style: LongcatTypography.bodyMedium(color: textColor)),
                   onTap: () {
                     Navigator.pop(ctx);
                     onMoveToVault?.call();
                   },
                 ),
               ListTile(
-                leading: const Icon(Icons.download_rounded, color: MiraloColors.accent),
-                title: Text('Download Document', style: MiraloTypography.bodyMedium(color: textColor)),
+                leading: const Icon(Icons.download_rounded, color: LongcatColors.accent),
+                title: Text('Download Document', style: LongcatTypography.bodyMedium(color: textColor)),
                 onTap: () {
                   Navigator.pop(ctx);
                   if (onDownload != null) {
@@ -642,9 +642,9 @@ class MessageRenderer extends StatelessWidget {
       spans.add(TextSpan(
         text: mention,
         style: baseStyle.copyWith(
-          color: MiraloColors.accent,
+          color: LongcatColors.accent,
           fontWeight: isAll ? FontWeight.w800 : FontWeight.w700,
-          backgroundColor: MiraloColors.accent.withValues(
+          backgroundColor: LongcatColors.accent.withValues(
             alpha: isAll ? (isDark ? 0.28 : 0.16) : (isDark ? 0.15 : 0.08),
           ),
         ),

@@ -6,8 +6,8 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../providers/library_provider.dart';
 import '../../providers/private_chat_provider.dart';
-import '../../widgets/common/miralo_app_bar.dart';
-import '../../widgets/common/miralo_avatar.dart';
+import '../../widgets/common/longcat_app_bar.dart';
+import '../../widgets/common/longcat_avatar.dart';
 
 /// Dedicated WhatsApp-style Recipient Selection Screen for External File Sharing.
 class ShareTargetPickerScreen extends StatefulWidget {
@@ -143,8 +143,8 @@ class _ShareTargetPickerScreenState extends State<ShareTargetPickerScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            MiraloAppBar(
-              leading: MiraloCircularIconButton(
+            LongcatAppBar(
+              leading: LongcatCircularIconButton(
                 icon: Icons.arrow_back_ios_new_rounded,
                 iconSize: 16,
                 onPressed: () => Navigator.pop(context),
@@ -366,7 +366,7 @@ class _ShareTargetPickerScreenState extends State<ShareTargetPickerScreen> {
                               }
                             });
                           },
-                          leading: MiraloAvatar(
+                          leading: LongcatAvatar(
                             name: c.displayName,
                             size: 40,
                             isOnline: c.isOnline,

@@ -3,7 +3,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 
 /// Circle avatar with initials fallback and optional online indicator.
-class MiraloAvatar extends StatelessWidget {
+class LongcatAvatar extends StatelessWidget {
   final String? imageUrl;
   final String name;
   final double size;
@@ -12,7 +12,7 @@ class MiraloAvatar extends StatelessWidget {
   final String? note;
   final bool showNote;
 
-  const MiraloAvatar({
+  const LongcatAvatar({
     super.key,
     this.imageUrl,
     required this.name,

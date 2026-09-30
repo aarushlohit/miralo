@@ -9,7 +9,7 @@ import '../../core/theme/app_typography.dart';
 import '../../models/private_contact_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/private_chat_provider.dart';
-import '../../widgets/common/miralo_avatar.dart';
+import '../../widgets/common/longcat_avatar.dart';
 
 class GroupProfileScreen extends StatefulWidget {
   final String groupId;
@@ -219,7 +219,7 @@ class _GroupProfileScreenState extends State<GroupProfileScreen> {
                       final c = nonMembers[i];
                       final isSelected = selected.contains(c.id);
                       return ListTile(
-                        leading: MiraloAvatar(name: c.displayName, imageUrl: c.avatarUrl, size: 36),
+                        leading: LongcatAvatar(name: c.displayName, imageUrl: c.avatarUrl, size: 36),
                         title: Text(c.displayName),
                         subtitle: Text(c.username.isNotEmpty ? '@${c.username}' : (c.phoneNumber ?? '')),
                         trailing: Checkbox(
@@ -470,7 +470,7 @@ class _GroupProfileScreenState extends State<GroupProfileScreen> {
           Center(
             child: Stack(
               children: [
-                MiraloAvatar(
+                LongcatAvatar(
                   name: group.displayName,
                   imageUrl: group.avatarUrl,
                   size: 90,
@@ -682,7 +682,7 @@ class _GroupProfileScreenState extends State<GroupProfileScreen> {
 
                   return ListTile(
                     contentPadding: EdgeInsets.zero,
-                    leading: MiraloAvatar(
+                    leading: LongcatAvatar(
                       name: m['name'] ?? '',
                       imageUrl: m['avatarUrl'],
                       size: 38,

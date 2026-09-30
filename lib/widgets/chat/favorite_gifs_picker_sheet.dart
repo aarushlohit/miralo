@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../core/theme/miralo_tokens.dart';
+import '../../core/theme/longcat_tokens.dart';
 import '../../models/private_message_model.dart';
 import '../../providers/private_chat_provider.dart';
 
@@ -27,11 +27,11 @@ class FavoriteGifsPickerSheet extends StatefulWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: isDark
-          ? MiraloColors.darkSurfacePrimary
-          : MiraloColors.lightSurfacePrimary,
+          ? LongcatColors.darkSurfacePrimary
+          : LongcatColors.lightSurfacePrimary,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
-          top: Radius.circular(MiraloRadius.bottomSheet),
+          top: Radius.circular(LongcatRadius.bottomSheet),
         ),
       ),
       builder: (_) => FavoriteGifsPickerSheet(
@@ -69,15 +69,15 @@ class _FavoriteGifsPickerSheetState extends State<FavoriteGifsPickerSheet> {
     final totalFavoritesCount = chat.favoriteGifs.length;
 
     final textColor = isDark
-        ? MiraloColors.darkTextPrimary
-        : MiraloColors.lightTextPrimary;
+        ? LongcatColors.darkTextPrimary
+        : LongcatColors.lightTextPrimary;
     final textMuted = isDark
-        ? MiraloColors.darkTextSecondary
-        : MiraloColors.lightTextSecondary;
+        ? LongcatColors.darkTextSecondary
+        : LongcatColors.lightTextSecondary;
     final searchBg = isDark
-        ? MiraloColors.darkSurfaceSecondary
-        : MiraloColors.lightSurfaceSecondary;
-    final border = isDark ? MiraloColors.darkBorder : MiraloColors.lightBorder;
+        ? LongcatColors.darkSurfaceSecondary
+        : LongcatColors.lightSurfaceSecondary;
+    final border = isDark ? LongcatColors.darkBorder : LongcatColors.lightBorder;
 
     final sheetHeight = MediaQuery.of(context).size.height * 0.72;
 
@@ -92,7 +92,7 @@ class _FavoriteGifsPickerSheetState extends State<FavoriteGifsPickerSheet> {
               child: Container(
                 width: 36,
                 height: 4,
-                margin: const EdgeInsets.only(top: MiraloSpacing.sm, bottom: MiraloSpacing.xs),
+                margin: const EdgeInsets.only(top: LongcatSpacing.sm, bottom: LongcatSpacing.xs),
                 decoration: BoxDecoration(
                   color: border,
                   borderRadius: BorderRadius.circular(2),
@@ -103,28 +103,28 @@ class _FavoriteGifsPickerSheetState extends State<FavoriteGifsPickerSheet> {
             // Header
             Padding(
               padding: const EdgeInsets.symmetric(
-                horizontal: MiraloSpacing.md,
-                vertical: MiraloSpacing.xs,
+                horizontal: LongcatSpacing.md,
+                vertical: LongcatSpacing.xs,
               ),
               child: Row(
                 children: [
                   const Icon(Icons.star_rounded, color: Colors.amber, size: 22),
-                  const SizedBox(width: MiraloSpacing.xs),
+                  const SizedBox(width: LongcatSpacing.xs),
                   Text(
                     'Favorite GIFs',
-                    style: MiraloTypography.titleMedium(color: textColor),
+                    style: LongcatTypography.titleMedium(color: textColor),
                   ),
                   if (totalFavoritesCount > 0) ...[
-                    const SizedBox(width: MiraloSpacing.xs),
+                    const SizedBox(width: LongcatSpacing.xs),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: MiraloColors.accent.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(MiraloRadius.pill),
+                        color: LongcatColors.accent.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(LongcatRadius.pill),
                       ),
                       child: Text(
                         '$totalFavoritesCount',
-                        style: MiraloTypography.bodySmall(color: MiraloColors.accent)
+                        style: LongcatTypography.bodySmall(color: LongcatColors.accent)
                             .copyWith(fontWeight: FontWeight.bold),
                       ),
                     ),
@@ -141,28 +141,28 @@ class _FavoriteGifsPickerSheetState extends State<FavoriteGifsPickerSheet> {
             // Search Bar
             Padding(
               padding: const EdgeInsets.symmetric(
-                horizontal: MiraloSpacing.md,
-                vertical: MiraloSpacing.xs,
+                horizontal: LongcatSpacing.md,
+                vertical: LongcatSpacing.xs,
               ),
               child: Container(
                 height: 40,
                 decoration: BoxDecoration(
                   color: searchBg,
-                  borderRadius: BorderRadius.circular(MiraloRadius.pill),
+                  borderRadius: BorderRadius.circular(LongcatRadius.pill),
                   border: Border.all(color: border, width: 0.8),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: MiraloSpacing.sm),
+                padding: const EdgeInsets.symmetric(horizontal: LongcatSpacing.sm),
                 child: Row(
                   children: [
                     Icon(Icons.search_rounded, color: textMuted, size: 18),
-                    const SizedBox(width: MiraloSpacing.xs),
+                    const SizedBox(width: LongcatSpacing.xs),
                     Expanded(
                       child: TextField(
                         controller: _searchController,
-                        style: MiraloTypography.bodyMedium(color: textColor),
+                        style: LongcatTypography.bodyMedium(color: textColor),
                         decoration: InputDecoration(
                           hintText: 'Search favorite GIFs...',
-                          hintStyle: MiraloTypography.bodyMedium(color: textMuted),
+                          hintStyle: LongcatTypography.bodyMedium(color: textMuted),
                           border: InputBorder.none,
                           isDense: true,
                           contentPadding: EdgeInsets.zero,
@@ -183,14 +183,14 @@ class _FavoriteGifsPickerSheetState extends State<FavoriteGifsPickerSheet> {
               ),
             ),
 
-            const SizedBox(height: MiraloSpacing.xs),
+            const SizedBox(height: LongcatSpacing.xs),
 
             // Content Grid / Empty state
             Expanded(
               child: gifs.isEmpty
                   ? Center(
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: MiraloSpacing.xl),
+                        padding: const EdgeInsets.symmetric(horizontal: LongcatSpacing.xl),
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -201,20 +201,20 @@ class _FavoriteGifsPickerSheetState extends State<FavoriteGifsPickerSheet> {
                               size: 48,
                               color: textMuted,
                             ),
-                            const SizedBox(height: MiraloSpacing.sm),
+                            const SizedBox(height: LongcatSpacing.sm),
                             Text(
                               totalFavoritesCount == 0
                                   ? 'No favorite GIFs yet'
                                   : 'No matching GIFs found',
-                              style: MiraloTypography.titleMedium(color: textColor),
+                              style: LongcatTypography.titleMedium(color: textColor),
                               textAlign: TextAlign.center,
                             ),
-                            const SizedBox(height: MiraloSpacing.xs),
+                            const SizedBox(height: LongcatSpacing.xs),
                             Text(
                               totalFavoritesCount == 0
                                   ? 'Long-press any GIF in chat and tap "Save Favorite" to collect them here.'
                                   : 'Try a different search word.',
-                              style: MiraloTypography.bodySmall(color: textMuted),
+                              style: LongcatTypography.bodySmall(color: textMuted),
                               textAlign: TextAlign.center,
                             ),
                           ],
@@ -222,11 +222,11 @@ class _FavoriteGifsPickerSheetState extends State<FavoriteGifsPickerSheet> {
                       ),
                     )
                   : GridView.builder(
-                      padding: const EdgeInsets.all(MiraloSpacing.md),
+                      padding: const EdgeInsets.all(LongcatSpacing.md),
                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
-                        crossAxisSpacing: MiraloSpacing.sm,
-                        mainAxisSpacing: MiraloSpacing.sm,
+                        crossAxisSpacing: LongcatSpacing.sm,
+                        mainAxisSpacing: LongcatSpacing.sm,
                         childAspectRatio: 1.0,
                       ),
                       itemCount: gifs.length,
@@ -248,7 +248,7 @@ class _FavoriteGifsPickerSheetState extends State<FavoriteGifsPickerSheet> {
                           child: Container(
                             decoration: BoxDecoration(
                               color: searchBg,
-                              borderRadius: BorderRadius.circular(MiraloRadius.md),
+                              borderRadius: BorderRadius.circular(LongcatRadius.md),
                               border: Border.all(color: border, width: 0.6),
                             ),
                             clipBehavior: Clip.antiAlias,

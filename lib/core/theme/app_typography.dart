@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// MIRALO AI — Typography tokens per design specification
+/// LONGCAT AI — Typography tokens per design specification
 /// SF Pro / Inter styled, restrained weights (w500 / w600 mostly).
 class AppTypography {
   AppTypography._();
@@ -133,5 +133,5 @@ class AppTypography {
 }
 
 /// Token standard alias per section 27
-typedef MiraloTypography = AppTypography;
+typedef LongcatTypography = AppTypography;
 

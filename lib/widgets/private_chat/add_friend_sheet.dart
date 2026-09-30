@@ -6,7 +6,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/private_chat_provider.dart';
-import '../common/miralo_avatar.dart';
+import '../common/longcat_avatar.dart';
 
 class AddFriendSheet extends StatefulWidget {
   final int initialTab;
@@ -524,7 +524,7 @@ class _AddFriendSheetState extends State<AddFriendSheet> {
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           child: Row(
                             children: [
-                              MiraloAvatar(name: name, size: 36, isOnline: !blocked),
+                              LongcatAvatar(name: name, size: 36, isOnline: !blocked),
                               const SizedBox(width: AppSpacing.sm),
                               Expanded(
                                 child: Column(
@@ -672,7 +672,7 @@ class _AddFriendSheetState extends State<AddFriendSheet> {
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           child: Row(
                             children: [
-                              MiraloAvatar(name: req.senderName, size: 36, isOnline: true),
+                              LongcatAvatar(name: req.senderName, size: 36, isOnline: true),
                               const SizedBox(width: AppSpacing.sm),
                               Expanded(
                                 child: Column(
@@ -878,7 +878,7 @@ class _AddFriendSheetState extends State<AddFriendSheet> {
                     padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
                     child: Row(
                       children: [
-                        MiraloAvatar(name: friend.displayName, imageUrl: friend.avatarUrl, size: 36),
+                        LongcatAvatar(name: friend.displayName, imageUrl: friend.avatarUrl, size: 36),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Column(

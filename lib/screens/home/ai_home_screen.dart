@@ -13,16 +13,16 @@ import '../../providers/vault_provider.dart';
 import '../../services/ai_service.dart';
 import '../../widgets/chat/composer.dart';
 import '../../widgets/common/app_sidebar_drawer.dart';
-import '../../widgets/common/miralo_app_bar.dart';
-import '../../widgets/common/miralo_logo.dart';
+import '../../widgets/common/longcat_app_bar.dart';
+import '../../widgets/common/longcat_logo.dart';
 
 /// AI Home Screen (Empty AI Chat — Reference Mockup Screen 5)
 ///
 /// Features:
 /// - Top Bar: [☰] Left, Model Selector Pill Center, [•••] More Right.
 /// - NO profile avatar in top right (profile lives in sidebar dock).
-/// - NO "MIRALO AI" center title in app bar.
-/// - Authentic MIRALO logo mark (NO galaxy, NO planet, NO sparkles).
+/// - NO "LONGCAT AI" center title in app bar.
+/// - Authentic LONGCAT logo mark (NO galaxy, NO planet, NO sparkles).
 /// - "How can I help you today?" heading & "Your AI. Your Space." subtitle.
 /// - 4 minimal suggestion rows with chevron right (>).
 /// - 54px floating pill composer with silent secret interception.
@@ -414,7 +414,7 @@ class _AiHomeScreenState extends State<AiHomeScreen> {
       key: _scaffoldKey,
       backgroundColor: bg,
       drawer: const AppSidebarDrawer(),
-      appBar: MiraloAppBar(
+      appBar: LongcatAppBar(
         leading: Consumer<PrivateChatProvider>(
           builder: (context, privateChat, _) {
             final hasUnread = privateChat.totalUnreadCount > 0 ||
@@ -464,7 +464,7 @@ class _AiHomeScreenState extends State<AiHomeScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
             decoration: BoxDecoration(
               color: pillBg,
-              borderRadius: BorderRadius.circular(MiraloDimensions.composerRadius),
+              borderRadius: BorderRadius.circular(LongcatDimensions.composerRadius),
               border: Border.all(color: borderColor, width: 1.0),
             ),
             child: Row(
@@ -493,7 +493,7 @@ class _AiHomeScreenState extends State<AiHomeScreen> {
         ),
         // Subtle [•••] action button (NO profile avatar in top right)
         actions: [
-          MiraloCircularIconButton(
+          LongcatCircularIconButton(
             icon: Icons.more_horiz_rounded,
             iconSize: 18,
             tooltip: 'Options',
@@ -517,9 +517,9 @@ class _AiHomeScreenState extends State<AiHomeScreen> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Minimal MIRALO logo brand mark (NO galaxy/planet)
+                      // Minimal LONGCAT logo brand mark (NO galaxy/planet)
                       const Center(
-                        child: MiraloLogo(
+                        child: LongcatLogo(
                           size: 44,
                           isIconOnly: true,
                         ),
@@ -604,15 +604,15 @@ class _SuggestionRow extends StatelessWidget {
 
     return Material(
       color: surface,
-      borderRadius: BorderRadius.circular(MiraloDimensions.standardRadius),
+      borderRadius: BorderRadius.circular(LongcatDimensions.standardRadius),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(MiraloDimensions.standardRadius),
+        borderRadius: BorderRadius.circular(LongcatDimensions.standardRadius),
         child: Container(
           height: 50,
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(MiraloDimensions.standardRadius),
+            borderRadius: BorderRadius.circular(LongcatDimensions.standardRadius),
             border: Border.all(color: border, width: 0.5),
           ),
           child: Row(

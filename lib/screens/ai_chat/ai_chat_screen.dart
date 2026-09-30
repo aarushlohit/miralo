@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/routes/app_routes.dart';
-import '../../core/theme/miralo_tokens.dart';
+import '../../core/theme/longcat_tokens.dart';
 import '../../providers/ai_chat_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/chat/ai_message_bubble.dart';
@@ -10,7 +10,7 @@ import '../../widgets/chat/chat_scaffold.dart';
 import '../../widgets/chat/composer.dart';
 import '../../widgets/chat/message_list.dart';
 import '../../widgets/common/app_sidebar_drawer.dart';
-import '../../widgets/common/miralo_empty_state.dart';
+import '../../widgets/common/longcat_empty_state.dart';
 
 class AiChatScreen extends StatefulWidget {
   const AiChatScreen({super.key});
@@ -54,17 +54,17 @@ class _AiChatScreenState extends State<AiChatScreen> {
     final models = ai.availableModels;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = isDark
-        ? MiraloColors.darkSurfacePrimary
-        : MiraloColors.lightSurfacePrimary;
+        ? LongcatColors.darkSurfacePrimary
+        : LongcatColors.lightSurfacePrimary;
     final border = isDark
-        ? MiraloColors.darkBorder
-        : MiraloColors.lightBorder;
+        ? LongcatColors.darkBorder
+        : LongcatColors.lightBorder;
     final textColor = isDark
-        ? MiraloColors.darkTextPrimary
-        : MiraloColors.lightTextPrimary;
+        ? LongcatColors.darkTextPrimary
+        : LongcatColors.lightTextPrimary;
     final mutedColor = isDark
-        ? MiraloColors.darkTextMuted
-        : MiraloColors.lightTextMuted;
+        ? LongcatColors.darkTextMuted
+        : LongcatColors.lightTextMuted;
 
     showModalBottomSheet(
       context: context,
@@ -72,7 +72,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
       backgroundColor: bg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
-          top: Radius.circular(MiraloRadius.bottomSheet),
+          top: Radius.circular(LongcatRadius.bottomSheet),
         ),
       ),
       builder: (ctx) => SafeArea(
@@ -85,7 +85,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                 child: Container(
                   width: 36,
                   height: 4,
-                  margin: const EdgeInsets.symmetric(vertical: MiraloSpacing.md),
+                  margin: const EdgeInsets.symmetric(vertical: LongcatSpacing.md),
                   decoration: BoxDecoration(
                     color: border,
                     borderRadius: BorderRadius.circular(2),
@@ -94,14 +94,14 @@ class _AiChatScreenState extends State<AiChatScreen> {
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(
-                  MiraloSpacing.lg,
+                  LongcatSpacing.lg,
                   0,
-                  MiraloSpacing.lg,
-                  MiraloSpacing.sm,
+                  LongcatSpacing.lg,
+                  LongcatSpacing.sm,
                 ),
                 child: Text(
                   'AI Model',
-                  style: MiraloTypography.titleMedium(color: textColor),
+                  style: LongcatTypography.titleMedium(color: textColor),
                 ),
               ),
               Divider(height: 0.6, thickness: 0.6, color: border),
@@ -114,7 +114,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                   },
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: MiraloSpacing.lg,
+                      horizontal: LongcatSpacing.lg,
                       vertical: 14,
                     ),
                     child: Row(
@@ -122,7 +122,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                         Expanded(
                           child: Text(
                             m,
-                            style: MiraloTypography.bodyMedium(color: textColor)
+                            style: LongcatTypography.bodyMedium(color: textColor)
                                 .copyWith(
                               fontWeight:
                                   selected ? FontWeight.w600 : FontWeight.w400,
@@ -133,7 +133,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                         ),
                         if (selected)
                           const Icon(Icons.check_rounded,
-                              size: 18, color: MiraloColors.accent)
+                              size: 18, color: LongcatColors.accent)
                         else
                           Icon(Icons.circle_outlined,
                               size: 18, color: mutedColor),
@@ -142,7 +142,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                   ),
                 );
               }),
-              const SizedBox(height: MiraloSpacing.md),
+              const SizedBox(height: LongcatSpacing.md),
             ],
           ),
         ),
@@ -154,29 +154,29 @@ class _AiChatScreenState extends State<AiChatScreen> {
     final chat = ai.activeChat;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = isDark
-        ? MiraloColors.darkSurfacePrimary
-        : MiraloColors.lightSurfacePrimary;
+        ? LongcatColors.darkSurfacePrimary
+        : LongcatColors.lightSurfacePrimary;
     final textPrimary = isDark
-        ? MiraloColors.darkTextPrimary
-        : MiraloColors.lightTextPrimary;
+        ? LongcatColors.darkTextPrimary
+        : LongcatColors.lightTextPrimary;
     final border = isDark
-        ? MiraloColors.darkBorder
-        : MiraloColors.lightBorder;
+        ? LongcatColors.darkBorder
+        : LongcatColors.lightBorder;
 
     showModalBottomSheet(
       context: context,
       backgroundColor: bg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
-          top: Radius.circular(MiraloRadius.bottomSheet),
+          top: Radius.circular(LongcatRadius.bottomSheet),
         ),
       ),
       builder: (ctx) => SafeArea(
         top: false,
         child: Padding(
           padding: const EdgeInsets.symmetric(
-            horizontal: MiraloSpacing.lg,
-            vertical: MiraloSpacing.md,
+            horizontal: LongcatSpacing.lg,
+            vertical: LongcatSpacing.md,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -185,7 +185,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                 child: Container(
                   width: 36,
                   height: 4,
-                  margin: const EdgeInsets.only(bottom: MiraloSpacing.md),
+                  margin: const EdgeInsets.only(bottom: LongcatSpacing.md),
                   decoration: BoxDecoration(
                     color: border,
                     borderRadius: BorderRadius.circular(2),
@@ -196,7 +196,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                 leading: Icon(Icons.share_outlined, color: textPrimary, size: 22),
                 title: Text(
                   'Share conversation',
-                  style: MiraloTypography.bodyMedium(color: textPrimary),
+                  style: LongcatTypography.bodyMedium(color: textPrimary),
                 ),
                 dense: true,
                 onTap: () {
@@ -212,11 +212,11 @@ class _AiChatScreenState extends State<AiChatScreen> {
               if (chat != null)
                 ListTile(
                   leading: const Icon(Icons.delete_outline_rounded,
-                      color: MiraloColors.danger, size: 22),
+                      color: LongcatColors.danger, size: 22),
                   title: Text(
                     'Delete conversation',
-                    style: MiraloTypography.bodyMedium(
-                        color: MiraloColors.danger),
+                    style: LongcatTypography.bodyMedium(
+                        color: LongcatColors.danger),
                   ),
                   dense: true,
                   onTap: () {
@@ -225,7 +225,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                     Navigator.pop(context);
                   },
                 ),
-              const SizedBox(height: MiraloSpacing.sm),
+              const SizedBox(height: LongcatSpacing.sm),
             ],
           ),
         ),
@@ -258,11 +258,11 @@ class _AiChatScreenState extends State<AiChatScreen> {
       ),
       body: chat == null || chat.messages.isEmpty
           ? const Center(
-              child: MiraloEmptyState(
+              child: LongcatEmptyState(
                 icon: Icons.auto_awesome_outlined,
                 title: 'Start a conversation',
                 subtitle:
-                    'Ask MIRALO AI anything. Your conversation stays private.',
+                    'Ask LONGCAT AI anything. Your conversation stays private.',
               ),
             )
           : MessageList(
@@ -289,22 +289,22 @@ class _AiChatScreenState extends State<AiChatScreen> {
         children: [
           if (_editingMessageId != null)
             Container(
-              color: MiraloColors.accent.withValues(alpha: 0.12),
+              color: LongcatColors.accent.withValues(alpha: 0.12),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               child: Row(
                 children: [
-                  const Icon(Icons.edit_note_rounded, size: 16, color: MiraloColors.accent),
+                  const Icon(Icons.edit_note_rounded, size: 16, color: LongcatColors.accent),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'Editing previous message prompt...',
-                      style: MiraloTypography.caption(color: MiraloColors.accent)
+                      style: LongcatTypography.caption(color: LongcatColors.accent)
                           .copyWith(fontWeight: FontWeight.w600),
                     ),
                   ),
                   InkWell(
                     onTap: _cancelEdit,
-                    child: const Icon(Icons.close_rounded, size: 16, color: MiraloColors.accent),
+                    child: const Icon(Icons.close_rounded, size: 16, color: LongcatColors.accent),
                   ),
                 ],
               ),

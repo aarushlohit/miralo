@@ -1,17 +1,17 @@
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:miralo/models/friend_request_model.dart';
-import 'package:miralo/models/user_model.dart';
-import 'package:miralo/models/private_contact_model.dart';
-import 'package:miralo/models/library_item_model.dart';
-import 'package:miralo/providers/vault_provider.dart';
-import 'package:miralo/providers/ai_chat_provider.dart';
-import 'package:miralo/providers/private_chat_provider.dart';
-import 'package:miralo/providers/library_provider.dart';
-import 'package:miralo/providers/auth_provider.dart';
-import 'package:miralo/services/ai_service.dart';
-import 'package:miralo/services/download_service.dart';
+import 'package:longcat/models/friend_request_model.dart';
+import 'package:longcat/models/user_model.dart';
+import 'package:longcat/models/private_contact_model.dart';
+import 'package:longcat/models/library_item_model.dart';
+import 'package:longcat/providers/vault_provider.dart';
+import 'package:longcat/providers/ai_chat_provider.dart';
+import 'package:longcat/providers/private_chat_provider.dart';
+import 'package:longcat/providers/library_provider.dart';
+import 'package:longcat/providers/auth_provider.dart';
+import 'package:longcat/services/ai_service.dart';
+import 'package:longcat/services/download_service.dart';
 
 class _RealHttpOverrides extends HttpOverrides {}
 

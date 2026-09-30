@@ -12,13 +12,13 @@ import '../../core/theme/app_typography.dart';
 import '../../providers/library_provider.dart';
 import '../../providers/vault_provider.dart';
 import '../../services/cloudinary_service.dart';
-import '../../widgets/common/miralo_app_bar.dart';
-import '../../widgets/common/miralo_empty_state.dart';
-import '../../widgets/common/miralo_segmented_tabs.dart';
+import '../../widgets/common/longcat_app_bar.dart';
+import '../../widgets/common/longcat_empty_state.dart';
+import '../../widgets/common/longcat_segmented_tabs.dart';
 import '../../widgets/library/file_card.dart';
 import '../../widgets/library/zip_export_dialog.dart';
 
-/// MIRALO AI Library Vault Screen.
+/// LONGCAT AI Library Vault Screen.
 /// Clean Apple-grade file management interface with pill tabs,
 /// two-column grid, search, and action sheets.
 class LibraryScreen extends StatefulWidget {
@@ -373,8 +373,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
         body: SafeArea(
           child: Column(
             children: [
-              MiraloAppBar(
-                leading: MiraloCircularIconButton(
+              LongcatAppBar(
+                leading: LongcatCircularIconButton(
                   icon: Icons.arrow_back_ios_new_rounded,
                   iconSize: 16,
                   onPressed: () {
@@ -384,13 +384,13 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 ),
                 title: 'Library',
                 actions: [
-                  MiraloCircularIconButton(
+                  LongcatCircularIconButton(
                     icon: Icons.create_new_folder_outlined,
                     iconSize: 18,
                     onPressed: () => _showCreateFolderDialog(context, library),
                   ),
                   const SizedBox(width: AppSpacing.xs),
-                  MiraloCircularIconButton(
+                  LongcatCircularIconButton(
                     icon: Icons.more_horiz_rounded,
                     iconSize: 18,
                     onPressed: () => _showMoreMenu(context, vault, library),
@@ -413,7 +413,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                       height: 44,
                       decoration: BoxDecoration(
                         color: iconBg,
-                        borderRadius: BorderRadius.circular(MiraloDimensions.composerRadius),
+                        borderRadius: BorderRadius.circular(LongcatDimensions.composerRadius),
                         border: Border.all(color: cardBorder, width: 0.6),
                       ),
                       padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -477,7 +477,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 horizontal: AppSpacing.screenH,
                 vertical: AppSpacing.sm,
               ),
-              child: MiraloSegmentedTabs(
+              child: LongcatSegmentedTabs(
                 tabs: _tabs,
                 selectedIndex: _tabs.indexOf(library.currentTab).clamp(0, _tabs.length - 1),
                 onTabSelected: (i) => library.setCurrentTab(_tabs[i]),
@@ -487,7 +487,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
             // ── Content Grid ───────────────────────────────────────────
             Expanded(
               child: (folders.isEmpty && items.isEmpty)
-                  ? MiraloEmptyState(
+                  ? LongcatEmptyState(
                       icon: Icons.folder_open_outlined,
                       title: 'Library is empty',
                       subtitle: 'Add items or create folders to store content privately.',

@@ -8,7 +8,7 @@ import '../models/user_model.dart';
 import '../services/cloudinary_service.dart';
 
 class AuthProvider extends ChangeNotifier {
-  static const String _prefUserKey = 'miralo_auth_user_v2';
+  static const String _prefUserKey = 'longcat_auth_user_v2';
 
   UserModel? _currentUser;
   bool _isLoading = false;

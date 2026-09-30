@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import '../../core/theme/miralo_tokens.dart';
+import '../../core/theme/longcat_tokens.dart';
 
 /// Unified Chat Header for both AI Chat and Private Chat.
 /// - AI mode: Menu/Back, Compact centered Model Selector pill, More options.
@@ -47,17 +47,17 @@ class ChatHeader extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = isDark
-        ? MiraloColors.darkBackground
-        : MiraloColors.lightBackground;
+        ? LongcatColors.darkBackground
+        : LongcatColors.lightBackground;
     final textPrimary = isDark
-        ? MiraloColors.darkTextPrimary
-        : MiraloColors.lightTextPrimary;
+        ? LongcatColors.darkTextPrimary
+        : LongcatColors.lightTextPrimary;
     final textMuted = isDark
-        ? MiraloColors.darkTextMuted
-        : MiraloColors.lightTextMuted;
+        ? LongcatColors.darkTextMuted
+        : LongcatColors.lightTextMuted;
     final border = isDark
-        ? MiraloColors.darkBorder
-        : MiraloColors.lightBorder;
+        ? LongcatColors.darkBorder
+        : LongcatColors.lightBorder;
 
     return AppBar(
       backgroundColor: bg,
@@ -109,7 +109,7 @@ class ChatHeader extends StatelessWidget implements PreferredSizeWidget {
                             Flexible(
                               child: Text(
                                 title ?? 'Chat',
-                                style: MiraloTypography.titleMedium(color: textPrimary).copyWith(fontSize: 16),
+                                style: LongcatTypography.titleMedium(color: textPrimary).copyWith(fontSize: 16),
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
@@ -136,9 +136,9 @@ class ChatHeader extends StatelessWidget implements PreferredSizeWidget {
                               ],
                               Text(
                                 subtitle!,
-                                style: MiraloTypography.bodySmall(
+                                style: LongcatTypography.bodySmall(
                                   color: subtitle == 'typing...'
-                                      ? MiraloColors.accent
+                                      ? LongcatColors.accent
                                       : (subtitle == 'Online'
                                           ? const Color(0xFF34C759)
                                           : textMuted),
@@ -160,14 +160,14 @@ class ChatHeader extends StatelessWidget implements PreferredSizeWidget {
           : (onModelSelectorTap != null
               ? InkWell(
                   onTap: onModelSelectorTap,
-                  borderRadius: BorderRadius.circular(MiraloRadius.pill),
+                  borderRadius: BorderRadius.circular(LongcatRadius.pill),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
                     decoration: BoxDecoration(
                       color: isDark
-                          ? MiraloColors.darkSurfaceSecondary
-                          : MiraloColors.lightSurfaceSecondary,
-                      borderRadius: BorderRadius.circular(MiraloRadius.pill),
+                          ? LongcatColors.darkSurfaceSecondary
+                          : LongcatColors.lightSurfaceSecondary,
+                      borderRadius: BorderRadius.circular(LongcatRadius.pill),
                       border: Border.all(color: border, width: 1.0),
                     ),
                     child: Row(
@@ -175,7 +175,7 @@ class ChatHeader extends StatelessWidget implements PreferredSizeWidget {
                       children: [
                         Text(
                           modelName ?? 'Model',
-                          style: MiraloTypography.labelMedium(color: textPrimary).copyWith(
+                          style: LongcatTypography.labelMedium(color: textPrimary).copyWith(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
                           ),
@@ -191,8 +191,8 @@ class ChatHeader extends StatelessWidget implements PreferredSizeWidget {
                   ),
                 )
               : Text(
-                  title ?? 'MIRALO AI',
-                  style: MiraloTypography.titleMedium(color: textPrimary).copyWith(fontSize: 17),
+                  title ?? 'LONGCAT AI',
+                  style: LongcatTypography.titleMedium(color: textPrimary).copyWith(fontSize: 17),
                 )),
       actions: [
         if (onMoreOptions != null)
@@ -208,15 +208,15 @@ class ChatHeader extends StatelessWidget implements PreferredSizeWidget {
 
   Widget _buildAvatar(BuildContext context, bool isDark, Color textPrimary) {
     final bg = isDark
-        ? MiraloColors.darkSurfaceSecondary
-        : MiraloColors.lightSurfaceSecondary;
+        ? LongcatColors.darkSurfaceSecondary
+        : LongcatColors.lightSurfaceSecondary;
 
     Widget child;
     if (isGroup) {
       child = const Icon(
         Icons.groups_rounded,
         size: 20,
-        color: MiraloColors.accent,
+        color: LongcatColors.accent,
       );
     } else if (avatarUrl != null && avatarUrl!.isNotEmpty) {
       child = ClipOval(
@@ -256,7 +256,7 @@ class ChatHeader extends StatelessWidget implements PreferredSizeWidget {
           shape: BoxShape.circle,
           color: bg,
           border: Border.all(
-            color: isDark ? MiraloColors.darkBorder : MiraloColors.lightBorder,
+            color: isDark ? LongcatColors.darkBorder : LongcatColors.lightBorder,
             width: 1,
           ),
         ),

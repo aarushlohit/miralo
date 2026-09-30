@@ -1,4 +1,4 @@
-# MIRALO AI — Exact Locked & Unlocked Sidebar Specification
+# LONGCAT AI — Exact Locked & Unlocked Sidebar Specification
 
 ## 1. Core Rule
 
@@ -14,7 +14,7 @@ The Library has its own dedicated Vault unlock UI.
 
 ## 2. Sidebar States
 
-MIRALO AI has three related interface states:
+LONGCAT AI has three related interface states:
 
 1. **Locked State** — Private Space is unavailable.
 2. **Unlocked State** — Private Space is available.
@@ -29,7 +29,7 @@ The Library Vault state is independent of Private Space.
 ### 3.1 Exact Ordering
 
 ```text
-MIRALO AI Header
+LONGCAT AI Header
 ────────────────────────
 
 ＋ New Chat
@@ -51,7 +51,7 @@ About AI
 
 ```text
 ┌──────────────────────────────┐
-│ MIRALO AI                    │
+│ LONGCAT AI                    │
 │                              │
 │ ＋  New Chat                  │
 │                              │
@@ -76,7 +76,7 @@ About AI
 
 | Order | Label | Type |
 |---|---|---|
-| 1 | MIRALO AI | Brand header |
+| 1 | LONGCAT AI | Brand header |
 | 2 | New Chat | Primary action |
 | 3 | Chats | Section label |
 | 4 | Recent AI conversations | Conversation list |
@@ -103,7 +103,7 @@ Project Ideas
 
 ### Always Visible
 
-- MIRALO AI header
+- LONGCAT AI header
 - New Chat
 - Chats
 - Recent AI conversations
@@ -161,7 +161,7 @@ After successful Private Space unlock, the sidebar changes to the following stru
 ### 6.1 Exact Ordering
 
 ```text
-MIRALO AI Header
+LONGCAT AI Header
 ────────────────────────
 
 ＋ New Chat
@@ -191,7 +191,7 @@ About AI
 
 ```text
 ┌──────────────────────────────┐
-│ MIRALO AI                    │
+│ LONGCAT AI                    │
 │                              │
 │ ＋  New Chat                  │
 │                              │
@@ -225,7 +225,7 @@ About AI
 
 | Order | Label | Type |
 |---|---|---|
-| 1 | MIRALO AI | Brand header |
+| 1 | LONGCAT AI | Brand header |
 | 2 | New Chat | Primary action |
 | 3 | Chats | AI conversation section |
 | 4 | AI conversations | Conversation list |
@@ -556,7 +556,7 @@ About AI                 ›
 
 It contains:
 
-- MIRALO AI description
+- LONGCAT AI description
 - AI provider information
 - Model information
 - Privacy explanation
@@ -740,7 +740,7 @@ On mobile, the sidebar should appear as a ChatGPT-style navigation drawer or ful
 ### Locked Drawer
 
 ```text
-MIRALO AI
+LONGCAT AI
 
 ＋ New Chat
 
@@ -758,7 +758,7 @@ About AI
 ### Unlocked Drawer
 
 ```text
-MIRALO AI
+LONGCAT AI
 
 ＋ New Chat
 
@@ -868,7 +868,7 @@ For Library, Images, and Settings:
 ### Locked Sidebar
 
 ```text
-MIRALO AI
+LONGCAT AI
 
 ＋ New Chat
 
@@ -893,7 +893,7 @@ Naughty Mode
 ### Unlocked Sidebar
 
 ```text
-MIRALO AI
+LONGCAT AI
 
 ＋ New Chat
 

@@ -4,7 +4,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 
 /// Rounded text field with optional leading icon and label.
-class MiraloTextField extends StatefulWidget {
+class LongcatTextField extends StatefulWidget {
   final TextEditingController? controller;
   final String? label;
   final String? hint;
@@ -22,7 +22,7 @@ class MiraloTextField extends StatefulWidget {
   final bool readOnly;
   final VoidCallback? onTap;
 
-  const MiraloTextField({
+  const LongcatTextField({
     super.key,
     this.controller,
     this.label,
@@ -43,10 +43,10 @@ class MiraloTextField extends StatefulWidget {
   });
 
   @override
-  State<MiraloTextField> createState() => _MiraloTextFieldState();
+  State<LongcatTextField> createState() => _LongcatTextFieldState();
 }
 
-class _MiraloTextFieldState extends State<MiraloTextField> {
+class _LongcatTextFieldState extends State<LongcatTextField> {
   bool _obscured = true;
 
   @override

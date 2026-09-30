@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
-import '../../widgets/common/miralo_list_tile.dart';
+import '../../widgets/common/longcat_list_tile.dart';
 
 import '../../services/stealth_notification_service.dart';
 
@@ -55,10 +55,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.screenH, vertical: AppSpacing.md),
           children: [
-            MiraloSectionHeader('ALERTS & MESSAGES'),
-            MiraloSettingsGroup(
+            LongcatSectionHeader('ALERTS & MESSAGES'),
+            LongcatSettingsGroup(
               children: [
-                MiraloListTile(
+                LongcatListTile(
                   icon: Icons.notifications_outlined,
                   title: 'Allow Notifications',
                   subtitle: 'Receive message and assistant alerts',
@@ -68,7 +68,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     onChanged: (v) => setState(() => _pushNotifications = v),
                   ),
                 ),
-                MiraloListTile(
+                LongcatListTile(
                   icon: Icons.shield_outlined,
                   title: 'Discreet Private Alerts',
                   subtitle: 'Generic alert without sender or content',
@@ -78,7 +78,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     onChanged: (v) => setState(() => _privateChatAlerts = v),
                   ),
                 ),
-                MiraloListTile(
+                LongcatListTile(
                   icon: Icons.send_to_mobile,
                   title: 'Test Push Notification Bar',
                   subtitle: 'Send a test push alert to system notification shade',
@@ -91,10 +91,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
             const SizedBox(height: AppSpacing.lg),
 
-            MiraloSectionHeader('SOUND & HAPTICS'),
-            MiraloSettingsGroup(
+            LongcatSectionHeader('SOUND & HAPTICS'),
+            LongcatSettingsGroup(
               children: [
-                MiraloListTile(
+                LongcatListTile(
                   icon: Icons.volume_up_outlined,
                   title: 'In-app Sounds',
                   subtitle: 'Subtle sound effects for messages',
@@ -104,7 +104,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     onChanged: (v) => setState(() => _soundEnabled = v),
                   ),
                 ),
-                MiraloListTile(
+                LongcatListTile(
                   icon: Icons.vibration,
                   title: 'Haptic Feedback',
                   subtitle: 'Tactile responses on interactions',

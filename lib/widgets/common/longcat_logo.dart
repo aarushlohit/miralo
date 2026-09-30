@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 
-/// MIRALO AI — Official Brand Identity
+/// LONGCAT AI — Official Brand Identity
 ///
-/// Authentic brand mark matching the official MIRALO design:
+/// Authentic brand mark matching the official LONGCAT design:
 /// - Distinctive circular arc mark `( )`
-/// - Full wordmark `MIRALO` with dark & light mode assets
+/// - Full wordmark `LONGCAT` with dark & light mode assets
 /// - NO galaxy/planet logos, NO generic sparkles, NO blue star squares.
-class MiraloLogo extends StatelessWidget {
+class LongcatLogo extends StatelessWidget {
   final double size;
   final bool isIconOnly;
   final Color? color;
   final bool animate;
 
-  const MiraloLogo({
+  const LongcatLogo({
     super.key,
     this.size = 56,
     this.isIconOnly = true,
@@ -33,13 +33,13 @@ class MiraloLogo extends StatelessWidget {
         width: size,
         height: size,
         child: Image.asset(
-          isDark ? 'assets/miralo_icon_white.png' : 'assets/miralo_icon_dark.png',
+          isDark ? 'assets/longcat_icon_white.png' : 'assets/longcat_icon_dark.png',
           width: size,
           height: size,
           fit: BoxFit.contain,
           errorBuilder: (_, error, stack) => CustomPaint(
             size: Size(size, size),
-            painter: _MiraloMarkPainter(color: primaryColor),
+            painter: _LongcatMarkPainter(color: primaryColor),
           ),
         ),
       );
@@ -51,7 +51,7 @@ class MiraloLogo extends StatelessWidget {
       width: width,
       height: size,
       child: Image.asset(
-        isDark ? 'assets/miralo_logo_white.png' : 'assets/miralo_logo_dark.png',
+        isDark ? 'assets/longcat_logo_white.png' : 'assets/longcat_logo_dark.png',
         width: width,
         height: size,
         fit: BoxFit.contain,
@@ -71,12 +71,12 @@ class MiraloLogo extends StatelessWidget {
   }
 }
 
-/// Full MIRALO wordmark widget
-class MiraloWordmark extends StatelessWidget {
+/// Full LONGCAT wordmark widget
+class LongcatWordmark extends StatelessWidget {
   final double height;
   final Color? color;
 
-  const MiraloWordmark({
+  const LongcatWordmark({
     super.key,
     this.height = 28,
     this.color,
@@ -90,7 +90,7 @@ class MiraloWordmark extends StatelessWidget {
     return SizedBox(
       height: height,
       child: Image.asset(
-        isDark ? 'assets/miralo_logo_white.png' : 'assets/miralo_logo_dark.png',
+        isDark ? 'assets/longcat_logo_white.png' : 'assets/longcat_logo_dark.png',
         height: height,
         fit: BoxFit.contain,
         errorBuilder: (_, error, stack) => Text(
@@ -107,11 +107,11 @@ class MiraloWordmark extends StatelessWidget {
   }
 }
 
-/// Crisp vector fallback for the signature MIRALO `( )` circle glyph
-class _MiraloMarkPainter extends CustomPainter {
+/// Crisp vector fallback for the signature LONGCAT `( )` circle glyph
+class _LongcatMarkPainter extends CustomPainter {
   final Color color;
 
-  _MiraloMarkPainter({required this.color});
+  _LongcatMarkPainter({required this.color});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -138,6 +138,6 @@ class _MiraloMarkPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _MiraloMarkPainter oldDelegate) =>
+  bool shouldRepaint(covariant _LongcatMarkPainter oldDelegate) =>
       oldDelegate.color != color;
 }

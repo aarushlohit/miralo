@@ -47,7 +47,7 @@ class FirebaseService {
       await docRef.set({
         'ping': true,
         'timestamp': FieldValue.serverTimestamp(),
-        'app': 'miralo',
+        'app': 'longcat',
       });
       final readSnap = await docRef.get();
       results['firestore'] = readSnap.exists;

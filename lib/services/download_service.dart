@@ -8,9 +8,9 @@ class DownloadService {
   DownloadService._();
 
   static const MethodChannel _mediaScannerChannel =
-      MethodChannel('com.miralo.ai/media_scanner');
+      MethodChannel('com.longcat.ai/media_scanner');
 
-  /// Determine the Miralo subfolder category based on file extension and type.
+  /// Determine the Longcat subfolder category based on file extension and type.
   static String getCategory(String fileName, [String? type]) {
     final lowerName = fileName.toLowerCase();
     final lowerType = type?.toLowerCase() ?? '';
@@ -53,15 +53,15 @@ class DownloadService {
   }
 
   /// Resolve the destination directory.
-  /// Images are saved to `/Pictures/Miralo` so they appear directly in the Android Gallery.
-  /// Videos are saved to `/Movies/Miralo`.
-  /// Documents and Audio are saved to `/Download/Miralo/<Category>`.
-  static Future<Directory> getMiraloDirectory(String category) async {
+  /// Images are saved to `/Pictures/Longcat` so they appear directly in the Android Gallery.
+  /// Videos are saved to `/Movies/Longcat`.
+  /// Documents and Audio are saved to `/Download/Longcat/<Category>`.
+  static Future<Directory> getLongcatDirectory(String category) async {
     Directory? baseDir;
 
     if (Platform.isAndroid) {
       if (category == 'Images') {
-        final pictures = Directory('/storage/emulated/0/Pictures/Miralo');
+        final pictures = Directory('/storage/emulated/0/Pictures/Longcat');
         if (!pictures.existsSync()) {
           try {
             pictures.createSync(recursive: true);
@@ -71,7 +71,7 @@ class DownloadService {
           return pictures;
         }
       } else if (category == 'Videos') {
-        final movies = Directory('/storage/emulated/0/Movies/Miralo');
+        final movies = Directory('/storage/emulated/0/Movies/Longcat');
         if (!movies.existsSync()) {
           try {
             movies.createSync(recursive: true);
@@ -95,7 +95,7 @@ class DownloadService {
     }
 
     baseDir ??= await getApplicationDocumentsDirectory();
-    final targetDir = Directory('${baseDir.path}/Miralo/$category');
+    final targetDir = Directory('${baseDir.path}/Longcat/$category');
     if (!targetDir.existsSync()) {
       targetDir.createSync(recursive: true);
     }
@@ -119,7 +119,7 @@ class DownloadService {
     String? type,
   }) async {
     final category = getCategory(fileName, type);
-    final dir = await getMiraloDirectory(category);
+    final dir = await getLongcatDirectory(category);
 
     String cleanName = fileName.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
     File targetFile = File('${dir.path}/$cleanName');
@@ -171,8 +171,8 @@ class DownloadService {
       if (context.mounted) {
         final isMedia = category == 'Images' || category == 'Videos';
         final message = isMedia
-            ? 'Saved to Gallery & Pictures/Miralo'
-            : 'Saved to Miralo/$category/$fileName';
+            ? 'Saved to Gallery & Pictures/Longcat'
+            : 'Saved to Longcat/$category/$fileName';
 
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(

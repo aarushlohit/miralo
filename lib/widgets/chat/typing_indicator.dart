@@ -1,23 +1,23 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import '../../core/theme/miralo_tokens.dart';
+import '../../core/theme/longcat_tokens.dart';
 
 /// Animated 3-dot typing indicator bubble for real-time chat.
-class MiraloTypingIndicator extends StatefulWidget {
+class LongcatTypingIndicator extends StatefulWidget {
   final String? userName;
   final bool showBubble;
 
-  const MiraloTypingIndicator({
+  const LongcatTypingIndicator({
     super.key,
     this.userName,
     this.showBubble = true,
   });
 
   @override
-  State<MiraloTypingIndicator> createState() => _MiraloTypingIndicatorState();
+  State<LongcatTypingIndicator> createState() => _LongcatTypingIndicatorState();
 }
 
-class _MiraloTypingIndicatorState extends State<MiraloTypingIndicator>
+class _LongcatTypingIndicatorState extends State<LongcatTypingIndicator>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
 
@@ -65,11 +65,11 @@ class _MiraloTypingIndicatorState extends State<MiraloTypingIndicator>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final dotColor = MiraloColors.accent;
+    final dotColor = LongcatColors.accent;
     final bubbleBg = isDark
-        ? MiraloColors.darkSurfaceSecondary
-        : MiraloColors.lightSurfaceSecondary;
-    final border = isDark ? MiraloColors.darkBorder : MiraloColors.lightBorder;
+        ? LongcatColors.darkSurfaceSecondary
+        : LongcatColors.lightSurfaceSecondary;
+    final border = isDark ? LongcatColors.darkBorder : LongcatColors.lightBorder;
 
     final dotsRow = Row(
       mainAxisSize: MainAxisSize.min,
@@ -115,7 +115,7 @@ class _MiraloTypingIndicatorState extends State<MiraloTypingIndicator>
               if (widget.userName != null && widget.userName!.isNotEmpty) ...[
                 Text(
                   widget.userName!,
-                  style: MiraloTypography.caption(color: MiraloColors.accent)
+                  style: LongcatTypography.caption(color: LongcatColors.accent)
                       .copyWith(fontWeight: FontWeight.w600, fontSize: 10),
                 ),
                 const SizedBox(height: 4),

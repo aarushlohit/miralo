@@ -5,22 +5,22 @@ import '../../core/theme/app_typography.dart';
 
 // ─── Button variants ─────────────────────────────────────────────────────────
 
-enum MiraloButtonVariant { primary, secondary, ghost, destructive }
+enum LongcatButtonVariant { primary, secondary, ghost, destructive }
 
-class MiraloButton extends StatelessWidget {
+class LongcatButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
-  final MiraloButtonVariant variant;
+  final LongcatButtonVariant variant;
   final IconData? icon;
   final bool isLoading;
   final bool expand;
   final double? height;
 
-  const MiraloButton({
+  const LongcatButton({
     super.key,
     required this.label,
     this.onPressed,
-    this.variant = MiraloButtonVariant.primary,
+    this.variant = LongcatButtonVariant.primary,
     this.icon,
     this.isLoading = false,
     this.expand = true,
@@ -37,19 +37,19 @@ class MiraloButton extends StatelessWidget {
 
   Widget _buildButton(BuildContext context, bool isDark) {
     switch (variant) {
-      case MiraloButtonVariant.primary:
+      case LongcatButtonVariant.primary:
         return _PrimaryButton(
             label: label, onPressed: onPressed, icon: icon,
             isLoading: isLoading, height: height);
-      case MiraloButtonVariant.secondary:
+      case LongcatButtonVariant.secondary:
         return _SecondaryButton(
             label: label, onPressed: onPressed, icon: icon,
             isLoading: isLoading, isDark: isDark, height: height);
-      case MiraloButtonVariant.ghost:
+      case LongcatButtonVariant.ghost:
         return _GhostButton(
             label: label, onPressed: onPressed, icon: icon,
             isLoading: isLoading, isDark: isDark, height: height);
-      case MiraloButtonVariant.destructive:
+      case LongcatButtonVariant.destructive:
         return _DestructiveButton(
             label: label, onPressed: onPressed, icon: icon,
             isLoading: isLoading, isDark: isDark, height: height);

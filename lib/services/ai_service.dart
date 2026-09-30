@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Supported AI Models for MIRALO AI
+/// Supported AI Models for LONGCAT AI
 class AiModels {
   // Flagship NVIDIA NIM Models (Verified Active on integrate.api.nvidia.com)
   static const String nemotronSuper120b = 'Nemotron 3 Super 120B';
@@ -96,9 +96,9 @@ class AiService {
   static final AiService instance = AiService._();
   AiService._();
 
-  static const String _prefGeminiKey = 'miralo_ai_gemini_key';
-  static const String _prefNvidiaKey = 'miralo_ai_nvidia_key';
-  static const String _prefSelectedModel = 'miralo_ai_selected_model';
+  static const String _prefGeminiKey = 'longcat_ai_gemini_key';
+  static const String _prefNvidiaKey = 'longcat_ai_nvidia_key';
+  static const String _prefSelectedModel = 'longcat_ai_selected_model';
 
   // Default backend API keys dynamically loaded from env
   static const String defaultGeminiKey =

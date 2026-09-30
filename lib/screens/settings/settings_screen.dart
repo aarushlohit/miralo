@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/routes/app_routes.dart';
-import '../../core/theme/miralo_tokens.dart';
+import '../../core/theme/longcat_tokens.dart';
 import '../../providers/ai_chat_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/library_provider.dart';
 import '../../providers/private_chat_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/vault_provider.dart';
-import '../../widgets/common/miralo_app_bar.dart';
-import '../../widgets/common/miralo_avatar.dart';
-import '../../widgets/common/miralo_list_tile.dart';
+import '../../widgets/common/longcat_app_bar.dart';
+import '../../widgets/common/longcat_avatar.dart';
+import '../../widgets/common/longcat_list_tile.dart';
 
-/// MIRALO AI Settings Screen
+/// LONGCAT AI Settings Screen
 /// Strictly reduced, minimal, and useful categories matching Section 18:
 /// - Account (Profile, Account)
 /// - AI (Model, AI preferences)
@@ -32,9 +32,9 @@ class SettingsScreen extends StatelessWidget {
     final theme = Provider.of<ThemeProvider>(context);
     final vault = Provider.of<VaultProvider>(context);
 
-    final bg = MiraloColors.bg(isDark);
-    final textPrimary = MiraloColors.textPrimary(isDark);
-    final textSecondary = MiraloColors.textSecondary(isDark);
+    final bg = LongcatColors.bg(isDark);
+    final textPrimary = LongcatColors.textPrimary(isDark);
+    final textSecondary = LongcatColors.textSecondary(isDark);
 
     final user = auth.currentUser;
 
@@ -43,8 +43,8 @@ class SettingsScreen extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            MiraloAppBar(
-              leading: MiraloCircularIconButton(
+            LongcatAppBar(
+              leading: LongcatCircularIconButton(
                 icon: Icons.arrow_back_ios_new_rounded,
                 iconSize: 16,
                 onPressed: () => Navigator.pop(context),
@@ -53,7 +53,7 @@ class SettingsScreen extends StatelessWidget {
             ),
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.symmetric(vertical: MiraloSpacing.md),
+                padding: const EdgeInsets.symmetric(vertical: LongcatSpacing.md),
                 children: [
                   // ── Profile Header ───────────────────────────
                   GestureDetector(
@@ -61,23 +61,23 @@ class SettingsScreen extends StatelessWidget {
                         context, AppRoutes.settingsProfile),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: MiraloSpacing.lg),
+                          horizontal: LongcatSpacing.lg),
                       child: Column(
                         children: [
-                          MiraloAvatar(
+                          LongcatAvatar(
                             name: user?.displayName ?? 'User',
                             size: 72,
                           ),
-                          const SizedBox(height: MiraloSpacing.sm),
+                          const SizedBox(height: LongcatSpacing.sm),
                           Text(
                             user?.displayName ?? 'User',
-                            style: MiraloTypography.titleLarge(
+                            style: LongcatTypography.titleLarge(
                                 color: textPrimary),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             user?.email ?? '',
-                            style: MiraloTypography.bodySmall(
+                            style: LongcatTypography.bodySmall(
                                 color: textSecondary),
                           ),
                         ],
@@ -85,20 +85,20 @@ class SettingsScreen extends StatelessWidget {
                     ),
                   ),
 
-                  const SizedBox(height: MiraloSpacing.xl),
+                  const SizedBox(height: LongcatSpacing.xl),
 
                   // ── ACCOUNT ──────────────────────────────────
-                  const MiraloSectionHeader('ACCOUNT'),
-                  MiraloSettingsGroup(
+                  const LongcatSectionHeader('ACCOUNT'),
+                  LongcatSettingsGroup(
                     children: [
-                      MiraloListTile(
+                      LongcatListTile(
                         icon: Icons.person_outline_rounded,
                         title: 'Profile',
                         subtitle: 'Name, email and user details',
                         onTap: () => Navigator.pushNamed(
                             context, AppRoutes.settingsProfile),
                       ),
-                      MiraloListTile(
+                      LongcatListTile(
                         icon: Icons.manage_accounts_outlined,
                         title: 'Account',
                         subtitle: 'Security & login information',
@@ -108,20 +108,20 @@ class SettingsScreen extends StatelessWidget {
                     ],
                   ),
 
-                  const SizedBox(height: MiraloSpacing.lg),
+                  const SizedBox(height: LongcatSpacing.lg),
 
                   // ── AI ───────────────────────────────────────
-                  const MiraloSectionHeader('AI'),
-                  MiraloSettingsGroup(
+                  const LongcatSectionHeader('AI'),
+                  LongcatSettingsGroup(
                     children: [
-                      MiraloListTile(
+                      LongcatListTile(
                         icon: Icons.smart_toy_outlined,
                         title: 'Model',
                         subtitle: 'Cloud AI endpoints and configuration',
                         onTap: () =>
                             Navigator.pushNamed(context, AppRoutes.settingsAi),
                       ),
-                      MiraloListTile(
+                      LongcatListTile(
                         icon: Icons.tune_rounded,
                         title: 'AI Preferences',
                         subtitle: 'API keys & custom system prompts',
@@ -131,35 +131,35 @@ class SettingsScreen extends StatelessWidget {
                     ],
                   ),
 
-                  const SizedBox(height: MiraloSpacing.lg),
+                  const SizedBox(height: LongcatSpacing.lg),
 
                   // ── PRIVACY & SECURITY ───────────────────────
-                  const MiraloSectionHeader('PRIVACY & SECURITY'),
+                  const LongcatSectionHeader('PRIVACY & SECURITY'),
                   if (vault.isPrivateUnlocked || vault.isLibraryUnlocked)
-                    MiraloSettingsGroup(
+                    LongcatSettingsGroup(
                       children: [
-                        MiraloListTile(
+                        LongcatListTile(
                           icon: Icons.lock_outline_rounded,
                           title: 'Private Access',
                           subtitle: 'Stealth composer passcode & contacts',
                           onTap: () => Navigator.pushNamed(
                               context, AppRoutes.settingsPrivacy),
                         ),
-                        MiraloListTile(
+                        LongcatListTile(
                           icon: Icons.shield_outlined,
                           title: 'Library Vault',
                           subtitle: 'Independent PIN protection for media',
                           onTap: () => Navigator.pushNamed(
                               context, AppRoutes.libraryLocked),
                         ),
-                        MiraloListTile(
+                        LongcatListTile(
                           icon: Icons.privacy_tip_outlined,
                           title: 'Privacy',
                           subtitle: 'Zero data tracking & local security',
                           onTap: () => Navigator.pushNamed(
                               context, AppRoutes.settingsPrivacy),
                         ),
-                        MiraloListTile(
+                        LongcatListTile(
                           icon: Icons.timer_outlined,
                           title: 'Auto-lock',
                           subtitle: 'Immediate session timeout on exit',
@@ -170,22 +170,22 @@ class SettingsScreen extends StatelessWidget {
                     )
                   else
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: MiraloSpacing.lg),
+                      padding: const EdgeInsets.symmetric(horizontal: LongcatSpacing.lg),
                       child: Container(
-                        padding: const EdgeInsets.all(MiraloSpacing.md),
+                        padding: const EdgeInsets.all(LongcatSpacing.md),
                         decoration: BoxDecoration(
-                          color: isDark ? MiraloColors.darkSurfaceSecondary : MiraloColors.lightSurfaceSecondary,
+                          color: isDark ? LongcatColors.darkSurfaceSecondary : LongcatColors.lightSurfaceSecondary,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: isDark ? MiraloColors.darkBorder : MiraloColors.lightBorder, width: 0.6),
+                          border: Border.all(color: isDark ? LongcatColors.darkBorder : LongcatColors.lightBorder, width: 0.6),
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.lock_outline_rounded, color: MiraloColors.accent, size: 20),
-                            const SizedBox(width: MiraloSpacing.sm),
+                            const Icon(Icons.lock_outline_rounded, color: LongcatColors.accent, size: 20),
+                            const SizedBox(width: LongcatSpacing.sm),
                             Expanded(
                               child: Text(
                                 'Sensitive security and vault settings are hidden until secret passcode is entered in AI chat.',
-                                style: MiraloTypography.bodySmall(color: textSecondary),
+                                style: LongcatTypography.bodySmall(color: textSecondary),
                               ),
                             ),
                           ],
@@ -193,13 +193,13 @@ class SettingsScreen extends StatelessWidget {
                       ),
                     ),
 
-                  const SizedBox(height: MiraloSpacing.lg),
+                  const SizedBox(height: LongcatSpacing.lg),
 
                   // ── APPEARANCE ───────────────────────────────
-                  const MiraloSectionHeader('APPEARANCE'),
-                  MiraloSettingsGroup(
+                  const LongcatSectionHeader('APPEARANCE'),
+                  LongcatSettingsGroup(
                     children: [
-                      MiraloListTile(
+                      LongcatListTile(
                         icon: isDark
                             ? Icons.dark_mode_outlined
                             : Icons.light_mode_outlined,
@@ -208,7 +208,7 @@ class SettingsScreen extends StatelessWidget {
                         onTap: () => theme.toggleTheme(),
                         trailing: Switch(
                           value: isDark,
-                          activeThumbColor: MiraloColors.accent,
+                          activeThumbColor: LongcatColors.accent,
                           onChanged: (_) => theme.toggleTheme(),
                         ),
                         showDivider: false,
@@ -216,13 +216,13 @@ class SettingsScreen extends StatelessWidget {
                     ],
                   ),
 
-                  const SizedBox(height: MiraloSpacing.lg),
+                  const SizedBox(height: LongcatSpacing.lg),
 
                   // ── NOTIFICATIONS ────────────────────────────
-                  const MiraloSectionHeader('NOTIFICATIONS'),
-                  MiraloSettingsGroup(
+                  const LongcatSectionHeader('NOTIFICATIONS'),
+                  LongcatSettingsGroup(
                     children: [
-                      MiraloListTile(
+                      LongcatListTile(
                         icon: Icons.notifications_none_outlined,
                         title: 'Notifications',
                         subtitle: 'Direct message and AI alerts',
@@ -233,14 +233,14 @@ class SettingsScreen extends StatelessWidget {
                     ],
                   ),
 
-                  const SizedBox(height: MiraloSpacing.lg),
+                  const SizedBox(height: LongcatSpacing.lg),
 
                   // ── STORAGE ──────────────────────────────────
                   if (vault.isPrivateUnlocked || vault.isLibraryUnlocked) ...[
-                    const MiraloSectionHeader('STORAGE'),
-                    MiraloSettingsGroup(
+                    const LongcatSectionHeader('STORAGE'),
+                    LongcatSettingsGroup(
                       children: [
-                        MiraloListTile(
+                        LongcatListTile(
                           icon: Icons.data_usage_outlined,
                           title: 'Data & Storage',
                           subtitle: 'Local cache, export and database sync',
@@ -250,46 +250,46 @@ class SettingsScreen extends StatelessWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: MiraloSpacing.lg),
+                    const SizedBox(height: LongcatSpacing.lg),
                   ],
 
                   // ── SUPPORT ──────────────────────────────────
-                  const MiraloSectionHeader('SUPPORT'),
-                  MiraloSettingsGroup(
+                  const LongcatSectionHeader('SUPPORT'),
+                  LongcatSettingsGroup(
                     children: [
-                      MiraloListTile(
+                      LongcatListTile(
                         icon: Icons.help_outline_rounded,
                         title: 'Help',
                         subtitle: 'Guides & FAQ',
                         onTap: () {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text('Support guides: help@miralo.ai'),
+                              content: Text('Support guides: help@longcat.ai'),
                             ),
                           );
                         },
                       ),
-                      MiraloListTile(
+                      LongcatListTile(
                         icon: Icons.info_outline_rounded,
                         title: 'About',
-                        subtitle: 'MIRALO AI v1.0.0',
+                        subtitle: 'LONGCAT AI v1.0.0',
                         onTap: () {
                           showAboutDialog(
                             context: context,
-                            applicationName: 'MIRALO AI',
+                            applicationName: 'LONGCAT AI',
                             applicationVersion: '1.0.0',
                             applicationLegalese:
-                                '© 2026 MIRALO AI. All rights reserved.',
+                                '© 2026 LONGCAT AI. All rights reserved.',
                           );
                         },
                       ),
                     ],
                   ),
 
-                  const SizedBox(height: MiraloSpacing.xl),
+                  const SizedBox(height: LongcatSpacing.xl),
 
                   // ── Sign out ──────────────────────────────────
-                  MiraloSettingsGroup(
+                  LongcatSettingsGroup(
                     children: [
                       InkWell(
                         onTap: () {
@@ -311,14 +311,14 @@ class SettingsScreen extends StatelessWidget {
                         },
                         child: const Padding(
                           padding: EdgeInsets.symmetric(
-                            horizontal: MiraloSpacing.md,
+                            horizontal: LongcatSpacing.md,
                             vertical: 14,
                           ),
                           child: Center(
                             child: Text(
                               'Sign out',
                               style: TextStyle(
-                                color: MiraloColors.danger,
+                                color: LongcatColors.danger,
                                 fontWeight: FontWeight.w600,
                                 fontSize: 15,
                               ),
@@ -329,7 +329,7 @@ class SettingsScreen extends StatelessWidget {
                     ],
                   ),
 
-                  const SizedBox(height: MiraloSpacing.xxl),
+                  const SizedBox(height: LongcatSpacing.xxl),
                 ],
               ),
             ),

@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
-import '../../core/theme/miralo_tokens.dart';
+import '../../core/theme/longcat_tokens.dart';
 import '../../services/cloudinary_service.dart';
 
 /// Modal sheet for recording voice notes.
@@ -24,9 +24,9 @@ class VoiceNoteRecorderSheet extends StatefulWidget {
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: isDark ? MiraloColors.darkSurfacePrimary : MiraloColors.lightSurfacePrimary,
+      backgroundColor: isDark ? LongcatColors.darkSurfacePrimary : LongcatColors.lightSurfacePrimary,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(MiraloRadius.bottomSheet)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(LongcatRadius.bottomSheet)),
       ),
       builder: (_) => VoiceNoteRecorderSheet(onVoiceNoteRecorded: onVoiceNoteRecorded),
     );
@@ -156,8 +156,8 @@ class _VoiceNoteRecorderSheetState extends State<VoiceNoteRecorderSheet> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textPrimary = isDark ? MiraloColors.darkTextPrimary : MiraloColors.lightTextPrimary;
-    final textSecondary = isDark ? MiraloColors.darkTextSecondary : MiraloColors.lightTextSecondary;
+    final textPrimary = isDark ? LongcatColors.darkTextPrimary : LongcatColors.lightTextPrimary;
+    final textSecondary = isDark ? LongcatColors.darkTextSecondary : LongcatColors.lightTextSecondary;
 
     final minutes = (_secondsElapsed ~/ 60).toString().padLeft(1, '0');
     final secs = (_secondsElapsed % 60).toString().padLeft(2, '0');
@@ -192,7 +192,7 @@ class _VoiceNoteRecorderSheetState extends State<VoiceNoteRecorderSheet> {
                 const SizedBox(width: 8),
                 Text(
                   _isPaused ? 'Recording Paused' : 'Recording Voice Note...',
-                  style: MiraloTypography.titleMedium(color: textPrimary),
+                  style: LongcatTypography.titleMedium(color: textPrimary),
                 ),
               ],
             ),
@@ -202,7 +202,7 @@ class _VoiceNoteRecorderSheetState extends State<VoiceNoteRecorderSheet> {
               style: const TextStyle(
                 fontSize: 32,
                 fontWeight: FontWeight.bold,
-                color: MiraloColors.accent,
+                color: LongcatColors.accent,
                 fontFeatures: [FontFeature.tabularFigures()],
               ),
             ),
@@ -211,7 +211,7 @@ class _VoiceNoteRecorderSheetState extends State<VoiceNoteRecorderSheet> {
             const SizedBox(height: 8),
             Text(
               _isPaused ? 'Tap resume to continue' : 'Speak into your microphone',
-              style: MiraloTypography.bodySmall(color: textSecondary),
+              style: LongcatTypography.bodySmall(color: textSecondary),
             ),
             const SizedBox(height: 24),
             Row(
@@ -228,7 +228,7 @@ class _VoiceNoteRecorderSheetState extends State<VoiceNoteRecorderSheet> {
                   onPressed: _isProcessing ? null : _cancelRecording,
                 ),
                 IconButton.filledTonal(
-                  icon: Icon(_isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded, color: MiraloColors.accent),
+                  icon: Icon(_isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded, color: LongcatColors.accent),
                   iconSize: 24,
                   onPressed: _isProcessing ? null : _togglePauseResume,
                   tooltip: _isPaused ? 'Resume' : 'Pause',
@@ -243,7 +243,7 @@ class _VoiceNoteRecorderSheetState extends State<VoiceNoteRecorderSheet> {
                       : const Icon(Icons.send_rounded, size: 18),
                   label: Text(_isProcessing ? 'Sending...' : 'Send Voice Note'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: MiraloColors.accent,
+                    backgroundColor: LongcatColors.accent,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -320,7 +320,7 @@ class _VoiceWaveformVisualizerState extends State<_VoiceWaveformVisualizer> with
                 decoration: BoxDecoration(
                   color: widget.isPaused
                       ? (isDark ? Colors.white30 : Colors.black26)
-                      : MiraloColors.accent.withValues(alpha: 0.6 + 0.4 * ((val + sinFactor) % 1.0)),
+                      : LongcatColors.accent.withValues(alpha: 0.6 + 0.4 * ((val + sinFactor) % 1.0)),
                   borderRadius: BorderRadius.circular(2),
                 ),
               );

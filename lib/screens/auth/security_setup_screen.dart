@@ -10,8 +10,8 @@ import '../../providers/auth_provider.dart';
 import '../../providers/library_provider.dart';
 import '../../providers/private_chat_provider.dart';
 import '../../providers/vault_provider.dart';
-import '../../widgets/common/miralo_button.dart';
-import '../../widgets/common/miralo_text_field.dart';
+import '../../widgets/common/longcat_button.dart';
+import '../../widgets/common/longcat_text_field.dart';
 
 class SecuritySetupScreen extends StatefulWidget {
   const SecuritySetupScreen({super.key});
@@ -102,7 +102,7 @@ class _SecuritySetupScreenState extends State<SecuritySetupScreen> {
           style: AppTypography.heading2(color: textPrimary),
         ),
         content: Text(
-          'Miralo requires configuring your Private Chat Secret and Library Vault PIN to protect your private workspace. If you leave now, you will be signed out.',
+          'Longcat requires configuring your Private Chat Secret and Library Vault PIN to protect your private workspace. If you leave now, you will be signed out.',
           style: AppTypography.body(color: textSecondary),
         ),
         actions: [
@@ -259,7 +259,7 @@ class _SecuritySetupScreenState extends State<SecuritySetupScreen> {
                       ],
                     ),
                     const SizedBox(height: AppSpacing.md),
-                    MiraloTextField(
+                    LongcatTextField(
                       controller: _privateSecretController,
                       hint: 'Secret (word, PIN, or phrase)',
                       obscureText: true,
@@ -317,7 +317,7 @@ class _SecuritySetupScreenState extends State<SecuritySetupScreen> {
                       ],
                     ),
                     const SizedBox(height: AppSpacing.md),
-                    MiraloTextField(
+                    LongcatTextField(
                       controller: _libraryPinController,
                       hint: 'Passcode (numbers, text, or phrase)',
                       keyboardType: TextInputType.text,
@@ -340,7 +340,7 @@ class _SecuritySetupScreenState extends State<SecuritySetupScreen> {
 
               const SizedBox(height: AppSpacing.lg),
 
-              MiraloButton(
+              LongcatButton(
                 label: 'Continue',
                 onPressed: _handleContinue,
               ),

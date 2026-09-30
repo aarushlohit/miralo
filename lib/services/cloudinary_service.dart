@@ -7,7 +7,7 @@ import 'package:http/http.dart' as http;
 class CloudinaryService {
   // Configurable Cloudinary Cloud Name and Upload Preset
   static String cloudName = 'ri3utim4'; 
-  static String uploadPreset = 'miralo_preset';
+  static String uploadPreset = 'longcat_preset';
 
   /// Configure Cloudinary credentials dynamically
   static void configure({required String newCloudName, required String newUploadPreset}) {

@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import '../../core/routes/app_routes.dart';
-import '../../core/theme/miralo_tokens.dart';
+import '../../core/theme/longcat_tokens.dart';
 import '../../models/friend_request_model.dart';
 import '../../models/private_contact_model.dart';
 import '../../models/private_message_model.dart';
@@ -24,7 +24,7 @@ import '../../widgets/chat/message_renderer.dart';
 import '../../widgets/chat/pinned_messages_banner.dart';
 import '../../widgets/chat/pinned_messages_sheet.dart';
 import '../../widgets/chat/reaction_sheet.dart';
-import '../../widgets/common/miralo_avatar.dart';
+import '../../widgets/common/longcat_avatar.dart';
 import 'group_profile_screen.dart';
 
 /// Private Chat Screen
@@ -246,9 +246,9 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
       builder: (ctx) {
         return Container(
           height: MediaQuery.of(ctx).size.height * 0.75,
-          padding: const EdgeInsets.all(MiraloSpacing.md),
+          padding: const EdgeInsets.all(LongcatSpacing.md),
           decoration: BoxDecoration(
-            color: isDark ? MiraloColors.darkSurfacePrimary : MiraloColors.lightSurfacePrimary,
+            color: isDark ? LongcatColors.darkSurfacePrimary : LongcatColors.lightSurfacePrimary,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           ),
           child: Column(
@@ -258,9 +258,9 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                 child: Container(
                   width: 36,
                   height: 4,
-                  margin: const EdgeInsets.only(bottom: MiraloSpacing.md),
+                  margin: const EdgeInsets.only(bottom: LongcatSpacing.md),
                   decoration: BoxDecoration(
-                    color: isDark ? MiraloColors.darkBorder : MiraloColors.lightBorder,
+                    color: isDark ? LongcatColors.darkBorder : LongcatColors.lightBorder,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -274,8 +274,8 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                       const SizedBox(width: 8),
                       Text(
                         'Starred Messages (${starred.length})',
-                        style: MiraloTypography.titleMedium(
-                          color: isDark ? MiraloColors.darkTextPrimary : MiraloColors.lightTextPrimary,
+                        style: LongcatTypography.titleMedium(
+                          color: isDark ? LongcatColors.darkTextPrimary : LongcatColors.lightTextPrimary,
                         ).copyWith(fontWeight: FontWeight.bold),
                       ),
                     ],
@@ -297,15 +297,15 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                         const SizedBox(height: 12),
                         Text(
                           'No starred messages yet',
-                          style: MiraloTypography.bodyMedium(
-                            color: isDark ? MiraloColors.darkTextPrimary : MiraloColors.lightTextPrimary,
+                          style: LongcatTypography.bodyMedium(
+                            color: isDark ? LongcatColors.darkTextPrimary : LongcatColors.lightTextPrimary,
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           'Long press any message and tap "Star Message"',
-                          style: MiraloTypography.caption(
-                            color: isDark ? MiraloColors.darkTextMuted : MiraloColors.lightTextMuted,
+                          style: LongcatTypography.caption(
+                            color: isDark ? LongcatColors.darkTextMuted : LongcatColors.lightTextMuted,
                           ),
                         ),
                       ],
@@ -324,14 +324,14 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                         contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         title: Text(
                           isMe ? 'You' : (msg.senderName ?? contact?.displayName ?? 'Contact'),
-                          style: MiraloTypography.caption(color: MiraloColors.accent).copyWith(fontWeight: FontWeight.bold),
+                          style: LongcatTypography.caption(color: LongcatColors.accent).copyWith(fontWeight: FontWeight.bold),
                         ),
                         subtitle: Text(
                           msg.text.isNotEmpty
                               ? msg.text
                               : (msg.fileName ?? '[Attachment]'),
-                          style: MiraloTypography.bodyMedium(
-                            color: isDark ? MiraloColors.darkTextPrimary : MiraloColors.lightTextPrimary,
+                          style: LongcatTypography.bodyMedium(
+                            color: isDark ? LongcatColors.darkTextPrimary : LongcatColors.lightTextPrimary,
                           ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -368,8 +368,8 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
     PrivateContactModel contact,
   ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textPrimary = isDark ? MiraloColors.darkTextPrimary : MiraloColors.lightTextPrimary;
-    final textMuted = isDark ? MiraloColors.darkTextMuted : MiraloColors.lightTextMuted;
+    final textPrimary = isDark ? LongcatColors.darkTextPrimary : LongcatColors.lightTextPrimary;
+    final textMuted = isDark ? LongcatColors.darkTextMuted : LongcatColors.lightTextMuted;
     final isFriend = chat.contacts.any((c) => c.id == contact.id);
 
     showModalBottomSheet(
@@ -380,9 +380,9 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
         constraints: BoxConstraints(
           maxHeight: MediaQuery.of(ctx).size.height * 0.85,
         ),
-        padding: const EdgeInsets.all(MiraloSpacing.lg),
+        padding: const EdgeInsets.all(LongcatSpacing.lg),
         decoration: BoxDecoration(
-          color: isDark ? MiraloColors.darkSurfacePrimary : MiraloColors.lightSurfacePrimary,
+          color: isDark ? LongcatColors.darkSurfacePrimary : LongcatColors.lightSurfacePrimary,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: SafeArea(
@@ -394,14 +394,14 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                 child: Container(
                   width: 36,
                   height: 4,
-                  margin: const EdgeInsets.only(bottom: MiraloSpacing.md),
+                  margin: const EdgeInsets.only(bottom: LongcatSpacing.md),
                   decoration: BoxDecoration(
-                    color: isDark ? MiraloColors.darkBorder : MiraloColors.lightBorder,
+                    color: isDark ? LongcatColors.darkBorder : LongcatColors.lightBorder,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
               ),
-              MiraloAvatar(
+              LongcatAvatar(
                 name: contact.displayName,
                 imageUrl: contact.avatarUrl,
                 size: 80,
@@ -410,12 +410,12 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
               const SizedBox(height: 12),
               Text(
                 contact.displayName,
-                style: MiraloTypography.titleMedium(color: textPrimary).copyWith(fontSize: 18, fontWeight: FontWeight.bold),
+                style: LongcatTypography.titleMedium(color: textPrimary).copyWith(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               if (contact.username.isNotEmpty)
-                Text('@${contact.username}', style: MiraloTypography.caption(color: textMuted)),
+                Text('@${contact.username}', style: LongcatTypography.caption(color: textMuted)),
               if (contact.phoneNumber != null)
-                Text(contact.phoneNumber!, style: MiraloTypography.caption(color: textMuted)),
+                Text(contact.phoneNumber!, style: LongcatTypography.caption(color: textMuted)),
               if (contact.note != null && contact.note!.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Container(
@@ -424,10 +424,10 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                     color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.04),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Text('💭 "${contact.note}"', style: MiraloTypography.bodySmall(color: textPrimary).copyWith(fontStyle: FontStyle.italic)),
+                  child: Text('💭 "${contact.note}"', style: LongcatTypography.bodySmall(color: textPrimary).copyWith(fontStyle: FontStyle.italic)),
                 ),
               ],
-              const SizedBox(height: MiraloSpacing.md),
+              const SizedBox(height: LongcatSpacing.md),
               const Divider(),
               ListTile(
                 leading: const Icon(Icons.star_rounded, color: Color(0xFFF59E0B)),
@@ -438,7 +438,7 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.search_rounded, color: MiraloColors.accent),
+                leading: const Icon(Icons.search_rounded, color: LongcatColors.accent),
                 title: const Text('Search in Chat'),
                 onTap: () {
                   Navigator.pop(ctx);
@@ -508,14 +508,14 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
   ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = isDark
-        ? MiraloColors.darkSurfacePrimary
-        : MiraloColors.lightSurfacePrimary;
+        ? LongcatColors.darkSurfacePrimary
+        : LongcatColors.lightSurfacePrimary;
     final textPrimary = isDark
-        ? MiraloColors.darkTextPrimary
-        : MiraloColors.lightTextPrimary;
+        ? LongcatColors.darkTextPrimary
+        : LongcatColors.lightTextPrimary;
     final border = isDark
-        ? MiraloColors.darkBorder
-        : MiraloColors.lightBorder;
+        ? LongcatColors.darkBorder
+        : LongcatColors.lightBorder;
 
     showModalBottomSheet(
       context: context,
@@ -526,7 +526,7 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
       backgroundColor: bg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
-          top: Radius.circular(MiraloRadius.bottomSheet),
+          top: Radius.circular(LongcatRadius.bottomSheet),
         ),
       ),
       builder: (ctx) => SafeArea(
@@ -535,8 +535,8 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
           physics: const BouncingScrollPhysics(),
           child: Padding(
             padding: const EdgeInsets.symmetric(
-              horizontal: MiraloSpacing.lg,
-              vertical: MiraloSpacing.md,
+              horizontal: LongcatSpacing.lg,
+              vertical: LongcatSpacing.md,
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -545,7 +545,7 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                 child: Container(
                   width: 36,
                   height: 4,
-                  margin: const EdgeInsets.only(bottom: MiraloSpacing.md),
+                  margin: const EdgeInsets.only(bottom: LongcatSpacing.md),
                   decoration: BoxDecoration(
                     color: border,
                     borderRadius: BorderRadius.circular(2),
@@ -556,10 +556,10 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
               // Preferred label: Return to Chat
               ListTile(
                 leading: const Icon(Icons.arrow_back_rounded,
-                    color: MiraloColors.accent, size: 22),
+                    color: LongcatColors.accent, size: 22),
                 title: Text(
                   'Return to Chat',
-                  style: MiraloTypography.bodyMedium(color: MiraloColors.accent)
+                  style: LongcatTypography.bodyMedium(color: LongcatColors.accent)
                       .copyWith(fontWeight: FontWeight.w600),
                 ),
                 dense: true,
@@ -572,10 +572,10 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
               // Search in Chat
               ListTile(
                 leading: const Icon(Icons.search_rounded,
-                    color: MiraloColors.accent, size: 22),
+                    color: LongcatColors.accent, size: 22),
                 title: Text(
                   'Search in Chat',
-                  style: MiraloTypography.bodyMedium(color: textPrimary),
+                  style: LongcatTypography.bodyMedium(color: textPrimary),
                 ),
                 dense: true,
                 onTap: () {
@@ -590,7 +590,7 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                     color: Color(0xFFF59E0B), size: 22),
                 title: Text(
                   'Starred Messages',
-                  style: MiraloTypography.bodyMedium(color: textPrimary),
+                  style: LongcatTypography.bodyMedium(color: textPrimary),
                 ),
                 dense: true,
                 onTap: () {
@@ -609,7 +609,7 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                   ),
                   title: Text(
                     contact.isGroup ? 'Group Info' : 'Contact Info',
-                    style: MiraloTypography.bodyMedium(color: textPrimary),
+                    style: LongcatTypography.bodyMedium(color: textPrimary),
                   ),
                   dense: true,
                   onTap: () {
@@ -634,7 +634,7 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                       color: textPrimary, size: 22),
                   title: Text(
                     'Edit display name',
-                    style: MiraloTypography.bodyMedium(color: textPrimary),
+                    style: LongcatTypography.bodyMedium(color: textPrimary),
                   ),
                   dense: true,
                   onTap: () {
@@ -649,7 +649,7 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                     color: textPrimary, size: 22),
                 title: Text(
                   'Clear conversation',
-                  style: MiraloTypography.bodyMedium(color: textPrimary),
+                  style: LongcatTypography.bodyMedium(color: textPrimary),
                 ),
                 dense: true,
                 onTap: () {
@@ -667,11 +667,11 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
               // Delete contact
               ListTile(
                 leading: const Icon(Icons.delete_outline_rounded,
-                    color: MiraloColors.danger, size: 22),
+                    color: LongcatColors.danger, size: 22),
                 title: Text(
                   'Delete conversation',
-                  style: MiraloTypography.bodyMedium(
-                      color: MiraloColors.danger),
+                  style: LongcatTypography.bodyMedium(
+                      color: LongcatColors.danger),
                 ),
                 dense: true,
                 onTap: () {
@@ -686,13 +686,13 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                 ListTile(
                   leading: Icon(
                     chat.isBlocked(contact.id) ? Icons.lock_open_rounded : Icons.block_rounded,
-                    color: chat.isBlocked(contact.id) ? textPrimary : MiraloColors.danger,
+                    color: chat.isBlocked(contact.id) ? textPrimary : LongcatColors.danger,
                     size: 22,
                   ),
                   title: Text(
                     chat.isBlocked(contact.id) ? 'Unblock contact' : 'Block contact',
-                    style: MiraloTypography.bodyMedium(
-                      color: chat.isBlocked(contact.id) ? textPrimary : MiraloColors.danger,
+                    style: LongcatTypography.bodyMedium(
+                      color: chat.isBlocked(contact.id) ? textPrimary : LongcatColors.danger,
                     ),
                   ),
                   dense: true,
@@ -718,7 +718,7 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(msg),
-                          backgroundColor: MiraloColors.accent,
+                          backgroundColor: LongcatColors.accent,
                           duration: const Duration(seconds: 4),
                         ),
                       );
@@ -749,7 +749,7 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
                                       content: Text(msg),
-                                      backgroundColor: MiraloColors.accent,
+                                      backgroundColor: LongcatColors.accent,
                                       duration: const Duration(seconds: 4),
                                     ),
                                   );
@@ -772,7 +772,7 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                   },
                 ),
 
-              const SizedBox(height: MiraloSpacing.sm),
+              const SizedBox(height: LongcatSpacing.sm),
             ],
           ),
         ),
@@ -793,42 +793,42 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: isDark
-            ? MiraloColors.darkSurfacePrimary
-            : MiraloColors.lightSurfacePrimary,
-        shape: RoundedRectangleBorder(borderRadius: MiraloRadius.r20),
+            ? LongcatColors.darkSurfacePrimary
+            : LongcatColors.lightSurfacePrimary,
+        shape: RoundedRectangleBorder(borderRadius: LongcatRadius.r20),
         title: Text(
           'Edit display name',
-          style: MiraloTypography.titleMedium(
+          style: LongcatTypography.titleMedium(
             color: isDark
-                ? MiraloColors.darkTextPrimary
-                : MiraloColors.lightTextPrimary,
+                ? LongcatColors.darkTextPrimary
+                : LongcatColors.lightTextPrimary,
           ),
         ),
         content: TextField(
           controller: controller,
           autofocus: true,
-          style: MiraloTypography.bodyMedium(
+          style: LongcatTypography.bodyMedium(
             color: isDark
-                ? MiraloColors.darkTextPrimary
-                : MiraloColors.lightTextPrimary,
+                ? LongcatColors.darkTextPrimary
+                : LongcatColors.lightTextPrimary,
           ),
           decoration: InputDecoration(
             hintText: 'Display name',
-            hintStyle: MiraloTypography.bodyMedium(
+            hintStyle: LongcatTypography.bodyMedium(
               color: isDark
-                  ? MiraloColors.darkTextMuted
-                  : MiraloColors.lightTextMuted,
+                  ? LongcatColors.darkTextMuted
+                  : LongcatColors.lightTextMuted,
             ),
             filled: true,
             fillColor: isDark
-                ? MiraloColors.darkSurfaceSecondary
-                : MiraloColors.lightSurfaceSecondary,
+                ? LongcatColors.darkSurfaceSecondary
+                : LongcatColors.lightSurfaceSecondary,
             border: OutlineInputBorder(
-              borderRadius: MiraloRadius.r12,
+              borderRadius: LongcatRadius.r12,
               borderSide: BorderSide(
                 color: isDark
-                    ? MiraloColors.darkBorder
-                    : MiraloColors.lightBorder,
+                    ? LongcatColors.darkBorder
+                    : LongcatColors.lightBorder,
               ),
             ),
           ),
@@ -838,10 +838,10 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
             onPressed: () => Navigator.pop(ctx),
             child: Text(
               'Cancel',
-              style: MiraloTypography.labelMedium(
+              style: LongcatTypography.labelMedium(
                 color: isDark
-                    ? MiraloColors.darkTextMuted
-                    : MiraloColors.lightTextMuted,
+                    ? LongcatColors.darkTextMuted
+                    : LongcatColors.lightTextMuted,
               ),
             ),
           ),
@@ -855,7 +855,7 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
             },
             child: Text(
               'Save',
-              style: MiraloTypography.labelMedium(color: MiraloColors.accent),
+              style: LongcatTypography.labelMedium(color: LongcatColors.accent),
             ),
           ),
         ],
@@ -869,10 +869,10 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: isDark ? MiraloColors.darkSurfacePrimary : MiraloColors.lightSurfacePrimary,
+        backgroundColor: isDark ? LongcatColors.darkSurfacePrimary : LongcatColors.lightSurfacePrimary,
         title: Text(
           'Edit Message',
-          style: MiraloTypography.bodyMedium(color: isDark ? MiraloColors.darkTextPrimary : MiraloColors.lightTextPrimary).copyWith(fontWeight: FontWeight.w600),
+          style: LongcatTypography.bodyMedium(color: isDark ? LongcatColors.darkTextPrimary : LongcatColors.lightTextPrimary).copyWith(fontWeight: FontWeight.w600),
         ),
         content: TextField(
           controller: controller,
@@ -889,7 +889,7 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: MiraloColors.accent,
+              backgroundColor: LongcatColors.accent,
               foregroundColor: Colors.white,
             ),
             onPressed: () {
@@ -1115,8 +1115,8 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: isDark ? MiraloColors.darkSurfaceSecondary : MiraloColors.lightSurfaceSecondary,
-                border: Border(bottom: BorderSide(color: isDark ? MiraloColors.darkBorder : MiraloColors.lightBorder, width: 0.6)),
+                color: isDark ? LongcatColors.darkSurfaceSecondary : LongcatColors.lightSurfaceSecondary,
+                border: Border(bottom: BorderSide(color: isDark ? LongcatColors.darkBorder : LongcatColors.lightBorder, width: 0.6)),
               ),
               child: Row(
                 children: [
@@ -1137,7 +1137,7 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                   if (_searchMatchIndices.isNotEmpty) ...[
                     Text(
                       '${_currentMatchIndex + 1} of ${_searchMatchIndices.length}',
-                      style: MiraloTypography.caption(color: isDark ? MiraloColors.darkTextMuted : MiraloColors.lightTextMuted),
+                      style: LongcatTypography.caption(color: isDark ? LongcatColors.darkTextMuted : LongcatColors.lightTextMuted),
                     ),
                     IconButton(
                       icon: const Icon(Icons.keyboard_arrow_up_rounded, size: 20),
@@ -1148,7 +1148,7 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                       onPressed: () => _nextSearchMatch(messages),
                     ),
                   ] else if (_searchController.text.isNotEmpty) ...[
-                    Text('0 matches', style: MiraloTypography.caption(color: isDark ? MiraloColors.darkTextMuted : MiraloColors.lightTextMuted)),
+                    Text('0 matches', style: LongcatTypography.caption(color: isDark ? LongcatColors.darkTextMuted : LongcatColors.lightTextMuted)),
                   ],
                   IconButton(
                     icon: const Icon(Icons.close_rounded, size: 20),
@@ -1181,9 +1181,9 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(
-                  color: isDark ? MiraloColors.darkSurfaceElevated : Colors.white,
+                  color: isDark ? LongcatColors.darkSurfaceElevated : Colors.white,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: MiraloColors.accent.withValues(alpha: 0.3), width: 1),
+                  border: Border.all(color: LongcatColors.accent.withValues(alpha: 0.3), width: 1),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.08),
@@ -1195,13 +1195,13 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.cloud_outlined, size: 18, color: MiraloColors.accent),
+                    const Icon(Icons.cloud_outlined, size: 18, color: LongcatColors.accent),
                     const SizedBox(width: 8),
                     Flexible(
                       child: Text(
                         'Status Note: ${contact.note}',
-                        style: MiraloTypography.bodySmall(
-                          color: isDark ? MiraloColors.darkTextPrimary : MiraloColors.lightTextPrimary,
+                        style: LongcatTypography.bodySmall(
+                          color: isDark ? LongcatColors.darkTextPrimary : LongcatColors.lightTextPrimary,
                         ).copyWith(fontWeight: FontWeight.w600),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -1306,22 +1306,22 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
           // Active reply/retag bar banner if selected
           if (_replyToText != null)
             Container(
-              margin: const EdgeInsets.symmetric(horizontal: MiraloSpacing.md),
+              margin: const EdgeInsets.symmetric(horizontal: LongcatSpacing.md),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
                 color: isDark ? const Color(0xFF222222) : const Color(0xFFE5E7EB),
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                border: Border(left: BorderSide(color: MiraloColors.accent, width: 3)),
+                border: Border(left: BorderSide(color: LongcatColors.accent, width: 3)),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.reply_rounded, color: MiraloColors.accent, size: 18),
+                  const Icon(Icons.reply_rounded, color: LongcatColors.accent, size: 18),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'Replying to: "$_replyToText"',
-                      style: MiraloTypography.bodySmall(
-                        color: isDark ? MiraloColors.darkTextPrimary : MiraloColors.lightTextPrimary,
+                      style: LongcatTypography.bodySmall(
+                        color: isDark ? LongcatColors.darkTextPrimary : LongcatColors.lightTextPrimary,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -1347,7 +1347,7 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                   Expanded(
                     child: Text(
                       'You have blocked @${contact.username}.',
-                      style: MiraloTypography.bodySmall(
+                      style: LongcatTypography.bodySmall(
                         color: isDark ? Colors.red.shade200 : Colors.red.shade800,
                       ),
                     ),
@@ -1388,22 +1388,22 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                   return Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    color: MiraloColors.accent.withValues(alpha: 0.12),
+                    color: LongcatColors.accent.withValues(alpha: 0.12),
                     child: Row(
                       children: [
-                        const Icon(Icons.person_add_outlined, size: 16, color: MiraloColors.accent),
+                        const Icon(Icons.person_add_outlined, size: 16, color: LongcatColors.accent),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             '@${contact.username} sent you a friend request.',
-                            style: MiraloTypography.bodySmall(
-                              color: isDark ? MiraloColors.darkTextPrimary : MiraloColors.lightTextPrimary,
+                            style: LongcatTypography.bodySmall(
+                              color: isDark ? LongcatColors.darkTextPrimary : LongcatColors.lightTextPrimary,
                             ),
                           ),
                         ),
                         ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: MiraloColors.accent,
+                            backgroundColor: LongcatColors.accent,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             minimumSize: Size.zero,
@@ -1420,7 +1420,7 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                         const SizedBox(width: 6),
                         OutlinedButton(
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: isDark ? MiraloColors.darkTextMuted : MiraloColors.lightTextMuted,
+                            foregroundColor: isDark ? LongcatColors.darkTextMuted : LongcatColors.lightTextMuted,
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             minimumSize: Size.zero,
                             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -1448,8 +1448,8 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                         Expanded(
                           child: Text(
                             'Friend request sent to @${contact.username} (Pending acceptance).',
-                            style: MiraloTypography.bodySmall(
-                              color: isDark ? MiraloColors.darkTextSecondary : MiraloColors.lightTextSecondary,
+                            style: LongcatTypography.bodySmall(
+                              color: isDark ? LongcatColors.darkTextSecondary : LongcatColors.lightTextSecondary,
                             ),
                           ),
                         ),
@@ -1461,22 +1461,22 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                 return Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  color: MiraloColors.accent.withValues(alpha: 0.1),
+                  color: LongcatColors.accent.withValues(alpha: 0.1),
                   child: Row(
                     children: [
-                      const Icon(Icons.person_add_alt_1_outlined, size: 16, color: MiraloColors.accent),
+                      const Icon(Icons.person_add_alt_1_outlined, size: 16, color: LongcatColors.accent),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           '@${contact.username} is not in your contacts.',
-                          style: MiraloTypography.bodySmall(
-                            color: isDark ? MiraloColors.darkTextPrimary : MiraloColors.lightTextPrimary,
+                          style: LongcatTypography.bodySmall(
+                            color: isDark ? LongcatColors.darkTextPrimary : LongcatColors.lightTextPrimary,
                           ),
                         ),
                       ),
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: MiraloColors.accent,
+                          backgroundColor: LongcatColors.accent,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           minimumSize: Size.zero,
@@ -1509,13 +1509,13 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
               color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF3F4F6),
               child: Row(
                 children: [
-                  const Icon(Icons.info_outline, size: 16, color: MiraloColors.accent),
+                  const Icon(Icons.info_outline, size: 16, color: LongcatColors.accent),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'Direct message limit reached (1 message). Further messages require an accepted friend request.',
-                      style: MiraloTypography.bodySmall(
-                        color: isDark ? MiraloColors.darkTextSecondary : MiraloColors.lightTextSecondary,
+                      style: LongcatTypography.bodySmall(
+                        color: isDark ? LongcatColors.darkTextSecondary : LongcatColors.lightTextSecondary,
                       ),
                     ),
                   ),

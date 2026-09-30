@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../core/theme/miralo_tokens.dart';
+import '../../core/theme/longcat_tokens.dart';
 
 /// Message actions bottom sheet.
 class MessageActionsSheet extends StatelessWidget {
@@ -56,11 +56,11 @@ class MessageActionsSheet extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: isDark
-          ? MiraloColors.darkSurfacePrimary
-          : MiraloColors.lightSurfacePrimary,
+          ? LongcatColors.darkSurfacePrimary
+          : LongcatColors.lightSurfacePrimary,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
-          top: Radius.circular(MiraloRadius.bottomSheet),
+          top: Radius.circular(LongcatRadius.bottomSheet),
         ),
       ),
       builder: (_) => MessageActionsSheet(
@@ -85,11 +85,11 @@ class MessageActionsSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor = isDark
-        ? MiraloColors.darkTextPrimary
-        : MiraloColors.lightTextPrimary;
+        ? LongcatColors.darkTextPrimary
+        : LongcatColors.lightTextPrimary;
     final border = isDark
-        ? MiraloColors.darkBorder
-        : MiraloColors.lightBorder;
+        ? LongcatColors.darkBorder
+        : LongcatColors.lightBorder;
 
     final maxHeight = MediaQuery.of(context).size.height * 0.85;
 
@@ -98,8 +98,8 @@ class MessageActionsSheet extends StatelessWidget {
       child: Container(
         constraints: BoxConstraints(maxHeight: maxHeight),
         padding: const EdgeInsets.symmetric(
-          horizontal: MiraloSpacing.lg,
-          vertical: MiraloSpacing.md,
+          horizontal: LongcatSpacing.lg,
+          vertical: LongcatSpacing.md,
         ),
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
@@ -110,7 +110,7 @@ class MessageActionsSheet extends StatelessWidget {
               child: Container(
                 width: 36,
                 height: 4,
-                margin: const EdgeInsets.only(bottom: MiraloSpacing.md),
+                margin: const EdgeInsets.only(bottom: LongcatSpacing.md),
                 decoration: BoxDecoration(
                   color: border,
                   borderRadius: BorderRadius.circular(2),
@@ -176,7 +176,7 @@ class MessageActionsSheet extends StatelessWidget {
               _ActionRow(
                 icon: isFavorite ? Icons.star_rounded : Icons.star_border_rounded,
                 title: isFavorite ? 'Remove from Favorites' : 'Save Favorite',
-                textColor: isFavorite ? MiraloColors.accent : textColor,
+                textColor: isFavorite ? LongcatColors.accent : textColor,
                 onTap: () {
                   Navigator.pop(context);
                   onFavorite?.call();
@@ -186,7 +186,7 @@ class MessageActionsSheet extends StatelessWidget {
               _ActionRow(
                 icon: isPinned ? Icons.push_pin_rounded : Icons.push_pin_outlined,
                 title: isPinned ? 'Unpin Message' : 'Pin Message',
-                textColor: isPinned ? MiraloColors.accent : textColor,
+                textColor: isPinned ? LongcatColors.accent : textColor,
                 onTap: () {
                   Navigator.pop(context);
                   onPin?.call();
@@ -222,7 +222,7 @@ class MessageActionsSheet extends StatelessWidget {
                   onMoveToVault?.call();
                 },
               ),
-            const SizedBox(height: MiraloSpacing.sm),
+            const SizedBox(height: LongcatSpacing.sm),
           ],
         ),
       ),
@@ -247,8 +247,8 @@ class _ActionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      leading: Icon(icon, color: textColor, size: MiraloIconSizes.md),
-      title: Text(title, style: MiraloTypography.bodyMedium(color: textColor)),
+      leading: Icon(icon, color: textColor, size: LongcatIconSizes.md),
+      title: Text(title, style: LongcatTypography.bodyMedium(color: textColor)),
       dense: true,
       contentPadding: EdgeInsets.zero,
       onTap: onTap,

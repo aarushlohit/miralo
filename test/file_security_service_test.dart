@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:miralo/services/file_security_service.dart';
+import 'package:longcat/services/file_security_service.dart';
 
 void main() {
   group('FileSecurityService Extension & RTLO Spoofing Tests', () {

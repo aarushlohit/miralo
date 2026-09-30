@@ -5,9 +5,9 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../providers/auth_provider.dart';
-import '../../widgets/common/miralo_app_bar.dart';
-import '../../widgets/common/miralo_avatar.dart';
-import '../../widgets/common/miralo_list_tile.dart';
+import '../../widgets/common/longcat_app_bar.dart';
+import '../../widgets/common/longcat_avatar.dart';
+import '../../widgets/common/longcat_list_tile.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -226,8 +226,8 @@ class ProfileScreen extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            MiraloAppBar(
-              leading: MiraloCircularIconButton(
+            LongcatAppBar(
+              leading: LongcatCircularIconButton(
                 icon: Icons.arrow_back_ios_new_rounded,
                 iconSize: 16,
                 onPressed: () => Navigator.pop(context),
@@ -295,7 +295,7 @@ class ProfileScreen extends StatelessWidget {
                           onTap: () => _showAvatarPicker(context, auth),
                           child: Stack(
                             children: [
-                              MiraloAvatar(
+                              LongcatAvatar(
                                 name: user?.displayName ?? 'User',
                                 imageUrl: user?.avatarUrl,
                                 size: 92,
@@ -344,42 +344,42 @@ class ProfileScreen extends StatelessWidget {
                   const SizedBox(height: AppSpacing.xl),
 
                   // Account Details
-                  MiraloSectionHeader('ACCOUNT INFORMATION'),
-                  MiraloSettingsGroup(
+                  LongcatSectionHeader('ACCOUNT INFORMATION'),
+                  LongcatSettingsGroup(
                     children: [
-                      MiraloListTile(
+                      LongcatListTile(
                         icon: Icons.person_outline,
                         title: 'Display Name',
                         subtitle: user?.displayName ?? 'User',
                         showChevron: false,
                       ),
-                      MiraloListTile(
+                      LongcatListTile(
                         icon: Icons.alternate_email,
                         title: 'Username',
                         subtitle: '@${user?.username ?? ''}',
                         showChevron: false,
                       ),
-                      MiraloListTile(
+                      LongcatListTile(
                         icon: Icons.mail_outline,
                         title: 'Email Address',
                         subtitle: user?.email ?? 'Not set',
                         showChevron: false,
                       ),
-                      MiraloListTile(
+                      LongcatListTile(
                         icon: Icons.notes_rounded,
                         title: 'Bio',
                         subtitle: (user?.bio != null && user!.bio!.isNotEmpty) ? user.bio! : 'Tap to add a bio...',
                         showChevron: true,
                         onTap: () => _showEditBioDialog(context, auth, user?.bio),
                       ),
-                      MiraloListTile(
+                      LongcatListTile(
                         icon: Icons.edit_note_rounded,
                         title: 'Note',
                         subtitle: (user?.note != null && user!.note!.isNotEmpty) ? user.note! : 'Tap to share a note...',
                         showChevron: true,
                         onTap: () => _showEditNoteDialog(context, auth, user?.note),
                       ),
-                      MiraloListTile(
+                      LongcatListTile(
                         icon: Icons.verified_user_outlined,
                         title: 'Account Status',
                         subtitle: 'Active',
@@ -391,16 +391,16 @@ class ProfileScreen extends StatelessWidget {
                   const SizedBox(height: AppSpacing.lg),
 
                   // Security Details
-                  MiraloSectionHeader('SESSION PROTECTION'),
-                  MiraloSettingsGroup(
+                  LongcatSectionHeader('SESSION PROTECTION'),
+                  LongcatSettingsGroup(
                     children: [
-                      MiraloListTile(
+                      LongcatListTile(
                         icon: Icons.shield_outlined,
                         title: 'Device Protection',
                         subtitle: 'Biometric & Passcode Active',
                         showChevron: false,
                       ),
-                      MiraloListTile(
+                      LongcatListTile(
                         icon: Icons.vpn_key_outlined,
                         title: 'Credential Status',
                         subtitle: 'Dual Independent Vaults Configured',

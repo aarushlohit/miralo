@@ -1,9 +1,9 @@
-# MIRALO AI
+# LONGCAT AI
 
 > **"Your AI. Your Space. Designed for What Matters."**  
 > *Smart. Private. Yours.*
 
-MIRALO AI is a minimal, distraction-free AI assistant with an integrated discreet private communication space and an independently encrypted Library Vault, engineered entirely in **Flutter**.
+LONGCAT AI is a minimal, distraction-free AI assistant with an integrated discreet private communication space and an independently encrypted Library Vault, engineered entirely in **Flutter**.
 
 ---
 
@@ -73,7 +73,7 @@ The interface is handcrafted in code matching the exact 21-screen specification:
 ### Run Locally
 ```bash
 # Clone or navigate to the project directory
-cd "/home/aarush/Myoffice/Personal Projects/miralo"
+cd "/home/aarush/Myoffice/Personal Projects/longcat"
 
 # Get dependencies
 flutter pub get
@@ -95,4 +95,4 @@ flutter run
 ---
 
 ## Assets
-- `assets/logo.png` — Official MIRALO AI glowing blue orbital logo.
+- `assets/logo.png` — Official LONGCAT AI glowing blue orbital logo.

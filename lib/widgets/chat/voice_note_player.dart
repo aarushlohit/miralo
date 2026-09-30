@@ -1,6 +1,6 @@
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
-import '../../core/theme/miralo_tokens.dart';
+import '../../core/theme/longcat_tokens.dart';
 
 /// Interactive Audio / Voice Note Player Widget with play/pause & seek control.
 class VoiceNotePlayer extends StatefulWidget {
@@ -77,7 +77,7 @@ class _VoiceNotePlayerState extends State<VoiceNotePlayer> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textPrimary = isDark ? MiraloColors.darkTextPrimary : MiraloColors.lightTextPrimary;
+    final textPrimary = isDark ? LongcatColors.darkTextPrimary : LongcatColors.lightTextPrimary;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -91,7 +91,7 @@ class _VoiceNotePlayerState extends State<VoiceNotePlayer> {
           IconButton(
             icon: Icon(
               _isPlaying ? Icons.pause_circle_filled_rounded : Icons.play_circle_fill_rounded,
-              color: MiraloColors.accent,
+              color: LongcatColors.accent,
               size: 32,
             ),
             padding: EdgeInsets.zero,
@@ -109,9 +109,9 @@ class _VoiceNotePlayerState extends State<VoiceNotePlayer> {
                     trackHeight: 3,
                     thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
                     overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
-                    activeTrackColor: MiraloColors.accent,
+                    activeTrackColor: LongcatColors.accent,
                     inactiveTrackColor: isDark ? Colors.white24 : Colors.black12,
-                    thumbColor: MiraloColors.accent,
+                    thumbColor: LongcatColors.accent,
                   ),
                   child: Slider(
                     value: _duration.inMilliseconds > 0

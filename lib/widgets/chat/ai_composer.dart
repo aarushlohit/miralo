@@ -25,7 +25,7 @@ class AiComposer extends StatefulWidget {
     this.onAttach,
     this.onStop,
     this.isStreaming = false,
-    this.placeholder = 'Ask MIRALO AI...',
+    this.placeholder = 'Ask LONGCAT AI...',
   });
 
   @override
@@ -126,10 +126,10 @@ class _AiComposerState extends State<AiComposer> {
       child: SafeArea(
         top: false,
         child: Container(
-          height: MiraloDimensions.composerHeight,
+          height: LongcatDimensions.composerHeight,
           decoration: BoxDecoration(
             color: pillBg,
-            borderRadius: BorderRadius.circular(MiraloDimensions.composerRadius),
+            borderRadius: BorderRadius.circular(LongcatDimensions.composerRadius),
             border: Border.all(color: borderColor, width: 0.8),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 6),

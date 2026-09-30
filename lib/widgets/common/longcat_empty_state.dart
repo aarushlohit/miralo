@@ -4,13 +4,13 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 
 /// Centered empty state with icon, title, and subtitle.
-class MiraloEmptyState extends StatelessWidget {
+class LongcatEmptyState extends StatelessWidget {
   final IconData icon;
   final String title;
   final String? subtitle;
   final Widget? action;
 
-  const MiraloEmptyState({
+  const LongcatEmptyState({
     super.key,
     required this.icon,
     required this.title,

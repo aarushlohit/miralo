@@ -1,4 +1,4 @@
-# MIRALO AI — Design System & Component Specification
+# LONGCAT AI — Design System & Component Specification
 
 > **"Your AI. Your Space. Designed for What Matters."**  
 > **Tagline:** Focused · Private · Beautifully Simple  

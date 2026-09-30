@@ -12,8 +12,8 @@ import '../../providers/library_provider.dart';
 import '../../providers/private_chat_provider.dart';
 import '../../providers/vault_provider.dart';
 import '../../services/download_service.dart';
-import '../../widgets/common/miralo_empty_state.dart';
-import '../../widgets/common/miralo_segmented_tabs.dart';
+import '../../widgets/common/longcat_empty_state.dart';
+import '../../widgets/common/longcat_segmented_tabs.dart';
 
 class PrivateImagesScreen extends StatefulWidget {
   const PrivateImagesScreen({super.key});
@@ -710,7 +710,7 @@ class _PrivateImagesScreenState extends State<PrivateImagesScreen> {
                       style: AppTypography.heading3(color: textPrimary)),
                   const SizedBox(height: AppSpacing.sm),
 
-                  MiraloSegmentedTabs(
+                  LongcatSegmentedTabs(
                     tabs: _tabs,
                     selectedIndex: _selectedTabIndex,
                     onTabSelected: (i) => setState(() => _selectedTabIndex = i),
@@ -759,7 +759,7 @@ class _PrivateImagesScreenState extends State<PrivateImagesScreen> {
                         if (displayedImages.isEmpty) {
                           return Padding(
                             padding: const EdgeInsets.symmetric(vertical: 40),
-                            child: MiraloEmptyState(
+                            child: LongcatEmptyState(
                               icon: Icons.photo_library_outlined,
                               title: _chatImagesSubFilter == 1
                                   ? 'No sent images'
@@ -803,7 +803,7 @@ class _PrivateImagesScreenState extends State<PrivateImagesScreen> {
                     if (privateChat.favoriteGifs.isEmpty)
                       const Padding(
                         padding: EdgeInsets.symmetric(vertical: 40),
-                        child: MiraloEmptyState(
+                        child: LongcatEmptyState(
                           icon: Icons.star_border_rounded,
                           title: 'No favorite GIFs yet',
                           subtitle: 'Long-press any GIF in chat and tap "Save Favorite" to see it here.',

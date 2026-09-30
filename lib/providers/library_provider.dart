@@ -68,8 +68,8 @@ class LibraryProvider extends ChangeNotifier {
     ]);
   }
 
-  String _getItemsKey(String uid) => 'miralo_library_items_$uid';
-  String _getFoldersKey(String uid) => 'miralo_library_folders_$uid';
+  String _getItemsKey(String uid) => 'longcat_library_items_$uid';
+  String _getFoldersKey(String uid) => 'longcat_library_folders_$uid';
 
   /// Initializes session for the specific user. Strictly isolates data between accounts.
   Future<void> initUserSession(String userId) async {

@@ -1,4 +1,4 @@
-package com.miralo.ai.miralo
+package com.longcat.ai.longcat
 
 import android.media.MediaScannerConnection
 import io.flutter.embedding.android.FlutterActivity
@@ -6,7 +6,7 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
-    private val CHANNEL = "com.miralo.ai/media_scanner"
+    private val CHANNEL = "com.longcat.ai/media_scanner"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)

@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 
-/// Centralized token definitions for MIRALO AI
+/// Centralized token definitions for LONGCAT AI
 /// Defines colors, typography, spacing, radius, elevation, and icon sizes.
 
-typedef MiraloColors = AppColors;
+typedef LongcatColors = AppColors;
 
-class MiraloSpacing {
-  MiraloSpacing._();
+class LongcatSpacing {
+  LongcatSpacing._();
 
   static const double xxs = 4.0;
   static const double xs = 8.0;
@@ -20,8 +20,8 @@ class MiraloSpacing {
   static const double xxxl = 40.0;
 }
 
-class MiraloRadius {
-  MiraloRadius._();
+class LongcatRadius {
+  LongcatRadius._();
 
   static const double xs = 8.0;
   static const double sm = 12.0;
@@ -44,8 +44,8 @@ class MiraloRadius {
   static BorderRadius get r28 => BorderRadius.circular(xxl);
 }
 
-class MiraloElevation {
-  MiraloElevation._();
+class LongcatElevation {
+  LongcatElevation._();
 
   static List<BoxShadow> subtle(bool isDark) {
     if (isDark) {
@@ -86,8 +86,8 @@ class MiraloElevation {
   }
 }
 
-class MiraloIconSizes {
-  MiraloIconSizes._();
+class LongcatIconSizes {
+  LongcatIconSizes._();
 
   static const double sm = 16.0;
   static const double md = 20.0;
@@ -95,8 +95,8 @@ class MiraloIconSizes {
   static const double xl = 28.0;
 }
 
-class MiraloTypography {
-  MiraloTypography._();
+class LongcatTypography {
+  LongcatTypography._();
 
   static TextStyle displayLarge({required Color color}) => GoogleFonts.inter(
         fontSize: 28,

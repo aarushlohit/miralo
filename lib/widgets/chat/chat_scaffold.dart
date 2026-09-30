@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/miralo_tokens.dart';
+import '../../core/theme/longcat_tokens.dart';
 
 /// Unified scaffold for AI Chat and Private Chat screens.
 class ChatScaffold extends StatelessWidget {
@@ -21,7 +21,7 @@ class ChatScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = MiraloColors.bg(isDark);
+    final bg = LongcatColors.bg(isDark);
 
     return Scaffold(
       key: scaffoldKey,
