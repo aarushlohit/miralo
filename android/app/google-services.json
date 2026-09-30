@@ -1,8 +1,8 @@
 {
   "project_info": {
     "project_number": "550282978216",
-    "project_id": "longcat-app",
-    "storage_bucket": "longcat-app.firebasestorage.app"
+    "project_id": "miralo-app",
+    "storage_bucket": "miralo-app.firebasestorage.app"
   },
   "client": [
     {

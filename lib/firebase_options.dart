@@ -53,10 +53,10 @@ class DefaultFirebaseOptions {
     apiKey: 'AIzaSyA_8WfYAtefNJziOc40w192k4k5njRRWng',
     appId: '1:550282978216:web:5a0f7c46129ba3e5e6f39d',
     messagingSenderId: '550282978216',
-    projectId: 'longcat-app',
-    authDomain: 'longcat-app.firebaseapp.com',
-    databaseURL: 'https://longcat-app-default-rtdb.firebaseio.com',
-    storageBucket: 'longcat-app.firebasestorage.app',
+    projectId: 'miralo-app',
+    authDomain: 'miralo-app.firebaseapp.com',
+    databaseURL: 'https://miralo-app-default-rtdb.firebaseio.com',
+    storageBucket: 'miralo-app.firebasestorage.app',
     measurementId: 'G-7SD5P7B6DQ',
   );
 
@@ -64,8 +64,8 @@ class DefaultFirebaseOptions {
     apiKey: 'AIzaSyBr0-7wTr_yAxAVOZfWnLFb1yHFBNuEMqo',
     appId: '1:550282978216:android:53ee9651fac071c4e6f39d',
     messagingSenderId: '550282978216',
-    projectId: 'longcat-app',
-    databaseURL: 'https://longcat-app-default-rtdb.firebaseio.com',
-    storageBucket: 'longcat-app.firebasestorage.app',
+    projectId: 'miralo-app',
+    databaseURL: 'https://miralo-app-default-rtdb.firebaseio.com',
+    storageBucket: 'miralo-app.firebasestorage.app',
   );
 }
