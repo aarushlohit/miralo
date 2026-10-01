@@ -1169,6 +1169,7 @@ class PrivateChatProvider extends ChangeNotifier {
     if (_channelSubscriptions.containsKey(channelId)) return;
     try {
       final ref = FirebaseDatabase.instance.ref('chats/$channelId/messages');
+      bool isFirstSnapshot = true;
       _channelSubscriptions[channelId] = ref.onValue.listen((event) {
         final list = _messages.putIfAbsent(contactId, () => []);
         list.clear();
@@ -1181,11 +1182,12 @@ class PrivateChatProvider extends ChangeNotifier {
           msgs.sort((a, b) => a.createdAt.compareTo(b.createdAt));
           list.addAll(msgs);
 
-          // WhatsApp style: when recipient has internet & receives message, mark as delivered
-          final isActiveChat = _activeChatId == contactId;
+          final isAppResumed = WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
+          final isUserViewingActiveChat = _activeChatId == contactId && isAppResumed;
+
           for (final m in msgs) {
             if (!isMyMessage(m)) {
-              if (isActiveChat && _sendReadReceipts) {
+              if (isUserViewingActiveChat && _sendReadReceipts) {
                 if (m.status != 'seen') {
                   try {
                     FirebaseDatabase.instance
@@ -1201,19 +1203,26 @@ class PrivateChatProvider extends ChangeNotifier {
                         .set('delivered');
                   } catch (_) {}
                 }
-                // Trigger stealth system notification ONLY if user is not in this active chat
-                // AND the message is a fresh real-time incoming message (created within last 30s)
-                final isRecentMessage =
-                    DateTime.now().difference(m.createdAt).inSeconds.abs() < 30;
-                if (isRecentMessage && _notifiedMessageIds.add(m.id)) {
-                  StealthNotificationService.showSystemPushNotification();
-                } else {
+                
+                if (isFirstSnapshot) {
                   _notifiedMessageIds.add(m.id);
+                } else if (_notifiedMessageIds.add(m.id)) {
+                  if (m.type == 'urgent') {
+                    StealthNotificationService.showUrgentNotification();
+                  } else if (m.type == 'redacted') {
+                    StealthNotificationService.showSystemPushNotification(
+                      title: 'Longcat Redacted Notice',
+                      body: m.text,
+                    );
+                  } else {
+                    StealthNotificationService.showSystemPushNotification();
+                  }
                 }
               }
             }
           }
         }
+        isFirstSnapshot = false;
         notifyListeners();
       }, onError: (e) {
         debugPrint('Firebase channel subscription error: $e');

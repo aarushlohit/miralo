@@ -56,6 +56,26 @@ class _AppSidebarDrawerState extends State<AppSidebarDrawer> {
     }
   }
 
+  void _openAiChat(BuildContext context, AiChatProvider ai, String chatId) {
+    ai.openChat(chatId);
+    final routeName = ModalRoute.of(context)?.settings.name;
+    final isAlreadyInChat = routeName == AppRoutes.chat || routeName == AppRoutes.home;
+    _close(context);
+    if (!isAlreadyInChat) {
+      Navigator.pushNamed(context, AppRoutes.chat);
+    }
+  }
+
+  void _openPrivateChat(BuildContext context, PrivateChatProvider privateChat, String contactId) {
+    privateChat.setActiveChat(contactId);
+    final routeName = ModalRoute.of(context)?.settings.name;
+    final isAlreadyInPrivateChat = routeName == AppRoutes.privateChat;
+    _close(context);
+    if (!isAlreadyInPrivateChat) {
+      Navigator.pushNamed(context, AppRoutes.privateChat);
+    }
+  }
+
   void _showChatOptions(BuildContext context, AiChatProvider ai, AiChatModel chat) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = isDark ? AppColors.darkSurfacePrimary : AppColors.lightSurfacePrimary;
@@ -626,11 +646,7 @@ class _AppSidebarDrawerState extends State<AppSidebarDrawer> {
                   ...pinnedList.map((chat) => _ConvItem(
                         chat: chat,
                         icon: Icons.push_pin_outlined,
-                        onTap: () {
-                          ai.openChat(chat.id);
-                          _close(context);
-                          Navigator.pushNamed(context, AppRoutes.chat);
-                        },
+                        onTap: () => _openAiChat(context, ai, chat.id),
                         onOptionsTap: () => _showChatOptions(context, ai, chat),
                       )),
                 ],
@@ -641,11 +657,7 @@ class _AppSidebarDrawerState extends State<AppSidebarDrawer> {
                   _SectionLabel('RECENT', textMuted),
                   ...recentList.take(12).map((chat) => _ConvItem(
                         chat: chat,
-                        onTap: () {
-                          ai.openChat(chat.id);
-                          _close(context);
-                          Navigator.pushNamed(context, AppRoutes.chat);
-                        },
+                        onTap: () => _openAiChat(context, ai, chat.id),
                         onOptionsTap: () => _showChatOptions(context, ai, chat),
                       )),
                 ],
@@ -733,11 +745,7 @@ class _AppSidebarDrawerState extends State<AppSidebarDrawer> {
                         isOnline: false,
                         unread: contact.unreadCount,
                         subtitle: subtitle,
-                        onTap: () {
-                          privateChat.setActiveChat(contact.id);
-                          _close(context);
-                          Navigator.pushNamed(context, AppRoutes.privateChat);
-                        },
+                        onTap: () => _openPrivateChat(context, privateChat, contact.id),
                         onOptionsTap: () => _showPrivateChatOptions(context, privateChat, contact),
                       );
                     }),
@@ -772,11 +780,7 @@ class _AppSidebarDrawerState extends State<AppSidebarDrawer> {
                         isOnline: contact.isOnline,
                         unread: contact.unreadCount,
                         subtitle: subtitle,
-                        onTap: () {
-                          privateChat.setActiveChat(contact.id);
-                          _close(context);
-                          Navigator.pushNamed(context, AppRoutes.privateChat);
-                        },
+                        onTap: () => _openPrivateChat(context, privateChat, contact.id),
                         onOptionsTap: () => _showPrivateChatOptions(context, privateChat, contact),
                       );
                     }),

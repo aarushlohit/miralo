@@ -8,7 +8,7 @@ class StealthNotificationService {
   StealthNotificationService._();
 
   static const String stealthTitle = 'Longcat AI';
-  static const String stealthBody = 'Longcat AI spawns !!!';
+  static const String stealthBody = 'Longcat AI initialized in background';
   static const String channelId = 'longcat_stealth_notifications';
   static const String channelName = 'Longcat AI Notifications';
   static const String channelDescription =
@@ -47,18 +47,37 @@ class StealthNotificationService {
         },
       );
 
-      // Request notification permissions for Android 13+ (API 33+)
-      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-        final androidPlugin = _localNotifications
-            .resolvePlatformSpecificImplementation<
-                AndroidFlutterLocalNotificationsPlugin>();
-        await androidPlugin?.requestNotificationsPermission();
-      }
+      await requestPermissionsIfNeeded();
     } catch (e) {
       debugPrint('Error initializing local notifications: $e');
     }
 
     _isInitialized = true;
+  }
+
+  /// Actively request OS push notification permissions if not already granted
+  static Future<void> requestPermissionsIfNeeded() async {
+    try {
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+        final androidPlugin = _localNotifications
+            .resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin>();
+        await androidPlugin?.requestNotificationsPermission();
+      } else if (!kIsWeb &&
+          (defaultTargetPlatform == TargetPlatform.iOS ||
+              defaultTargetPlatform == TargetPlatform.macOS)) {
+        final iosPlugin = _localNotifications
+            .resolvePlatformSpecificImplementation<
+                IOSFlutterLocalNotificationsPlugin>();
+        await iosPlugin?.requestPermissions(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
+      }
+    } catch (e) {
+      debugPrint('Error requesting notification permissions: $e');
+    }
   }
 
   /// Display a stealth push notification into the system notification bar (top status bar / notification shade)
