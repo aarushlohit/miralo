@@ -732,8 +732,8 @@ class _ComposerState extends State<Composer> {
         }
 
         if (isMatch) {
-          vault.unlockPrivate(key);
-          vault.unlockLibrary(key);
+          vault.unhideChatMessages();
+          vault.unhideLibraryContent();
           vault.resetInactivityTimer();
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -743,6 +743,21 @@ class _ComposerState extends State<Composer> {
               ),
             );
           }
+        }
+        return;
+      }
+
+      if (lower == '/hide') {
+        _controller.clear();
+        final vault = Provider.of<VaultProvider>(context, listen: false);
+        vault.hideChatMessages();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Chat hidden.'),
+              duration: Duration(seconds: 2),
+            ),
+          );
         }
         return;
       }

@@ -377,14 +377,15 @@ class _LibraryScreenState extends State<LibraryScreen> {
     final cardBg = isDark ? AppColors.darkSurfacePrimary : AppColors.lightSurfacePrimary;
     final cardBorder = isDark ? AppColors.darkBorder : AppColors.lightBorder;
 
-    final folders = vault.isLibraryUnlocked ? library.folders : library.folders.take(0).toList();
-    final items = vault.isLibraryUnlocked ? library.filteredItems : library.filteredItems.take(0).toList();
+    final folders = vault.isLibraryContentUnhidden ? library.folders : library.folders.take(0).toList();
+    final items = vault.isLibraryContentUnhidden ? library.filteredItems : library.filteredItems.take(0).toList();
 
     return PopScope(
       canPop: true,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) {
-          vault.lockLibrary();
+          vault.hideLibraryContent();
+          vault.resetInactivityTimer();
         }
       },
       child: Scaffold(
@@ -404,7 +405,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                     icon: Icons.arrow_back_ios_new_rounded,
                     iconSize: 16,
                     onPressed: () {
-                      vault.lockLibrary();
+                      vault.hideLibraryContent();
                       Navigator.pop(context);
                     },
                   ),
@@ -474,8 +475,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
                                       isMatch = true;
                                     }
                                     if (isMatch) {
-                                      vault.unlockLibrary(key);
-                                      vault.unlockPrivate(key);
+                                      vault.unhideLibraryContent();
+                                      vault.unhideChatMessages();
                                       vault.resetInactivityTimer();
                                       _searchCtrl.clear();
                                       library.setSearchQuery('');

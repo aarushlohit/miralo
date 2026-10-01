@@ -1143,8 +1143,6 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
     final vault = Provider.of<VaultProvider>(context);
     final library = Provider.of<LibraryProvider>(context, listen: false);
     final contact = chat.activeContact;
-    final messages = vault.isPrivateUnlocked ? chat.activeMessages : <PrivateMessageModel>[];
-
     final displayName = contact?.displayName ?? 'Mira';
     final isTyping = contact != null && chat.isContactTyping(contact.id);
     final subtitle = isTyping
@@ -1155,23 +1153,38 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                 ? 'Online'
                 : (contact?.lastSeenText ?? 'Active recently')));
 
-    final pinnedMessages = vault.isPrivateUnlocked ? chat.getPinnedMessages(contact?.id) : <PrivateMessageModel>[];
+    final messages = vault.isChatMessagesUnhidden ? chat.activeMessages : <PrivateMessageModel>[];
+    final pinnedMessages = vault.isChatMessagesUnhidden ? chat.getPinnedMessages(contact?.id) : <PrivateMessageModel>[];
 
-    return Listener(
-      behavior: HitTestBehavior.translucent,
-      onPointerDown: (_) {
-        try {
-          Provider.of<VaultProvider>(context, listen: false).resetInactivityTimer();
-        } catch (_) {}
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) {
+          try {
+            Provider.of<VaultProvider>(context, listen: false).hideChatMessages();
+          } catch (_) {}
+        }
       },
-      child: ChatScaffold(
-      header: ChatHeader(
-        isPrivate: true,
-        title: displayName,
-        subtitle: subtitle,
-        avatarUrl: contact?.avatarUrl,
-        isGroup: contact?.isGroup == true,
-        onBack: () => Navigator.pop(context),
+      child: Listener(
+        behavior: HitTestBehavior.translucent,
+        onPointerDown: (_) {
+          try {
+            Provider.of<VaultProvider>(context, listen: false).resetInactivityTimer();
+          } catch (_) {}
+        },
+        child: ChatScaffold(
+          header: ChatHeader(
+            isPrivate: true,
+            title: displayName,
+            subtitle: subtitle,
+            avatarUrl: contact?.avatarUrl,
+            isGroup: contact?.isGroup == true,
+            onBack: () {
+              try {
+                Provider.of<VaultProvider>(context, listen: false).hideChatMessages();
+              } catch (_) {}
+              Navigator.pop(context);
+            },
         onAvatarTap: contact != null
             ? () {
                 if (contact.isGroup) {
@@ -1267,7 +1280,7 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                 );
               },
             ),
-          if (vault.isPrivateUnlocked && _showCloudNote && contact?.note != null && contact!.note!.isNotEmpty && !contact.isGroup)
+          if (vault.isChatMessagesUnhidden && _showCloudNote && contact?.note != null && contact!.note!.isNotEmpty && !contact.isGroup)
             AnimatedOpacity(
               duration: const Duration(milliseconds: 300),
               opacity: _showCloudNote ? 1.0 : 0.0,
@@ -1683,6 +1696,7 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
           ),
         ],
       ),
+    ),
     ),
     );
   }

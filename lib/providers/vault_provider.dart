@@ -65,7 +65,7 @@ class VaultProvider extends ChangeNotifier with WidgetsBindingObserver {
 
   void resetInactivityTimer() {
     _inactivityTimer?.cancel();
-    if (_isPrivateUnlocked || _isLibraryUnlocked) {
+    if (_isPrivateUnlocked || _isLibraryUnlocked || _isChatMessagesUnhidden || _isLibraryContentUnhidden) {
       _inactivityTimer = Timer(const Duration(minutes: 2), () {
         lockAllAndReturnToAiMode();
       });
@@ -73,9 +73,12 @@ class VaultProvider extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   void lockAllAndReturnToAiMode() {
-    final wasUnlocked = _isPrivateUnlocked || _isLibraryUnlocked;
+    final wasUnlocked = _isPrivateUnlocked || _isLibraryUnlocked || _isChatMessagesUnhidden || _isLibraryContentUnhidden;
     _isPrivateUnlocked = false;
     _isLibraryUnlocked = false;
+    _isChatMessagesUnhidden = false;
+    _isLibraryContentUnhidden = false;
+    _lastUnlockedKey = '';
     _inactivityTimer?.cancel();
     _inactivityTimer = null;
     notifyListeners();
@@ -92,7 +95,7 @@ class VaultProvider extends ChangeNotifier with WidgetsBindingObserver {
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive ||
         state == AppLifecycleState.detached) {
-      if (_isPrivateUnlocked || _isLibraryUnlocked) {
+      if (_isPrivateUnlocked || _isLibraryUnlocked || _isChatMessagesUnhidden || _isLibraryContentUnhidden) {
         lockAllAndReturnToAiMode();
       }
     }
@@ -119,6 +122,9 @@ class VaultProvider extends ChangeNotifier with WidgetsBindingObserver {
   // Independent session states
   bool _isPrivateUnlocked = false;
   bool _isLibraryUnlocked = false;
+  bool _isChatMessagesUnhidden = false;
+  bool _isLibraryContentUnhidden = false;
+  String _lastUnlockedKey = '';
 
   // Rate Limiting & Security Lockout
   int _failedPrivateAttempts = 0;
@@ -140,6 +146,31 @@ class VaultProvider extends ChangeNotifier with WidgetsBindingObserver {
   // Getters
   bool get isPrivateUnlocked => _isPrivateUnlocked;
   bool get isLibraryUnlocked => _isLibraryUnlocked;
+  bool get isChatMessagesUnhidden => _isChatMessagesUnhidden;
+  bool get isLibraryContentUnhidden => _isLibraryContentUnhidden;
+
+  void unhideChatMessages() {
+    _isChatMessagesUnhidden = true;
+    resetInactivityTimer();
+    notifyListeners();
+  }
+
+  void hideChatMessages() {
+    _isChatMessagesUnhidden = false;
+    notifyListeners();
+  }
+
+  void unhideLibraryContent() {
+    _isLibraryContentUnhidden = true;
+    resetInactivityTimer();
+    notifyListeners();
+  }
+
+  void hideLibraryContent() {
+    _isLibraryContentUnhidden = false;
+    notifyListeners();
+  }
+
   bool get hasPrivateSecret => _privateChatSecret.isNotEmpty || _privateChatSecretHash.isNotEmpty;
   bool get hasLibraryPin => _libraryPin.isNotEmpty || _libraryPinHash.isNotEmpty;
   int get autoLockMinutes => _autoLockMinutes;
@@ -184,6 +215,7 @@ class VaultProvider extends ChangeNotifier with WidgetsBindingObserver {
   bool verifyPasscode(String inputSecret) {
     final cleanInput = inputSecret.trim();
     if (cleanInput.isEmpty) return false;
+    if (_lastUnlockedKey.isNotEmpty && cleanInput == _lastUnlockedKey) return true;
     if (_privateChatSecret.isNotEmpty && cleanInput == _privateChatSecret) return true;
     if (_privateChatSecretHash.isNotEmpty && _currentUserId != null && _currentUserId!.isNotEmpty) {
       return hashSecret(cleanInput, _currentUserId!) == _privateChatSecretHash;
@@ -194,6 +226,7 @@ class VaultProvider extends ChangeNotifier with WidgetsBindingObserver {
   bool verifyLibraryPin(String inputPasscode) {
     final cleanInput = inputPasscode.trim();
     if (cleanInput.isEmpty) return false;
+    if (_lastUnlockedKey.isNotEmpty && cleanInput == _lastUnlockedKey) return true;
     if (_libraryPin.isNotEmpty && cleanInput == _libraryPin) return true;
     if (_libraryPinHash.isNotEmpty && _currentUserId != null && _currentUserId!.isNotEmpty) {
       return hashSecret(cleanInput, _currentUserId!) == _libraryPinHash;
@@ -270,6 +303,8 @@ class VaultProvider extends ChangeNotifier with WidgetsBindingObserver {
 
     if (verifyPasscode(inputSecret) || verifyLibraryPin(inputSecret) || (!hasPrivateSecret && inputSecret.isNotEmpty)) {
       _isPrivateUnlocked = true;
+      _isChatMessagesUnhidden = false;
+      _lastUnlockedKey = inputSecret.trim();
       _failedPrivateAttempts = 0;
       _privateLockoutEndTime = null;
       resetInactivityTimer();
@@ -294,6 +329,8 @@ class VaultProvider extends ChangeNotifier with WidgetsBindingObserver {
     final isServerValid = await verifyPrivateSecretServerSide(inputSecret);
     if (isServerValid) {
       _isPrivateUnlocked = true;
+      _isChatMessagesUnhidden = false;
+      _lastUnlockedKey = inputSecret.trim();
       _failedPrivateAttempts = 0;
       _privateLockoutEndTime = null;
       resetInactivityTimer();
@@ -312,6 +349,7 @@ class VaultProvider extends ChangeNotifier with WidgetsBindingObserver {
 
   void lockPrivate() {
     _isPrivateUnlocked = false;
+    _isChatMessagesUnhidden = false;
     _inactivityTimer?.cancel();
     notifyListeners();
   }
@@ -322,6 +360,8 @@ class VaultProvider extends ChangeNotifier with WidgetsBindingObserver {
 
     if (verifyLibraryPin(inputPasscode) || verifyPasscode(inputPasscode) || (!hasLibraryPin && inputPasscode.isNotEmpty)) {
       _isLibraryUnlocked = true;
+      _isLibraryContentUnhidden = false;
+      _lastUnlockedKey = inputPasscode.trim();
       _failedLibraryAttempts = 0;
       _libraryLockoutEndTime = null;
       resetInactivityTimer();
@@ -346,8 +386,11 @@ class VaultProvider extends ChangeNotifier with WidgetsBindingObserver {
     final isServerValid = await verifyLibraryPinServerSide(inputPasscode);
     if (isServerValid) {
       _isLibraryUnlocked = true;
+      _isLibraryContentUnhidden = false;
+      _lastUnlockedKey = inputPasscode.trim();
       _failedLibraryAttempts = 0;
       _libraryLockoutEndTime = null;
+      resetInactivityTimer();
       notifyListeners();
       return true;
     }
@@ -363,6 +406,8 @@ class VaultProvider extends ChangeNotifier with WidgetsBindingObserver {
 
   void lockLibrary() {
     _isLibraryUnlocked = false;
+    _isLibraryContentUnhidden = false;
+    _inactivityTimer?.cancel();
     notifyListeners();
   }
 
@@ -466,6 +511,10 @@ class VaultProvider extends ChangeNotifier with WidgetsBindingObserver {
   void lockAll() {
     _isPrivateUnlocked = false;
     _isLibraryUnlocked = false;
+    _isChatMessagesUnhidden = false;
+    _isLibraryContentUnhidden = false;
+    _lastUnlockedKey = '';
+    _inactivityTimer?.cancel();
     notifyListeners();
   }
 

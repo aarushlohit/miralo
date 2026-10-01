@@ -339,7 +339,7 @@ class _LibraryFolderScreenState extends State<LibraryFolderScreen> {
 
     final allFolderItems =
         library.items.where((i) => i.folderId == library.selectedFolderId).toList();
-    final items = vault.isLibraryUnlocked
+    final items = vault.isLibraryContentUnhidden
         ? (_searchQuery.isEmpty
             ? allFolderItems
             : allFolderItems.where((i) => i.name.toLowerCase().contains(_searchQuery)).toList())
@@ -420,8 +420,8 @@ class _LibraryFolderScreenState extends State<LibraryFolderScreen> {
                                   isMatch = true;
                                 }
                                 if (isMatch) {
-                                  vault.unlockLibrary(key);
-                                  vault.unlockPrivate(key);
+                                  vault.unhideLibraryContent();
+                                  vault.unhideChatMessages();
                                   vault.resetInactivityTimer();
                                   _searchCtrl.clear();
                                   setState(() => _searchQuery = '');
