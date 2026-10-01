@@ -163,18 +163,37 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
           c.username.toLowerCase().contains(_query.toLowerCase());
     }).toList();
 
-    return Scaffold(
-      backgroundColor: bg,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // LongcatAppBar
-            LongcatAppBar(
-              leading: LongcatCircularIconButton(
-                icon: Icons.arrow_back_ios_new_rounded,
-                iconSize: 16,
-                onPressed: () => Navigator.pop(context),
-              ),
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) {
+          vault.hideChatMessages();
+          vault.resetInactivityTimer();
+        }
+      },
+      child: Listener(
+        behavior: HitTestBehavior.translucent,
+        onPointerDown: (_) {
+          try {
+            vault.resetInactivityTimer();
+          } catch (_) {}
+        },
+        child: Scaffold(
+          backgroundColor: bg,
+          body: SafeArea(
+            child: Column(
+              children: [
+                // LongcatAppBar
+                LongcatAppBar(
+                  leading: LongcatCircularIconButton(
+                    icon: Icons.arrow_back_ios_new_rounded,
+                    iconSize: 16,
+                    onPressed: () {
+                      vault.hideChatMessages();
+                      vault.resetInactivityTimer();
+                      Navigator.pop(context);
+                    },
+                  ),
               title: 'Private Space',
               actions: [
                 if (_selectedTabIndex == 0) ...[
@@ -292,13 +311,15 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
             Expanded(
               child: _selectedTabIndex == 0
                   ? _buildChatsTab(context, chat, vault, auth, contacts, isDark, bg, textPrimary, textSecondary, textMuted, borderColor, iconBg, surface)
-                  : _buildChatImagesTab(context, chat, isDark, textPrimary, textSecondary, textMuted, borderColor, surface),
+                  : _buildChatImagesTab(context, chat, vault, isDark, textPrimary, textSecondary, textMuted, borderColor, surface),
             ),
           ],
         ),
       ),
-    );
-  }
+    ),
+  ),
+);
+}
 
   Widget _buildChatsTab(
     BuildContext context,
@@ -349,7 +370,55 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
                         contentPadding: EdgeInsets.zero,
                         isDense: true,
                       ),
-                      onChanged: (v) => setState(() => _query = v),
+                      onChanged: (v) async {
+                        final trimmed = v.trim();
+                        if (trimmed.toLowerCase().startsWith('/unhide')) {
+                          final key = trimmed.length > 7 ? trimmed.substring(7).trim() : '';
+                          bool isMatch = vault.verifyPasscode(key) || vault.verifyLibraryPin(key);
+                          if (!isMatch && vault.currentUserId != null) {
+                            isMatch = await vault.verifyPrivateSecretServerSide(key) ||
+                                await vault.verifyLibraryPinServerSide(key);
+                          }
+                          if (!isMatch && !vault.hasLibraryPin && !vault.hasPrivateSecret && key.isNotEmpty) {
+                            isMatch = true;
+                          }
+                          if (isMatch) {
+                            vault.unhideChatMessages();
+                            vault.unhideLibraryContent();
+                            vault.resetInactivityTimer();
+                            _searchCtrl.clear();
+                            setState(() => _query = '');
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Content unhidden.'),
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+                            }
+                            return;
+                          }
+                        } else if (trimmed.toLowerCase() == '/hide') {
+                          vault.hideChatMessages();
+                          vault.hideLibraryContent();
+                          vault.resetInactivityTimer();
+                          _searchCtrl.clear();
+                          setState(() => _query = '');
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Content hidden.'),
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          }
+                          return;
+                        }
+                        try {
+                          vault.resetInactivityTimer();
+                        } catch (_) {}
+                        setState(() => _query = v);
+                      },
                     ),
                   ),
                   if (_query.isNotEmpty)
@@ -769,6 +838,7 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
   Widget _buildChatImagesTab(
     BuildContext context,
     PrivateChatProvider chat,
+    VaultProvider vault,
     bool isDark,
     Color textPrimary,
     Color textSecondary,
@@ -776,14 +846,23 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
     Color borderColor,
     Color surface,
   ) {
-    final images = chat.allChatImages;
+    final images = vault.isChatMessagesUnhidden
+        ? chat.allChatImages.where((img) {
+            if (_query.isEmpty) return true;
+            final fn = (img.fileName ?? '').toLowerCase();
+            final txt = img.text.toLowerCase();
+            return fn.contains(_query.toLowerCase()) || txt.contains(_query.toLowerCase());
+          }).toList()
+        : <PrivateMessageModel>[];
     final library = Provider.of<LibraryProvider>(context, listen: false);
 
-    if (images.isEmpty) {
-      return const LongcatEmptyState(
+    if (!vault.isChatMessagesUnhidden || images.isEmpty) {
+      return LongcatEmptyState(
         icon: Icons.photo_library_outlined,
-        title: 'No Chat Images',
-        subtitle: 'Photos and images received in your private chats will appear here.',
+        title: !vault.isChatMessagesUnhidden ? 'Images are hidden' : 'No Chat Images',
+        subtitle: !vault.isChatMessagesUnhidden
+            ? 'Type /unhide <secretkey> in search to reveal images.'
+            : 'Photos and images received in your private chats will appear here.',
       );
     }
 

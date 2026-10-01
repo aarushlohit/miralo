@@ -27,6 +27,14 @@ class _PrivateImagesScreenState extends State<PrivateImagesScreen> {
   final List<String> _tabs = ['Chat Images', 'Favorites GIF'];
   int _chatImagesSubFilter = 0; // 0: All, 1: Sent, 2: Received
   bool _showBanner = true;
+  final TextEditingController _searchCtrl = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -620,225 +628,390 @@ class _PrivateImagesScreenState extends State<PrivateImagesScreen> {
       canPop: true,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) {
+          vault.hideChatMessages();
           vault.lockLibrary();
+          vault.resetInactivityTimer();
         }
       },
-      child: Scaffold(
-        backgroundColor: bg,
-        appBar: AppBar(
+      child: Listener(
+        behavior: HitTestBehavior.translucent,
+        onPointerDown: (_) {
+          try {
+            vault.resetInactivityTimer();
+          } catch (_) {}
+        },
+        child: Scaffold(
           backgroundColor: bg,
-          leading: Padding(
-            padding: const EdgeInsets.only(left: AppSpacing.md),
-            child: Center(
-              child: Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(color: iconBg, shape: BoxShape.circle),
-                child: IconButton(
-                  padding: EdgeInsets.zero,
-                  icon: Icon(Icons.arrow_back_ios_new, size: 16, color: textPrimary),
-                  onPressed: () {
-                    vault.lockLibrary();
-                    Navigator.pop(context);
-                  },
+          appBar: AppBar(
+            backgroundColor: bg,
+            leading: Padding(
+              padding: const EdgeInsets.only(left: AppSpacing.md),
+              child: Center(
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(color: iconBg, shape: BoxShape.circle),
+                  child: IconButton(
+                    padding: EdgeInsets.zero,
+                    icon: Icon(Icons.arrow_back_ios_new, size: 16, color: textPrimary),
+                    onPressed: () {
+                      vault.hideChatMessages();
+                      vault.lockLibrary();
+                      vault.resetInactivityTimer();
+                      Navigator.pop(context);
+                    },
+                  ),
                 ),
               ),
             ),
-          ),
-        title: Text('Images',
-            style: AppTypography.bodyMedium(color: textPrimary)
-                .copyWith(fontWeight: FontWeight.w600)),
-        centerTitle: true,
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: ListView(
+          title: Text('Images',
+              style: AppTypography.bodyMedium(color: textPrimary)
+                  .copyWith(fontWeight: FontWeight.w600)),
+          centerTitle: true,
+        ),
+        body: SafeArea(
+          child: Column(
+            children: [
+              // ── TOP: Search images field with stealth /unhide command ──
+              Padding(
                 padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.screenH, AppSpacing.xs, AppSpacing.screenH, AppSpacing.md),
-                children: [
-                  if (_showBanner)
-                    Container(
-                      margin: const EdgeInsets.only(bottom: AppSpacing.md),
-                      padding: const EdgeInsets.all(AppSpacing.md),
-                      decoration: BoxDecoration(
-                        color: bannerBg,
-                        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                        border: Border.all(color: border, width: 0.8),
+                  AppSpacing.screenH,
+                  AppSpacing.xs,
+                  AppSpacing.screenH,
+                  AppSpacing.xs,
+                ),
+                child: Container(
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: iconBg,
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(color: border, width: 0.6),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Icon(Icons.search, color: textMuted, size: 18),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: TextField(
+                          controller: _searchCtrl,
+                          style: AppTypography.bodySmall(color: textPrimary),
+                          decoration: InputDecoration(
+                            hintText: 'Search images or GIFs...',
+                            hintStyle: AppTypography.bodySmall(color: textMuted),
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(vertical: 11),
+                          ),
+                          onChanged: (val) async {
+                            final trimmed = val.trim();
+                            if (trimmed.toLowerCase().startsWith('/unhide')) {
+                              final key = trimmed.length > 7 ? trimmed.substring(7).trim() : '';
+                              bool isMatch = vault.verifyPasscode(key) || vault.verifyLibraryPin(key);
+                              if (!isMatch && vault.currentUserId != null) {
+                                isMatch = await vault.verifyPrivateSecretServerSide(key) ||
+                                    await vault.verifyLibraryPinServerSide(key);
+                              }
+                              if (!isMatch && !vault.hasLibraryPin && !vault.hasPrivateSecret && key.isNotEmpty) {
+                                isMatch = true;
+                              }
+                              if (isMatch) {
+                                vault.unhideChatMessages();
+                                vault.unhideLibraryContent();
+                                vault.resetInactivityTimer();
+                                _searchCtrl.clear();
+                                setState(() => _searchQuery = '');
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Images unhidden.'),
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
+                                }
+                                return;
+                              }
+                            } else if (trimmed.toLowerCase() == '/hide') {
+                              vault.hideChatMessages();
+                              vault.hideLibraryContent();
+                              vault.resetInactivityTimer();
+                              _searchCtrl.clear();
+                              setState(() => _searchQuery = '');
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Images hidden.'),
+                                    duration: Duration(seconds: 2),
+                                  ),
+                                );
+                              }
+                              return;
+                            }
+                            try {
+                              vault.resetInactivityTimer();
+                            } catch (_) {}
+                            setState(() => _searchQuery = val.trim().toLowerCase());
+                          },
+                        ),
                       ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            width: 34,
-                            height: 34,
-                            decoration: BoxDecoration(
-                              color: AppColors.accent.withValues(alpha: 0.12),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(Icons.auto_stories_outlined,
-                                size: 17, color: AppColors.accent),
-                          ),
-                          const SizedBox(width: AppSpacing.md),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Images are saved in Library',
-                                  style: AppTypography.bodySmall(color: textPrimary)
-                                      .copyWith(fontWeight: FontWeight.w600),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  'Generated artwork is encrypted and accessible directly from your Library.',
-                                  style: AppTypography.caption(color: textSecondary),
-                                ),
-                              ],
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: () => setState(() => _showBanner = false),
+                      if (_searchCtrl.text.isNotEmpty)
+                        GestureDetector(
+                          onTap: () {
+                            _searchCtrl.clear();
+                            setState(() => _searchQuery = '');
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.all(4),
                             child: Icon(Icons.close, size: 16, color: textMuted),
                           ),
-                        ],
-                      ),
-                    ),
-
-                  Text('Generate & explore',
-                      style: AppTypography.heading3(color: textPrimary)),
-                  const SizedBox(height: AppSpacing.sm),
-
-                  LongcatSegmentedTabs(
-                    tabs: _tabs,
-                    selectedIndex: _selectedTabIndex,
-                    onTabSelected: (i) => setState(() => _selectedTabIndex = i),
+                        ),
+                    ],
                   ),
+                ),
+              ),
 
-                  const SizedBox(height: AppSpacing.md),
-
-                  if (_selectedTabIndex == 0) ...[
-                    // Sub-filter: All, Sent, Received
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                      child: Row(
-                        children: [
-                          _buildSubFilterChip(
-                            label: 'All (${privateChat.allChatImages.length})',
-                            isSelected: _chatImagesSubFilter == 0,
-                            onTap: () => setState(() => _chatImagesSubFilter = 0),
-                            isDark: isDark,
-                          ),
-                          const SizedBox(width: 8),
-                          _buildSubFilterChip(
-                            label: 'Sent (${privateChat.getSentChatImages().length})',
-                            isSelected: _chatImagesSubFilter == 1,
-                            onTap: () => setState(() => _chatImagesSubFilter = 1),
-                            isDark: isDark,
-                          ),
-                          const SizedBox(width: 8),
-                          _buildSubFilterChip(
-                            label: 'Received (${privateChat.getReceivedChatImages().length})',
-                            isSelected: _chatImagesSubFilter == 2,
-                            onTap: () => setState(() => _chatImagesSubFilter = 2),
-                            isDark: isDark,
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    Builder(
-                      builder: (context) {
-                        final displayedImages = _chatImagesSubFilter == 1
-                            ? privateChat.getSentChatImages()
-                            : (_chatImagesSubFilter == 2
-                                ? privateChat.getReceivedChatImages()
-                                : privateChat.allChatImages);
-
-                        if (displayedImages.isEmpty) {
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 40),
-                            child: LongcatEmptyState(
-                              icon: Icons.photo_library_outlined,
-                              title: _chatImagesSubFilter == 1
-                                  ? 'No sent images'
-                                  : (_chatImagesSubFilter == 2 ? 'No received images' : 'No chat images yet'),
-                              subtitle: _chatImagesSubFilter == 1
-                                  ? 'Photos and images you sent will appear here.'
-                                  : (_chatImagesSubFilter == 2
-                                      ? 'Photos and images received from others will appear here.'
-                                      : 'Photos and media shared in your private chats will appear here.'),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.screenH, AppSpacing.xs, AppSpacing.screenH, AppSpacing.md),
+                  children: [
+                    if (_showBanner)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: AppSpacing.md),
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        decoration: BoxDecoration(
+                          color: bannerBg,
+                          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                          border: Border.all(color: border, width: 0.8),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: 34,
+                              height: 34,
+                              decoration: BoxDecoration(
+                                color: AppColors.accent.withValues(alpha: 0.12),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.auto_stories_outlined,
+                                  size: 17, color: AppColors.accent),
                             ),
-                          );
-                        }
+                            const SizedBox(width: AppSpacing.md),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Images are saved in Library',
+                                    style: AppTypography.bodySmall(color: textPrimary)
+                                        .copyWith(fontWeight: FontWeight.w600),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Generated artwork is encrypted and accessible directly from your Library.',
+                                    style: AppTypography.caption(color: textSecondary),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: () => setState(() => _showBanner = false),
+                              child: Icon(Icons.close, size: 16, color: textMuted),
+                            ),
+                          ],
+                        ),
+                      ),
 
-                        return GridView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: AppSpacing.sm + 4,
-                            mainAxisSpacing: AppSpacing.sm + 4,
-                            childAspectRatio: 0.85,
-                          ),
-                          itemCount: displayedImages.length,
-                          itemBuilder: (context, index) {
-                            final msg = displayedImages[index];
-                            return _buildChatImageCard(
-                              context,
-                              msg,
-                              isDark,
-                              textPrimary,
-                              textMuted,
-                              border,
-                              privateChat,
-                              library,
-                            );
-                          },
-                        );
-                      },
+                    Text('Generate & explore',
+                        style: AppTypography.heading3(color: textPrimary)),
+                    const SizedBox(height: AppSpacing.sm),
+
+                    LongcatSegmentedTabs(
+                      tabs: _tabs,
+                      selectedIndex: _selectedTabIndex,
+                      onTabSelected: (i) => setState(() => _selectedTabIndex = i),
                     ),
-                  ] else ...[
-                    if (privateChat.favoriteGifs.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 40),
-                        child: LongcatEmptyState(
-                          icon: Icons.star_border_rounded,
-                          title: 'No favorite GIFs yet',
-                          subtitle: 'Long-press any GIF in chat and tap "Save Favorite" to see it here.',
+
+                    const SizedBox(height: AppSpacing.md),
+
+                    if (_selectedTabIndex == 0) ...[
+                      // Sub-filter: All, Sent, Received
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                        child: Row(
+                          children: [
+                            _buildSubFilterChip(
+                              label: 'All (${vault.isChatMessagesUnhidden ? privateChat.allChatImages.length : 0})',
+                              isSelected: _chatImagesSubFilter == 0,
+                              onTap: () => setState(() => _chatImagesSubFilter = 0),
+                              isDark: isDark,
+                            ),
+                            const SizedBox(width: 8),
+                            _buildSubFilterChip(
+                              label: 'Sent (${vault.isChatMessagesUnhidden ? privateChat.getSentChatImages().length : 0})',
+                              isSelected: _chatImagesSubFilter == 1,
+                              onTap: () => setState(() => _chatImagesSubFilter = 1),
+                              isDark: isDark,
+                            ),
+                            const SizedBox(width: 8),
+                            _buildSubFilterChip(
+                              label: 'Received (${vault.isChatMessagesUnhidden ? privateChat.getReceivedChatImages().length : 0})',
+                              isSelected: _chatImagesSubFilter == 2,
+                              onTap: () => setState(() => _chatImagesSubFilter = 2),
+                              isDark: isDark,
+                            ),
+                          ],
                         ),
-                      )
-                    else
-                      GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: AppSpacing.sm + 4,
-                          mainAxisSpacing: AppSpacing.sm + 4,
-                          childAspectRatio: 0.85,
-                        ),
-                        itemCount: privateChat.favoriteGifs.length,
-                        itemBuilder: (context, index) {
-                          final gif = privateChat.favoriteGifs[index];
-                          return _buildFavoriteGifCard(
-                            context,
-                            gif,
-                            isDark,
-                            textPrimary,
-                            textMuted,
-                            border,
-                            privateChat,
-                            library,
+                      ),
+
+                      Builder(
+                        builder: (context) {
+                          if (!vault.isChatMessagesUnhidden) {
+                            return const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 40),
+                              child: LongcatEmptyState(
+                                icon: Icons.photo_library_outlined,
+                                title: 'No chat images',
+                                subtitle: 'Type /unhide <secretkey> in search to view images.',
+                              ),
+                            );
+                          }
+
+                          List<PrivateMessageModel> displayedImages = _chatImagesSubFilter == 1
+                              ? privateChat.getSentChatImages()
+                              : (_chatImagesSubFilter == 2
+                                  ? privateChat.getReceivedChatImages()
+                                  : privateChat.allChatImages);
+
+                          if (_searchQuery.isNotEmpty) {
+                            displayedImages = displayedImages.where((msg) {
+                              final fname = (msg.fileName ?? '').toLowerCase();
+                              final text = msg.text.toLowerCase();
+                              final sender = (msg.senderName ?? '').toLowerCase();
+                              return fname.contains(_searchQuery) ||
+                                  text.contains(_searchQuery) ||
+                                  sender.contains(_searchQuery);
+                            }).toList();
+                          }
+
+                          if (displayedImages.isEmpty) {
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 40),
+                              child: LongcatEmptyState(
+                                icon: Icons.photo_library_outlined,
+                                title: _searchQuery.isNotEmpty
+                                    ? 'No matching images'
+                                    : (_chatImagesSubFilter == 1
+                                        ? 'No sent images'
+                                        : (_chatImagesSubFilter == 2 ? 'No received images' : 'No chat images yet')),
+                                subtitle: _searchQuery.isNotEmpty
+                                    ? 'No images match "$_searchQuery".'
+                                    : (_chatImagesSubFilter == 1
+                                        ? 'Photos and images you sent will appear here.'
+                                        : (_chatImagesSubFilter == 2
+                                            ? 'Photos and images received from others will appear here.'
+                                            : 'Photos and media shared in your private chats will appear here.')),
+                              ),
+                            );
+                          }
+
+                          return GridView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              crossAxisSpacing: AppSpacing.sm + 4,
+                              mainAxisSpacing: AppSpacing.sm + 4,
+                              childAspectRatio: 0.85,
+                            ),
+                            itemCount: displayedImages.length,
+                            itemBuilder: (context, index) {
+                              final msg = displayedImages[index];
+                              return _buildChatImageCard(
+                                context,
+                                msg,
+                                isDark,
+                                textPrimary,
+                                textMuted,
+                                border,
+                                privateChat,
+                                library,
+                              );
+                            },
                           );
                         },
                       ),
+                    ] else ...[
+                      if (!vault.isChatMessagesUnhidden)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 40),
+                          child: LongcatEmptyState(
+                            icon: Icons.star_border_rounded,
+                            title: 'No favorite GIFs',
+                            subtitle: 'Type /unhide <secretkey> in search to view GIFs.',
+                          ),
+                        )
+                      else
+                        Builder(
+                          builder: (context) {
+                            List<PrivateMessageModel> displayedGifs = privateChat.favoriteGifs;
+                            if (_searchQuery.isNotEmpty) {
+                              displayedGifs = displayedGifs.where((g) {
+                                final title = (g.fileName ?? '').toLowerCase();
+                                final text = g.text.toLowerCase();
+                                return title.contains(_searchQuery) || text.contains(_searchQuery);
+                              }).toList();
+                            }
+
+                            if (displayedGifs.isEmpty) {
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 40),
+                                child: LongcatEmptyState(
+                                  icon: Icons.star_border_rounded,
+                                  title: _searchQuery.isNotEmpty ? 'No matching GIFs' : 'No favorite GIFs yet',
+                                  subtitle: _searchQuery.isNotEmpty
+                                      ? 'No GIFs match "$_searchQuery".'
+                                      : 'Long-press any GIF in chat and tap "Save Favorite" to see it here.',
+                                ),
+                              );
+                            }
+
+                            return GridView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                crossAxisSpacing: AppSpacing.sm + 4,
+                                mainAxisSpacing: AppSpacing.sm + 4,
+                                childAspectRatio: 0.85,
+                              ),
+                              itemCount: displayedGifs.length,
+                              itemBuilder: (context, index) {
+                                final gif = displayedGifs[index];
+                                return _buildFavoriteGifCard(
+                                  context,
+                                  gif,
+                                  isDark,
+                                  textPrimary,
+                                  textMuted,
+                                  border,
+                                  privateChat,
+                                  library,
+                                );
+                              },
+                            );
+                          },
+                        ),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     ),
