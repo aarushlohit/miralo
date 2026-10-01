@@ -386,6 +386,11 @@ class _ComposerState extends State<Composer> {
       setState(() => _hasText = has);
     }
 
+    // Reset inactivity timer on typing
+    try {
+      Provider.of<VaultProvider>(context, listen: false).resetInactivityTimer();
+    } catch (_) {}
+
     // Typing indicator broadcast (private chat only)
     if (widget.isPrivate) {
       final chat = Provider.of<PrivateChatProvider>(context, listen: false);
@@ -706,11 +711,42 @@ class _ComposerState extends State<Composer> {
       }
     }
 
+    if (!mounted) return;
+
     // ─── SLASH COMMANDS INTERCEPTION ───
     final lower = text.toLowerCase();
 
     // ─── DM / GROUP CHAT EXCLUSIVE SLASH COMMANDS ───
     if (widget.isPrivate) {
+      if (lower.startsWith('/unhide')) {
+        final key = text.length > 7 ? text.substring(7).trim() : '';
+        _controller.clear();
+        final vault = Provider.of<VaultProvider>(context, listen: false);
+        bool isMatch = vault.verifyPasscode(key) || vault.verifyLibraryPin(key);
+        if (!isMatch && vault.currentUserId != null) {
+          isMatch = await vault.verifyPrivateSecretServerSide(key) ||
+              await vault.verifyLibraryPinServerSide(key);
+        }
+        if (!isMatch && !vault.hasPrivateSecret && key.isNotEmpty) {
+          isMatch = true;
+        }
+
+        if (isMatch) {
+          vault.unlockPrivate(key);
+          vault.unlockLibrary(key);
+          vault.resetInactivityTimer();
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Chat unhidden.'),
+                duration: Duration(seconds: 2),
+              ),
+            );
+          }
+        }
+        return;
+      }
+
       if (lower == '/gif' || lower.startsWith('/gif ')) {
         _controller.clear();
         _openGiphyPicker();

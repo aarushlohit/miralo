@@ -1140,9 +1140,10 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final chat = Provider.of<PrivateChatProvider>(context);
+    final vault = Provider.of<VaultProvider>(context);
     final library = Provider.of<LibraryProvider>(context, listen: false);
     final contact = chat.activeContact;
-    final messages = chat.activeMessages;
+    final messages = vault.isPrivateUnlocked ? chat.activeMessages : <PrivateMessageModel>[];
 
     final displayName = contact?.displayName ?? 'Mira';
     final isTyping = contact != null && chat.isContactTyping(contact.id);
@@ -1154,9 +1155,16 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                 ? 'Online'
                 : (contact?.lastSeenText ?? 'Active recently')));
 
-    final pinnedMessages = chat.getPinnedMessages(contact?.id);
+    final pinnedMessages = vault.isPrivateUnlocked ? chat.getPinnedMessages(contact?.id) : <PrivateMessageModel>[];
 
-    return ChatScaffold(
+    return Listener(
+      behavior: HitTestBehavior.translucent,
+      onPointerDown: (_) {
+        try {
+          Provider.of<VaultProvider>(context, listen: false).resetInactivityTimer();
+        } catch (_) {}
+      },
+      child: ChatScaffold(
       header: ChatHeader(
         isPrivate: true,
         title: displayName,
@@ -1259,7 +1267,7 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                 );
               },
             ),
-          if (_showCloudNote && contact?.note != null && contact!.note!.isNotEmpty && !contact.isGroup)
+          if (vault.isPrivateUnlocked && _showCloudNote && contact?.note != null && contact!.note!.isNotEmpty && !contact.isGroup)
             AnimatedOpacity(
               duration: const Duration(milliseconds: 300),
               opacity: _showCloudNote ? 1.0 : 0.0,
@@ -1675,6 +1683,7 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
           ),
         ],
       ),
+    ),
     );
   }
 

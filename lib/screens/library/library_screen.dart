@@ -377,8 +377,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
     final cardBg = isDark ? AppColors.darkSurfacePrimary : AppColors.lightSurfacePrimary;
     final cardBorder = isDark ? AppColors.darkBorder : AppColors.lightBorder;
 
-    final folders = library.folders;
-    final items = library.filteredItems;
+    final folders = vault.isLibraryUnlocked ? library.folders : library.folders.take(0).toList();
+    final items = vault.isLibraryUnlocked ? library.filteredItems : library.filteredItems.take(0).toList();
 
     return PopScope(
       canPop: true,
@@ -389,89 +389,129 @@ class _LibraryScreenState extends State<LibraryScreen> {
       },
       child: Scaffold(
         backgroundColor: bg,
-        body: SafeArea(
-          child: Column(
-            children: [
-              LongcatAppBar(
-                leading: LongcatCircularIconButton(
-                  icon: Icons.arrow_back_ios_new_rounded,
-                  iconSize: 16,
-                  onPressed: () {
-                    vault.lockLibrary();
-                    Navigator.pop(context);
-                  },
+        body: Listener(
+          behavior: HitTestBehavior.translucent,
+          onPointerDown: (_) {
+            try {
+              vault.resetInactivityTimer();
+            } catch (_) {}
+          },
+          child: SafeArea(
+            child: Column(
+              children: [
+                LongcatAppBar(
+                  leading: LongcatCircularIconButton(
+                    icon: Icons.arrow_back_ios_new_rounded,
+                    iconSize: 16,
+                    onPressed: () {
+                      vault.lockLibrary();
+                      Navigator.pop(context);
+                    },
+                  ),
+                  title: 'Library',
+                  actions: [
+                    LongcatCircularIconButton(
+                      icon: Icons.create_new_folder_outlined,
+                      iconSize: 18,
+                      onPressed: () => _showCreateFolderDialog(context, library),
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    LongcatCircularIconButton(
+                      icon: Icons.more_horiz_rounded,
+                      iconSize: 18,
+                      onPressed: () => _showMoreMenu(context, vault, library),
+                    ),
+                  ],
                 ),
-                title: 'Library',
-                actions: [
-                  LongcatCircularIconButton(
-                    icon: Icons.create_new_folder_outlined,
-                    iconSize: 18,
-                    onPressed: () => _showCreateFolderDialog(context, library),
-                  ),
-                  const SizedBox(width: AppSpacing.xs),
-                  LongcatCircularIconButton(
-                    icon: Icons.more_horiz_rounded,
-                    iconSize: 18,
-                    onPressed: () => _showMoreMenu(context, vault, library),
-                  ),
-                ],
-              ),
 
-            // ── TOP: Search library field with clean padding & no overlap ──
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.screenH,
-                AppSpacing.xs,
-                AppSpacing.screenH,
-                AppSpacing.xs,
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: iconBg,
-                        borderRadius: BorderRadius.circular(LongcatDimensions.composerRadius),
-                        border: Border.all(color: cardBorder, width: 0.6),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Icon(Icons.search, color: textMuted, size: 18),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: TextField(
-                              controller: _searchCtrl,
-                              style: AppTypography.bodySmall(color: textPrimary),
-                              decoration: InputDecoration(
-                                hintText: 'Search library...',
-                                hintStyle: AppTypography.bodySmall(color: textMuted),
-                                border: InputBorder.none,
-                                enabledBorder: InputBorder.none,
-                                focusedBorder: InputBorder.none,
-                                isDense: true,
-                                contentPadding: const EdgeInsets.symmetric(vertical: 11),
+              // ── TOP: Search library field with clean padding & no overlap ──
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.screenH,
+                  AppSpacing.xs,
+                  AppSpacing.screenH,
+                  AppSpacing.xs,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: iconBg,
+                          borderRadius: BorderRadius.circular(LongcatDimensions.composerRadius),
+                          border: Border.all(color: cardBorder, width: 0.6),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Icon(Icons.search, color: textMuted, size: 18),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: TextField(
+                                controller: _searchCtrl,
+                                style: AppTypography.bodySmall(color: textPrimary),
+                                decoration: InputDecoration(
+                                  hintText: 'Search library...',
+                                  hintStyle: AppTypography.bodySmall(color: textMuted),
+                                  border: InputBorder.none,
+                                  enabledBorder: InputBorder.none,
+                                  focusedBorder: InputBorder.none,
+                                  isDense: true,
+                                  contentPadding: const EdgeInsets.symmetric(vertical: 11),
+                                ),
+                                onChanged: (val) async {
+                                  final trimmed = val.trim();
+                                  if (trimmed.toLowerCase().startsWith('/unhide')) {
+                                    final key = trimmed.length > 7 ? trimmed.substring(7).trim() : '';
+                                    bool isMatch = vault.verifyPasscode(key) || vault.verifyLibraryPin(key);
+                                    if (!isMatch && vault.currentUserId != null) {
+                                      isMatch = await vault.verifyPrivateSecretServerSide(key) ||
+                                          await vault.verifyLibraryPinServerSide(key);
+                                    }
+                                    if (!isMatch && !vault.hasLibraryPin && !vault.hasPrivateSecret && key.isNotEmpty) {
+                                      isMatch = true;
+                                    }
+                                    if (isMatch) {
+                                      vault.unlockLibrary(key);
+                                      vault.unlockPrivate(key);
+                                      vault.resetInactivityTimer();
+                                      _searchCtrl.clear();
+                                      library.setSearchQuery('');
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('Library unhidden.'),
+                                            duration: Duration(seconds: 2),
+                                          ),
+                                        );
+                                      }
+                                      return;
+                                    }
+                                  }
+                                  try {
+                                    vault.resetInactivityTimer();
+                                  } catch (_) {}
+                                  library.setSearchQuery(val);
+                                },
                               ),
-                              onChanged: (val) => library.setSearchQuery(val),
                             ),
-                          ),
-                          if (_searchCtrl.text.isNotEmpty)
-                            GestureDetector(
-                              onTap: () {
-                                _searchCtrl.clear();
-                                library.setSearchQuery('');
-                              },
-                              child: Padding(
-                                padding: const EdgeInsets.all(4),
-                                child: Icon(Icons.close, size: 16, color: textMuted),
+                            if (_searchCtrl.text.isNotEmpty)
+                              GestureDetector(
+                                onTap: () {
+                                  _searchCtrl.clear();
+                                  library.setSearchQuery('');
+                                },
+                                child: Padding(
+                                  padding: const EdgeInsets.all(4),
+                                  child: Icon(Icons.close, size: 16, color: textMuted),
+                                ),
                               ),
-                            ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-                  ),
                   const SizedBox(width: AppSpacing.sm),
                   Container(
                     width: 44,
@@ -556,10 +596,11 @@ class _LibraryScreenState extends State<LibraryScreen> {
                       ],
                     ),
             ),
-          ],
+              ],
+            ),
+          ),
         ),
       ),
-    ),
     );
   }
 

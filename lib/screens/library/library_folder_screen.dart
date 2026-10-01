@@ -9,13 +9,28 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../providers/library_provider.dart';
+import '../../providers/vault_provider.dart';
 import '../../services/cloudinary_service.dart';
 import '../../widgets/common/longcat_app_bar.dart';
 import '../../widgets/common/longcat_empty_state.dart';
 import '../../widgets/library/file_card.dart';
 
-class LibraryFolderScreen extends StatelessWidget {
+class LibraryFolderScreen extends StatefulWidget {
   const LibraryFolderScreen({super.key});
+
+  @override
+  State<LibraryFolderScreen> createState() => _LibraryFolderScreenState();
+}
+
+class _LibraryFolderScreenState extends State<LibraryFolderScreen> {
+  final TextEditingController _searchCtrl = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
 
   void _showFolderAddMenu(BuildContext context, LibraryProvider library) {
     final folder = library.currentFolder;
@@ -313,63 +328,177 @@ class LibraryFolderScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final library = Provider.of<LibraryProvider>(context);
+    final vault = Provider.of<VaultProvider>(context);
     final folder = library.currentFolder;
 
     final bg = isDark ? AppColors.darkBackground : AppColors.lightBackground;
-    final items =
-        library.items.where((i) => i.folderId == library.selectedFolderId).toList();
+    final textPrimary = isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
+    final textMuted = isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted;
+    final iconBg = isDark ? AppColors.darkSurfaceSecondary : AppColors.lightSurfaceSecondary;
+    final cardBorder = isDark ? AppColors.darkBorder : AppColors.lightBorder;
 
-    return Scaffold(
-      backgroundColor: bg,
-      body: SafeArea(
-        child: Column(
-          children: [
-            LongcatAppBar(
-              leading: LongcatCircularIconButton(
-                icon: Icons.arrow_back_ios_new_rounded,
-                iconSize: 16,
-                onPressed: () => Navigator.pop(context),
-              ),
-              title: folder?.name ?? 'Folder',
-            ),
-            Expanded(
-              child: items.isEmpty
-                  ? const LongcatEmptyState(
-                      icon: Icons.folder_open_outlined,
-                      title: 'This folder is empty',
-                      subtitle:
-                          'Add documents or media to store them in this folder.',
-                    )
-                  : GridView.builder(
-                      padding: const EdgeInsets.all(AppSpacing.screenH),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: AppSpacing.sm + 4,
-                        mainAxisSpacing: AppSpacing.sm + 4,
-                        childAspectRatio: 0.82,
-                      ),
-                      itemCount: items.length,
-                      itemBuilder: (context, index) {
-                        final item = items[index];
-                        return FileCardWidget(
-                          item: item,
-                          onDelete: () => library.deleteItem(item.id),
-                          onRename: (newName) =>
-                              library.renameItem(item.id, newName),
-                          onMove: (fId) => library.moveItem(item.id, fId),
-                        );
-                      },
+    final allFolderItems =
+        library.items.where((i) => i.folderId == library.selectedFolderId).toList();
+    final items = vault.isLibraryUnlocked
+        ? (_searchQuery.isEmpty
+            ? allFolderItems
+            : allFolderItems.where((i) => i.name.toLowerCase().contains(_searchQuery)).toList())
+        : allFolderItems.take(0).toList();
+
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) {
+          vault.resetInactivityTimer();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: bg,
+        body: Listener(
+          behavior: HitTestBehavior.translucent,
+          onPointerDown: (_) {
+            try {
+              vault.resetInactivityTimer();
+            } catch (_) {}
+          },
+          child: SafeArea(
+            child: Column(
+              children: [
+                LongcatAppBar(
+                  leading: LongcatCircularIconButton(
+                    icon: Icons.arrow_back_ios_new_rounded,
+                    iconSize: 16,
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  title: folder?.name ?? 'Folder',
+                ),
+
+                // ── Search bar with stealth /unhide support ──
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.screenH,
+                    AppSpacing.xs,
+                    AppSpacing.screenH,
+                    AppSpacing.xs,
+                  ),
+                  child: Container(
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: iconBg,
+                      borderRadius: BorderRadius.circular(LongcatDimensions.composerRadius),
+                      border: Border.all(color: cardBorder, width: 0.6),
                     ),
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Icon(Icons.search, color: textMuted, size: 18),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: TextField(
+                            controller: _searchCtrl,
+                            style: AppTypography.bodySmall(color: textPrimary),
+                            decoration: InputDecoration(
+                              hintText: 'Search in folder...',
+                              hintStyle: AppTypography.bodySmall(color: textMuted),
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              isDense: true,
+                              contentPadding: const EdgeInsets.symmetric(vertical: 11),
+                            ),
+                            onChanged: (val) async {
+                              final trimmed = val.trim();
+                              if (trimmed.toLowerCase().startsWith('/unhide')) {
+                                final key = trimmed.length > 7 ? trimmed.substring(7).trim() : '';
+                                bool isMatch = vault.verifyPasscode(key) || vault.verifyLibraryPin(key);
+                                if (!isMatch && vault.currentUserId != null) {
+                                  isMatch = await vault.verifyPrivateSecretServerSide(key) ||
+                                      await vault.verifyLibraryPinServerSide(key);
+                                }
+                                if (!isMatch && !vault.hasLibraryPin && !vault.hasPrivateSecret && key.isNotEmpty) {
+                                  isMatch = true;
+                                }
+                                if (isMatch) {
+                                  vault.unlockLibrary(key);
+                                  vault.unlockPrivate(key);
+                                  vault.resetInactivityTimer();
+                                  _searchCtrl.clear();
+                                  setState(() => _searchQuery = '');
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Library unhidden.'),
+                                        duration: Duration(seconds: 2),
+                                      ),
+                                    );
+                                  }
+                                  return;
+                                }
+                              }
+                              try {
+                                vault.resetInactivityTimer();
+                              } catch (_) {}
+                              setState(() => _searchQuery = val.trim().toLowerCase());
+                            },
+                          ),
+                        ),
+                        if (_searchCtrl.text.isNotEmpty)
+                          GestureDetector(
+                            onTap: () {
+                              _searchCtrl.clear();
+                              setState(() => _searchQuery = '');
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.all(4),
+                              child: Icon(Icons.close, size: 16, color: textMuted),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                Expanded(
+                  child: items.isEmpty
+                      ? const LongcatEmptyState(
+                          icon: Icons.folder_open_outlined,
+                          title: 'This folder is empty',
+                          subtitle:
+                              'Add documents or media to store them in this folder.',
+                        )
+                      : GridView.builder(
+                          padding: const EdgeInsets.all(AppSpacing.screenH),
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            crossAxisSpacing: AppSpacing.sm + 4,
+                            mainAxisSpacing: AppSpacing.sm + 4,
+                            childAspectRatio: 0.82,
+                          ),
+                          itemCount: items.length,
+                          itemBuilder: (context, index) {
+                            final item = items[index];
+                            return FileCardWidget(
+                              item: item,
+                              onDelete: () => library.deleteItem(item.id),
+                              onRename: (newName) =>
+                                  library.renameItem(item.id, newName),
+                              onMove: (fId) => library.moveItem(item.id, fId),
+                            );
+                          },
+                        ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: AppColors.accent,
-        elevation: 2,
-        child: const Icon(Icons.add_rounded, color: Colors.white, size: 24),
-        onPressed: () => _showFolderAddMenu(context, library),
+        floatingActionButton: FloatingActionButton(
+          backgroundColor: AppColors.accent,
+          elevation: 2,
+          child: const Icon(Icons.add_rounded, color: Colors.white, size: 24),
+          onPressed: () => _showFolderAddMenu(context, library),
+        ),
       ),
     );
   }

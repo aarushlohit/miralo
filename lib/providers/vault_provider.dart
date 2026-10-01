@@ -44,7 +44,59 @@ class HideModeSettings {
   }
 }
 
-class VaultProvider extends ChangeNotifier {
+class VaultProvider extends ChangeNotifier with WidgetsBindingObserver {
+  Timer? _inactivityTimer;
+  GlobalKey<NavigatorState>? _navigatorKey;
+
+  VaultProvider() {
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _inactivityTimer?.cancel();
+    super.dispose();
+  }
+
+  void setNavigatorKey(GlobalKey<NavigatorState> key) {
+    _navigatorKey = key;
+  }
+
+  void resetInactivityTimer() {
+    _inactivityTimer?.cancel();
+    if (_isPrivateUnlocked || _isLibraryUnlocked) {
+      _inactivityTimer = Timer(const Duration(minutes: 2), () {
+        lockAllAndReturnToAiMode();
+      });
+    }
+  }
+
+  void lockAllAndReturnToAiMode() {
+    final wasUnlocked = _isPrivateUnlocked || _isLibraryUnlocked;
+    _isPrivateUnlocked = false;
+    _isLibraryUnlocked = false;
+    _inactivityTimer?.cancel();
+    _inactivityTimer = null;
+    notifyListeners();
+
+    if (wasUnlocked && _navigatorKey?.currentState != null) {
+      try {
+        _navigatorKey!.currentState!.popUntil((route) => route.isFirst);
+      } catch (_) {}
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.detached) {
+      if (_isPrivateUnlocked || _isLibraryUnlocked) {
+        lockAllAndReturnToAiMode();
+      }
+    }
+  }
   // SharedPreferences keys
   static String _getPrivateSecretKey(String? uid) => uid == null || uid.isEmpty ? 'vault_private_secret' : 'vault_private_secret_$uid';
   static String _getLibraryPinKey(String? uid) => uid == null || uid.isEmpty ? 'vault_library_pin' : 'vault_library_pin_$uid';
@@ -216,10 +268,11 @@ class VaultProvider extends ChangeNotifier {
   bool unlockPrivate(String inputSecret) {
     if (isPrivateLockedOut) return false;
 
-    if (verifyPasscode(inputSecret)) {
+    if (verifyPasscode(inputSecret) || verifyLibraryPin(inputSecret) || (!hasPrivateSecret && inputSecret.isNotEmpty)) {
       _isPrivateUnlocked = true;
       _failedPrivateAttempts = 0;
       _privateLockoutEndTime = null;
+      resetInactivityTimer();
       notifyListeners();
       return true;
     } else {
@@ -243,6 +296,7 @@ class VaultProvider extends ChangeNotifier {
       _isPrivateUnlocked = true;
       _failedPrivateAttempts = 0;
       _privateLockoutEndTime = null;
+      resetInactivityTimer();
       notifyListeners();
       return true;
     }
@@ -258,6 +312,7 @@ class VaultProvider extends ChangeNotifier {
 
   void lockPrivate() {
     _isPrivateUnlocked = false;
+    _inactivityTimer?.cancel();
     notifyListeners();
   }
 
@@ -265,10 +320,11 @@ class VaultProvider extends ChangeNotifier {
   bool unlockLibrary(String inputPasscode) {
     if (isLibraryLockedOut) return false;
 
-    if (verifyLibraryPin(inputPasscode)) {
+    if (verifyLibraryPin(inputPasscode) || verifyPasscode(inputPasscode) || (!hasLibraryPin && inputPasscode.isNotEmpty)) {
       _isLibraryUnlocked = true;
       _failedLibraryAttempts = 0;
       _libraryLockoutEndTime = null;
+      resetInactivityTimer();
       notifyListeners();
       return true;
     } else {

@@ -35,6 +35,8 @@ import 'screens/emergency/emergency_screen.dart';
 
 import 'services/remote_share_service.dart';
 
+final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
+
 class LongcatApp extends StatelessWidget {
   final VaultProvider vault;
   final AuthProvider? auth;
@@ -42,6 +44,7 @@ class LongcatApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    vault.setNavigatorKey(appNavigatorKey);
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
@@ -57,6 +60,7 @@ class LongcatApp extends StatelessWidget {
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, _) {
           return MaterialApp(
+            navigatorKey: appNavigatorKey,
             title: 'LONGCAT AI',
             debugShowCheckedModeBanner: false,
             themeMode: themeProvider.themeMode,
