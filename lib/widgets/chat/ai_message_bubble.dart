@@ -6,6 +6,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../models/ai_chat_model.dart';
+import '../../services/ai_service.dart';
 
 import '../common/longcat_logo.dart';
 
@@ -282,16 +283,32 @@ class _AiMessage extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 10),
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.danger,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                    icon: const Icon(Icons.refresh_rounded, size: 16),
-                    label: const Text('Retry Prompt', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                    onPressed: onRetry ?? onRegenerate,
+                  Row(
+                    children: [
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.danger,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        icon: const Icon(Icons.refresh_rounded, size: 16),
+                        label: const Text('Retry Prompt', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                        onPressed: onRetry ?? onRegenerate,
+                      ),
+                      const SizedBox(width: 8),
+                      OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: isDark ? Colors.white : AppColors.darkBackground,
+                          side: BorderSide(color: AppColors.danger.withValues(alpha: 0.5)),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        icon: const Icon(Icons.key_rounded, size: 14),
+                        label: const Text('API Keys', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                        onPressed: () => _showApiKeyDialog(context, onRetry ?? onRegenerate),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -515,4 +532,112 @@ class _ActionBtn extends StatelessWidget {
       ),
     );
   }
+}
+
+void _showApiKeyDialog(BuildContext context, VoidCallback? onRetry) {
+  final geminiCtrl = TextEditingController(text: AiService.instance.geminiApiKey ?? '');
+  final nvidiaCtrl = TextEditingController(text: AiService.instance.nvidiaApiKey ?? '');
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: isDark ? AppColors.darkSurfacePrimary : AppColors.lightSurfacePrimary,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(AppSpacing.radiusSheet)),
+    ),
+    builder: (ctx) {
+      return Padding(
+        padding: EdgeInsets.only(
+          left: AppSpacing.md,
+          right: AppSpacing.md,
+          top: AppSpacing.md,
+          bottom: MediaQuery.of(ctx).viewInsets.bottom + AppSpacing.md,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Row(
+              children: [
+                const Icon(Icons.key_rounded, color: AppColors.accent, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'Configure AI API Keys',
+                  style: TextStyle(
+                    color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Enter custom API keys or leave blank to use active system backend keys.',
+              style: TextStyle(
+                color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                fontSize: 12,
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: geminiCtrl,
+              obscureText: true,
+              style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 13),
+              decoration: InputDecoration(
+                labelText: 'Gemini API Key',
+                hintText: 'AIzaSy...',
+                prefixIcon: const Icon(Icons.vpn_key_outlined, size: 18),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: nvidiaCtrl,
+              obscureText: true,
+              style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 13),
+              decoration: InputDecoration(
+                labelText: 'NVIDIA NIM API Key',
+                hintText: 'nvapi-...',
+                prefixIcon: const Icon(Icons.memory_outlined, size: 18),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.accent,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                icon: const Icon(Icons.save_rounded, size: 18),
+                label: const Text('Save Keys & Retry Prompt', style: TextStyle(fontWeight: FontWeight.bold)),
+                onPressed: () async {
+                  await AiService.instance.setGeminiApiKey(geminiCtrl.text);
+                  await AiService.instance.setNvidiaApiKey(nvidiaCtrl.text);
+                  if (ctx.mounted) Navigator.pop(ctx);
+                  onRetry?.call();
+                },
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
 }
