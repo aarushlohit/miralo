@@ -3,6 +3,7 @@ class PrivateContactModel {
   final String displayName;
   final String username;
   final String? avatarUrl;
+  final String? bio;
   final bool isOnline;
   final String lastSeenText;
   final bool isMuted;
@@ -24,6 +25,7 @@ class PrivateContactModel {
     required this.displayName,
     required this.username,
     this.avatarUrl,
+    this.bio,
     this.isOnline = false,
     this.lastSeenText = 'recently',
     this.isMuted = false,
@@ -72,6 +74,7 @@ class PrivateContactModel {
     String? displayName,
     String? username,
     String? avatarUrl,
+    String? bio,
     bool? isOnline,
     String? lastSeenText,
     bool? isMuted,
@@ -93,6 +96,7 @@ class PrivateContactModel {
       displayName: displayName ?? this.displayName,
       username: username ?? this.username,
       avatarUrl: avatarUrl ?? this.avatarUrl,
+      bio: bio ?? this.bio,
       isOnline: isOnline ?? this.isOnline,
       lastSeenText: lastSeenText ?? this.lastSeenText,
       isMuted: isMuted ?? this.isMuted,
@@ -117,6 +121,7 @@ class PrivateContactModel {
       'displayName': displayName,
       'username': username,
       'avatarUrl': avatarUrl,
+      if (bio != null) 'bio': bio,
       'isOnline': isOnline,
       'lastSeenText': lastSeenText,
       'isMuted': isMuted,
@@ -159,6 +164,7 @@ class PrivateContactModel {
       displayName: json['displayName']?.toString() ?? 'User',
       username: json['username']?.toString() ?? '',
       avatarUrl: json['avatarUrl']?.toString(),
+      bio: json['bio']?.toString(),
       isOnline: json['isOnline'] == true,
       lastSeenText: json['lastSeenText']?.toString() ?? 'recently',
       isMuted: json['isMuted'] == true,

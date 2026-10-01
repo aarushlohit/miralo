@@ -56,6 +56,7 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
 
   bool _showCloudNote = true;
   Timer? _cloudNoteTimer;
+  String? _lastActiveChatId;
 
   @override
   void initState() {
@@ -65,6 +66,14 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
         _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
       }
     });
+    _resetCloudNoteTimer();
+  }
+
+  void _resetCloudNoteTimer() {
+    _cloudNoteTimer?.cancel();
+    setState(() {
+      _showCloudNote = true;
+    });
     _cloudNoteTimer = Timer(const Duration(seconds: 4), () {
       if (mounted) {
         setState(() {
@@ -73,6 +82,8 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
       }
     });
   }
+
+
 
   @override
   void dispose() {
@@ -362,6 +373,51 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
     );
   }
 
+  void _openFullProfilePhoto(BuildContext context, String imageUrl, String name) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.black,
+        insetPadding: EdgeInsets.zero,
+        child: Stack(
+          children: [
+            Center(
+              child: InteractiveViewer(
+                child: imageUrl.startsWith('data:image/')
+                    ? Image.memory(
+                        base64Decode(imageUrl.split(',').last),
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, size: 80, color: Colors.white54),
+                      )
+                    : Image.network(
+                        imageUrl,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, size: 80, color: Colors.white54),
+                      ),
+              ),
+            ),
+            Positioned(
+              top: 40,
+              left: 16,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                onPressed: () => Navigator.pop(ctx),
+              ),
+            ),
+            Positioned(
+              top: 48,
+              left: 64,
+              child: Text(
+                name,
+                style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showContactProfileSheet(
     BuildContext context,
     PrivateChatProvider chat,
@@ -401,11 +457,16 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                   ),
                 ),
               ),
-              LongcatAvatar(
-                name: contact.displayName,
-                imageUrl: contact.avatarUrl,
-                size: 80,
-                note: contact.note,
+              GestureDetector(
+                onTap: (contact.avatarUrl != null && contact.avatarUrl!.isNotEmpty)
+                    ? () => _openFullProfilePhoto(context, contact.avatarUrl!, contact.displayName)
+                    : null,
+                child: LongcatAvatar(
+                  name: contact.displayName,
+                  imageUrl: contact.avatarUrl,
+                  size: 80,
+                  note: contact.note,
+                ),
               ),
               const SizedBox(height: 12),
               Text(
@@ -416,6 +477,17 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                 Text('@${contact.username}', style: LongcatTypography.caption(color: textMuted)),
               if (contact.phoneNumber != null)
                 Text(contact.phoneNumber!, style: LongcatTypography.caption(color: textMuted)),
+              if (contact.bio != null && contact.bio!.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    contact.bio!,
+                    textAlign: TextAlign.center,
+                    style: LongcatTypography.bodySmall(color: textPrimary).copyWith(fontSize: 13),
+                  ),
+                ),
+              ],
               if (contact.note != null && contact.note!.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Container(
@@ -429,6 +501,15 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
               ],
               const SizedBox(height: LongcatSpacing.md),
               const Divider(),
+              if (contact.avatarUrl != null && contact.avatarUrl!.isNotEmpty)
+                ListTile(
+                  leading: const Icon(Icons.account_box_outlined, color: LongcatColors.accent),
+                  title: const Text('View Profile Photo'),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _openFullProfilePhoto(context, contact.avatarUrl!, contact.displayName);
+                  },
+                ),
               ListTile(
                 leading: const Icon(Icons.star_rounded, color: Color(0xFFF59E0B)),
                 title: const Text('Starred Messages'),
@@ -1046,6 +1127,11 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
         email: auth.currentUser?.email,
         displayName: auth.currentUser?.displayName,
       );
+      final activeId = chat.activeChatId;
+      if (activeId != _lastActiveChatId) {
+        _lastActiveChatId = activeId;
+        _resetCloudNoteTimer();
+      }
     }
   }
 
@@ -1173,7 +1259,7 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                 );
               },
             ),
-          if (_showCloudNote && contact?.note != null && contact!.note!.isNotEmpty)
+          if (_showCloudNote && contact?.note != null && contact!.note!.isNotEmpty && !contact.isGroup)
             AnimatedOpacity(
               duration: const Duration(milliseconds: 300),
               opacity: _showCloudNote ? 1.0 : 0.0,

@@ -57,22 +57,32 @@ class _AppSidebarDrawerState extends State<AppSidebarDrawer> {
   }
 
   void _openAiChat(BuildContext context, AiChatProvider ai, String chatId) {
-    ai.openChat(chatId);
+    final navigator = Navigator.of(context);
     final routeName = ModalRoute.of(context)?.settings.name;
     final isAlreadyInChat = routeName == AppRoutes.chat || routeName == AppRoutes.home;
-    _close(context);
+    ai.openChat(chatId);
+    if (widget.isPersistent) {
+      widget.onClose?.call();
+    } else {
+      navigator.pop();
+    }
     if (!isAlreadyInChat) {
-      Navigator.pushNamed(context, AppRoutes.chat);
+      navigator.pushNamed(AppRoutes.chat);
     }
   }
 
   void _openPrivateChat(BuildContext context, PrivateChatProvider privateChat, String contactId) {
-    privateChat.setActiveChat(contactId);
+    final navigator = Navigator.of(context);
     final routeName = ModalRoute.of(context)?.settings.name;
     final isAlreadyInPrivateChat = routeName == AppRoutes.privateChat;
-    _close(context);
+    privateChat.setActiveChat(contactId);
+    if (widget.isPersistent) {
+      widget.onClose?.call();
+    } else {
+      navigator.pop();
+    }
     if (!isAlreadyInPrivateChat) {
-      Navigator.pushNamed(context, AppRoutes.privateChat);
+      navigator.pushNamed(AppRoutes.privateChat);
     }
   }
 

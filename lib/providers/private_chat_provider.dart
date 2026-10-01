@@ -44,6 +44,7 @@ class PrivateChatProvider extends ChangeNotifier {
   StreamSubscription<DatabaseEvent>? _recentChatsSubscription;
   StreamSubscription<DatabaseEvent>? _infoConnectedSubscription;
   final Map<String, StreamSubscription<DatabaseEvent>> _contactPresenceSubs = {};
+  final Map<String, StreamSubscription<DatabaseEvent>> _contactProfileSubs = {};
   final Map<String, bool> _typingUsers = {};
   final Map<String, String> _typingUserNames = {};
   final Map<String, StreamSubscription<DatabaseEvent>> _typingSubscriptions = {};
@@ -949,6 +950,43 @@ class PrivateChatProvider extends ChangeNotifier {
   }
 
   void _subscribeToContactPresence(String contactId) {
+    if (!_contactProfileSubs.containsKey(contactId)) {
+      try {
+        final profileRef = FirebaseDatabase.instance.ref('users/$contactId');
+        _contactProfileSubs[contactId] = profileRef.onValue.listen((event) {
+          if (event.snapshot.value != null && event.snapshot.value is Map) {
+            final data = Map<String, dynamic>.from(event.snapshot.value as Map);
+            final avatarUrl = data['avatarUrl']?.toString();
+            final bio = data['bio']?.toString();
+            final note = data['note']?.toString();
+            final displayName = data['displayName']?.toString();
+            final username = data['username']?.toString();
+
+            final contactIdx = _contacts.indexWhere((c) => c.id == contactId);
+            if (contactIdx != -1) {
+              _contacts[contactIdx] = _contacts[contactIdx].copyWith(
+                avatarUrl: avatarUrl ?? _contacts[contactIdx].avatarUrl,
+                bio: bio ?? _contacts[contactIdx].bio,
+                note: note ?? _contacts[contactIdx].note,
+                displayName: displayName ?? _contacts[contactIdx].displayName,
+                username: username ?? _contacts[contactIdx].username,
+              );
+            }
+            if (_tempContacts.containsKey(contactId)) {
+              _tempContacts[contactId] = _tempContacts[contactId]!.copyWith(
+                avatarUrl: avatarUrl ?? _tempContacts[contactId]!.avatarUrl,
+                bio: bio ?? _tempContacts[contactId]!.bio,
+                note: note ?? _tempContacts[contactId]!.note,
+                displayName: displayName ?? _tempContacts[contactId]!.displayName,
+                username: username ?? _tempContacts[contactId]!.username,
+              );
+            }
+            notifyListeners();
+          }
+        }, onError: (_) {});
+      } catch (_) {}
+    }
+
     if (_contactPresenceSubs.containsKey(contactId)) return;
     try {
       final ref = FirebaseDatabase.instance.ref('users/$contactId/presence');
@@ -1058,6 +1096,10 @@ class PrivateChatProvider extends ChangeNotifier {
       sub.cancel();
     }
     _contactPresenceSubs.clear();
+    for (final sub in _contactProfileSubs.values) {
+      sub.cancel();
+    }
+    _contactProfileSubs.clear();
     for (final sub in _channelSubscriptions.values) {
       sub.cancel();
     }

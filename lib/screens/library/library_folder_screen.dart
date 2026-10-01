@@ -108,48 +108,63 @@ class LibraryFolderScreen extends StatelessWidget {
   ) async {
     try {
       final picker = ImagePicker();
-      final XFile? file = await picker.pickImage(
-        source: source,
-        maxWidth: 1600,
-        maxHeight: 1600,
-        imageQuality: 85,
-      );
-      if (file == null) return;
-
-      final bytes = await file.readAsBytes();
-      final sizeKb = bytes.length / 1024;
-      final sizeStr = sizeKb > 1024
-          ? '${(sizeKb / 1024).toStringAsFixed(1)} MB'
-          : '${sizeKb.toStringAsFixed(1)} KB';
-
-      final appDir = await getApplicationDocumentsDirectory();
-      final libDir = Directory('${appDir.path}/library');
-      if (!libDir.existsSync()) {
-        await libDir.create(recursive: true);
-      }
-      final destPath = '${libDir.path}/${DateTime.now().millisecondsSinceEpoch}_${file.name}';
-      final savedFile = await File(destPath).writeAsBytes(bytes);
-
-      String? cloudUrl;
-      try {
-        cloudUrl = await CloudinaryService.uploadFileBytes(
-          fileBytes: bytes,
-          fileName: file.name,
-          resourceType: 'image',
+      final List<XFile> files = [];
+      if (source == ImageSource.gallery) {
+        final multi = await picker.pickMultiImage(
+          maxWidth: 1600,
+          maxHeight: 1600,
+          imageQuality: 85,
         );
-      } catch (_) {}
+        files.addAll(multi);
+      } else {
+        final single = await picker.pickImage(
+          source: source,
+          maxWidth: 1600,
+          maxHeight: 1600,
+          imageQuality: 85,
+        );
+        if (single != null) files.add(single);
+      }
+      if (files.isEmpty) return;
 
-      library.uploadItem(
-        name: file.name,
-        type: 'image',
-        size: sizeStr,
-        mediaUrl: cloudUrl ?? savedFile.path,
-        folderId: library.selectedFolderId,
-      );
+      int addedCount = 0;
+      for (final file in files) {
+        final bytes = await file.readAsBytes();
+        final sizeKb = bytes.length / 1024;
+        final sizeStr = sizeKb > 1024
+            ? '${(sizeKb / 1024).toStringAsFixed(1)} MB'
+            : '${sizeKb.toStringAsFixed(1)} KB';
+
+        final appDir = await getApplicationDocumentsDirectory();
+        final libDir = Directory('${appDir.path}/library');
+        if (!libDir.existsSync()) {
+          await libDir.create(recursive: true);
+        }
+        final destPath = '${libDir.path}/${DateTime.now().millisecondsSinceEpoch}_${file.name}';
+        final savedFile = await File(destPath).writeAsBytes(bytes);
+
+        String? cloudUrl;
+        try {
+          cloudUrl = await CloudinaryService.uploadFileBytes(
+            fileBytes: bytes,
+            fileName: file.name,
+            resourceType: 'image',
+          );
+        } catch (_) {}
+
+        library.uploadItem(
+          name: file.name,
+          type: 'image',
+          size: sizeStr,
+          mediaUrl: cloudUrl ?? savedFile.path,
+          folderId: library.selectedFolderId,
+        );
+        addedCount++;
+      }
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Added "${file.name}" to folder.')),
+          SnackBar(content: Text('Added $addedCount image${addedCount > 1 ? "s" : ""} to folder.')),
         );
       }
     } catch (e) {
@@ -222,61 +237,66 @@ class LibraryFolderScreen extends StatelessWidget {
           ? await FilePicker.platform.pickFiles(
               type: FileType.custom,
               allowedExtensions: ['pdf', 'doc', 'docx', 'txt', 'rtf', 'xls', 'xlsx', 'ppt', 'pptx', 'csv'],
+              allowMultiple: true,
               withData: true,
             )
           : await FilePicker.platform.pickFiles(
               type: FileType.any,
+              allowMultiple: true,
               withData: true,
             );
       if (result == null || result.files.isEmpty) return;
 
-      final picked = result.files.first;
-      Uint8List? bytes = picked.bytes;
-      if (bytes == null && picked.path != null) {
-        bytes = await File(picked.path!).readAsBytes();
-      }
-      if (bytes == null) return;
+      int addedCount = 0;
+      for (final picked in result.files) {
+        Uint8List? bytes = picked.bytes;
+        if (bytes == null && picked.path != null) {
+          bytes = await File(picked.path!).readAsBytes();
+        }
+        if (bytes == null) continue;
 
-      final sizeKb = bytes.length / 1024;
-      final sizeStr = sizeKb > 1024
-          ? '${(sizeKb / 1024).toStringAsFixed(1)} MB'
-          : '${sizeKb.toStringAsFixed(1)} KB';
+        final sizeKb = bytes.length / 1024;
+        final sizeStr = sizeKb > 1024
+            ? '${(sizeKb / 1024).toStringAsFixed(1)} MB'
+            : '${sizeKb.toStringAsFixed(1)} KB';
 
-      final appDir = await getApplicationDocumentsDirectory();
-      final libDir = Directory('${appDir.path}/library');
-      if (!libDir.existsSync()) {
-        await libDir.create(recursive: true);
-      }
-      final destPath = '${libDir.path}/${DateTime.now().millisecondsSinceEpoch}_${picked.name}';
-      final savedFile = await File(destPath).writeAsBytes(bytes);
+        final appDir = await getApplicationDocumentsDirectory();
+        final libDir = Directory('${appDir.path}/library');
+        if (!libDir.existsSync()) {
+          await libDir.create(recursive: true);
+        }
+        final destPath = '${libDir.path}/${DateTime.now().millisecondsSinceEpoch}_${picked.name}';
+        final savedFile = await File(destPath).writeAsBytes(bytes);
 
-      final ext = picked.name.split('.').last.toLowerCase();
-      final type = (ext == 'zip' || ext == 'rar' || ext == '7z')
-          ? 'zip'
-          : (['mp4', 'mov', 'avi', 'mkv'].contains(ext)
-              ? 'video'
-              : (['jpg', 'jpeg', 'png', 'gif', 'webp'].contains(ext) ? 'image' : 'document'));
+        final ext = picked.name.split('.').last.toLowerCase();
+        final type = (ext == 'zip' || ext == 'rar' || ext == '7z')
+            ? 'zip'
+            : (['mp4', 'mov', 'avi', 'mkv'].contains(ext)
+                ? 'video'
+                : (['jpg', 'jpeg', 'png', 'gif', 'webp'].contains(ext) ? 'image' : 'document'));
 
-      String? cloudUrl;
-      try {
-        cloudUrl = await CloudinaryService.uploadFileBytes(
-          fileBytes: bytes,
-          fileName: picked.name,
-          resourceType: type == 'image' ? 'image' : (type == 'video' ? 'video' : 'raw'),
+        String? cloudUrl;
+        try {
+          cloudUrl = await CloudinaryService.uploadFileBytes(
+            fileBytes: bytes,
+            fileName: picked.name,
+            resourceType: type == 'image' ? 'image' : (type == 'video' ? 'video' : 'raw'),
+          );
+        } catch (_) {}
+
+        library.uploadItem(
+          name: picked.name,
+          type: type,
+          size: sizeStr,
+          mediaUrl: cloudUrl ?? savedFile.path,
+          folderId: library.selectedFolderId,
         );
-      } catch (_) {}
-
-      library.uploadItem(
-        name: picked.name,
-        type: type,
-        size: sizeStr,
-        mediaUrl: cloudUrl ?? savedFile.path,
-        folderId: library.selectedFolderId,
-      );
+        addedCount++;
+      }
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Added "${picked.name}" to folder.')),
+          SnackBar(content: Text('Added $addedCount file${addedCount > 1 ? "s" : ""} to folder.')),
         );
       }
     } catch (e) {

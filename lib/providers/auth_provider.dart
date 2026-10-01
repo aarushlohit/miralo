@@ -415,18 +415,19 @@ class AuthProvider extends ChangeNotifier {
     try {
       _isLoading = true;
       notifyListeners();
-      final url = await CloudinaryService.uploadFileBytes(
+      var url = await CloudinaryService.uploadFileBytes(
         fileBytes: fileBytes,
         fileName: filename,
         resourceType: 'image',
       );
-      if (url != null) {
-        updateProfile(avatarUrl: url);
-      }
+      url ??= 'data:image/jpeg;base64,${base64Encode(fileBytes)}';
+      updateProfile(avatarUrl: url);
       return url;
     } catch (e) {
       debugPrint('Error uploading custom avatar: $e');
-      return null;
+      final fallbackUrl = 'data:image/jpeg;base64,${base64Encode(fileBytes)}';
+      updateProfile(avatarUrl: fallbackUrl);
+      return fallbackUrl;
     } finally {
       _isLoading = false;
       notifyListeners();

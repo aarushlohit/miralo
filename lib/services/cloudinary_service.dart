@@ -44,11 +44,25 @@ class CloudinaryService {
         return secureUrl;
       } else {
         debugPrint('Cloudinary upload error (${response.statusCode}): ${response.body}');
-        return null;
+        final mime = fileName.toLowerCase().endsWith('.png')
+            ? 'image/png'
+            : fileName.toLowerCase().endsWith('.gif')
+                ? 'image/gif'
+                : fileName.toLowerCase().endsWith('.pdf')
+                    ? 'application/pdf'
+                    : 'image/jpeg';
+        return 'data:$mime;base64,${base64Encode(fileBytes)}';
       }
     } catch (e) {
       debugPrint('Cloudinary upload exception: $e');
-      return null;
+      final mime = fileName.toLowerCase().endsWith('.png')
+          ? 'image/png'
+          : fileName.toLowerCase().endsWith('.gif')
+              ? 'image/gif'
+              : fileName.toLowerCase().endsWith('.pdf')
+                  ? 'application/pdf'
+                  : 'image/jpeg';
+      return 'data:$mime;base64,${base64Encode(fileBytes)}';
     }
   }
 
