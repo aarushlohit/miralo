@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/library_item_model.dart';
+import '../services/cloudinary_service.dart';
 
 class LibraryProvider extends ChangeNotifier {
   final List<LibraryFolderModel> _folders = [];
@@ -149,10 +151,66 @@ class LibraryProvider extends ChangeNotifier {
 
           _recalculateFolderCounts();
           notifyListeners();
+          autoSyncLocalItemsToCloud();
         }
       });
     } catch (e) {
       debugPrint('Firebase library sync listener error: $e');
+    }
+
+    autoSyncLocalItemsToCloud();
+  }
+
+  bool _isAutoSyncing = false;
+
+  /// Automatically scans library items and uploads any locally saved files to Cloudinary in the background.
+  Future<void> autoSyncLocalItemsToCloud() async {
+    if (_isAutoSyncing || _items.isEmpty) return;
+    _isAutoSyncing = true;
+
+    bool updated = false;
+    for (int i = 0; i < _items.length; i++) {
+      final item = _items[i];
+      final pathOrUrl = item.cloudUrl ?? item.thumbnailUrl;
+
+      // Check if item needs cloud upload (local file path, not http or data url)
+      final needsUpload = pathOrUrl != null &&
+          !pathOrUrl.startsWith('http://') &&
+          !pathOrUrl.startsWith('https://') &&
+          !pathOrUrl.startsWith('data:');
+
+      if (needsUpload) {
+        try {
+          String? url;
+          final file = File(pathOrUrl);
+          if (file.existsSync()) {
+            final resourceType = item.type == 'image'
+                ? 'image'
+                : (item.type == 'video' ? 'video' : 'raw');
+            url = await CloudinaryService.uploadFilePath(
+              pathOrUrl,
+              resourceType: resourceType,
+            );
+          }
+
+          if (url != null && url.isNotEmpty) {
+            _items[i] = item.copyWith(
+              cloudUrl: url,
+              thumbnailUrl: url,
+              updatedAt: DateTime.now(),
+            );
+            updated = true;
+          }
+        } catch (e) {
+          debugPrint('Auto cloud upload error for item "${item.name}": $e');
+        }
+      }
+    }
+
+    _isAutoSyncing = false;
+    if (updated) {
+      await _saveToStorageAndCloud();
+      notifyListeners();
     }
   }
 
@@ -243,6 +301,11 @@ class LibraryProvider extends ChangeNotifier {
     String? mediaUrl,
     String? folderId,
   }) {
+    final isCloud = mediaUrl != null &&
+        (mediaUrl.startsWith('http://') ||
+            mediaUrl.startsWith('https://') ||
+            mediaUrl.startsWith('data:'));
+
     final newItem = LibraryItemModel(
       id: 'item_${DateTime.now().millisecondsSinceEpoch}',
       name: name,
@@ -254,7 +317,7 @@ class LibraryProvider extends ChangeNotifier {
               : 'application/octet-stream',
       size: size,
       thumbnailUrl: mediaUrl,
-      cloudUrl: (mediaUrl != null && mediaUrl.startsWith('http')) ? mediaUrl : null,
+      cloudUrl: isCloud ? mediaUrl : null,
       folderId: folderId ?? _selectedFolderId,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
@@ -264,6 +327,10 @@ class LibraryProvider extends ChangeNotifier {
     _recalculateFolderCounts();
     _saveToStorageAndCloud();
     notifyListeners();
+
+    if (!isCloud && mediaUrl != null && mediaUrl.isNotEmpty) {
+      autoSyncLocalItemsToCloud();
+    }
   }
 
   void moveItem(String itemId, String? targetFolderId) {
