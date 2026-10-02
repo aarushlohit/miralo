@@ -639,5 +639,41 @@ void main() {
       // Once there is a reply from the other person, coldDmLimitReached must be false!
       expect(chat.coldDmLimitReached, isFalse);
     });
+
+    test('PrivateChatProvider allConversations ignores internal transport chat_ channel IDs', () {
+      final chat = PrivateChatProvider();
+      chat.initUserSession('user_me', username: 'me');
+
+      // Inject messages under internal channel ID
+      final channelId = 'chat_user_me_user_peer';
+      final dummyMsg = PrivateMessageModel(
+        id: 'pmsg_test_1',
+        chatId: channelId,
+        senderId: 'user_peer',
+        senderName: 'Peer',
+        type: 'text',
+        text: 'Channel message',
+        createdAt: DateTime.now(),
+      );
+      chat.injectMessageForTest(channelId, dummyMsg);
+
+      // allConversations must NEVER include channel IDs (chat_...) as contacts!
+      expect(chat.allConversations.any((c) => c.id.startsWith('chat_')), isFalse);
+    });
+
+    test('PrivateChatProvider deleteConversation persists deletion and filters out deleted contact', () async {
+      final chat = PrivateChatProvider();
+      chat.initUserSession('user_me', username: 'me');
+      chat.setActiveChat('user_to_delete', displayName: 'Delete Me', username: 'deleteme');
+
+      chat.sendTextMessage('Goodbye');
+      expect(chat.allConversations.any((c) => c.id == 'user_to_delete'), isTrue);
+
+      await chat.deleteConversation('user_to_delete');
+
+      // Chat must no longer appear in allConversations
+      expect(chat.allConversations.any((c) => c.id == 'user_to_delete'), isFalse);
+      expect(chat.activeMessages.isEmpty, isTrue);
+    });
   });
 }

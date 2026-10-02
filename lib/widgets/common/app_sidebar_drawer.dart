@@ -796,16 +796,22 @@ class _AppSidebarDrawerState extends State<AppSidebarDrawer> {
                     const SizedBox(height: AppSpacing.md),
                     _SectionLabel('DIRECT MESSAGES', textMuted),
                     ...privateChat.allConversations.where((c) => !c.isGroup).map((contact) {
-                      final isFriend = privateChat.contacts.any((c) => c.id == contact.id);
                       final displayName =
                           vault.hideMode.isEnabled &&
                                   vault.hideMode.hidePrivateChatNames
                               ? 'Contact'
                               : contact.displayName;
 
+                      final hasPendingRequest = privateChat.pendingFriendRequests.any((r) {
+                        final normSender = r.senderUsername.toLowerCase().replaceAll('@', '').trim();
+                        final normContact = contact.username.toLowerCase().replaceAll('@', '').trim();
+                        return r.senderId == contact.id ||
+                            (normSender.isNotEmpty && normSender == normContact);
+                      });
+
                       final subtitle = contact.isPendingInvitation
                           ? 'New invitation · Tap to chat'
-                          : (!isFriend
+                          : (hasPendingRequest
                               ? 'Pending request'
                               : (contact.isOnline ? 'Online' : 'Encrypted chat'));
 

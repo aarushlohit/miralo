@@ -84,6 +84,38 @@ class PrivateChatProvider extends ChangeNotifier {
 
   final Map<String, PrivateContactModel> _tempContacts = {};
 
+  static const String _deletedConversationsPrefsKey = 'deleted_conversations_set';
+  final Set<String> _deletedConversationIds = {};
+
+  Future<void> _loadDeletedConversations() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final list = prefs.getStringList(_deletedConversationsPrefsKey);
+      if (list != null) {
+        _deletedConversationIds.addAll(list.map((s) => s.toLowerCase().trim()));
+        notifyListeners();
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _persistDeletedConversations() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(_deletedConversationsPrefsKey, _deletedConversationIds.toList());
+    } catch (_) {}
+  }
+
+  void _unDeleteConversation(String id) {
+    final clean = id.toLowerCase().trim();
+    final norm = _normalizeIdentifier(clean);
+    bool changed = _deletedConversationIds.remove(clean);
+    if (norm.isNotEmpty) {
+      if (_deletedConversationIds.remove(norm)) changed = true;
+    }
+    if (changed) {
+      _persistDeletedConversations();
+    }
+  }
 
   List<PrivateContactModel> get contacts => _contacts;
 
@@ -100,6 +132,17 @@ class PrivateChatProvider extends ChangeNotifier {
     if (idOrUsername.startsWith('group_')) return idOrUsername;
     final norm = _normalizeIdentifier(idOrUsername);
     if (norm.isEmpty) return idOrUsername;
+
+    // If it is an internal channel ID like chat_uidA_uidB, resolve to peer UID
+    if (norm.startsWith('chat_')) {
+      final parts = norm.substring(5).split('_');
+      if (parts.length >= 2 && _currentUserId != null) {
+        final cur = sanitizeDbKey(_currentUserId!);
+        if (parts[0] == cur) return parts[1];
+        if (parts[1] == cur) return parts[0];
+      }
+      return idOrUsername;
+    }
 
     // 1. Check confirmed contacts
     for (final c in _contacts) {
@@ -183,6 +226,12 @@ class PrivateChatProvider extends ChangeNotifier {
 
     // 1. First add all confirmed contacts
     for (var c in _contacts) {
+      final cleanId = c.id.toLowerCase().trim();
+      final normUname = _normalizeIdentifier(c.username);
+      if (_deletedConversationIds.contains(cleanId) ||
+          (normUname.isNotEmpty && _deletedConversationIds.contains(normUname))) {
+        continue;
+      }
       canonicalMap[c.id] = c;
       if (c.username.isNotEmpty) {
         _mergeMessageKeys(c.username, c.id);
@@ -196,6 +245,16 @@ class PrivateChatProvider extends ChangeNotifier {
       final senderId = req.senderId;
       final senderUsername = req.senderUsername;
       final normSender = _normalizeIdentifier(senderUsername);
+
+      // Skip fake / internal channel IDs
+      if (senderId.startsWith('chat_') || normSender.startsWith('chat_')) {
+        continue;
+      }
+
+      if (_deletedConversationIds.contains(senderId.toLowerCase().trim()) ||
+          (normSender.isNotEmpty && _deletedConversationIds.contains(normSender))) {
+        continue;
+      }
 
       String existingKey = '';
       for (final entry in canonicalMap.entries) {
@@ -232,6 +291,16 @@ class PrivateChatProvider extends ChangeNotifier {
       final normUname = _normalizeIdentifier(temp.username);
       final normId = _normalizeIdentifier(temp.id);
 
+      // NEVER treat internal channel IDs as contacts!
+      if (temp.id.startsWith('chat_') || normId.startsWith('chat_')) {
+        continue;
+      }
+
+      if (_deletedConversationIds.contains(normId) ||
+          (normUname.isNotEmpty && _deletedConversationIds.contains(normUname))) {
+        continue;
+      }
+
       bool alreadyPresent = false;
       for (final entry in canonicalMap.entries) {
         if (entry.key == temp.id ||
@@ -250,7 +319,16 @@ class PrivateChatProvider extends ChangeNotifier {
 
     // 4. Merge messages for any orphan message keys
     for (final msgKey in _messages.keys.toList()) {
+      // NEVER create contacts for internal transport channel IDs
+      if (msgKey.startsWith('chat_')) {
+        continue;
+      }
+
       final normMsgKey = _normalizeIdentifier(msgKey);
+      if (_deletedConversationIds.contains(normMsgKey)) {
+        continue;
+      }
+
       bool merged = false;
       for (final entry in canonicalMap.entries) {
         if (entry.key == msgKey ||
@@ -369,6 +447,19 @@ class PrivateChatProvider extends ChangeNotifier {
     final list = <FriendRequestModel>[];
     for (final req in _pendingFriendRequests) {
       if (req.status != 'pending') continue;
+      if (req.senderId.startsWith('chat_') ||
+          req.senderUsername.startsWith('chat_') ||
+          req.id.startsWith('chat_')) {
+        continue;
+      }
+
+      final cleanSender = req.senderId.toLowerCase().trim();
+      final normSender = _normalizeIdentifier(req.senderUsername);
+      if (_deletedConversationIds.contains(cleanSender) ||
+          (normSender.isNotEmpty && _deletedConversationIds.contains(normSender))) {
+        continue;
+      }
+
       final senderKey = req.senderId.isNotEmpty
           ? req.senderId
           : _normalizeIdentifier(req.senderUsername);
@@ -802,6 +893,7 @@ class PrivateChatProvider extends ChangeNotifier {
   PrivateChatProvider() {
     _loadPrivacySettings();
     _loadFavoriteGifs();
+    _loadDeletedConversations();
   }
 
   void setAutoBackupEnabled(bool enabled) {
@@ -1201,10 +1293,27 @@ class PrivateChatProvider extends ChangeNotifier {
         final rawMap = Map<String, dynamic>.from(snapshot.value as Map);
         for (var entry in rawMap.entries) {
           final otherUserId = entry.key;
+          final cleanOther = otherUserId.toLowerCase().trim();
+
+          // 1. If key is an internal channel ID (e.g. chat_...), clean it up from Firebase and skip!
+          if (cleanOther.startsWith('chat_')) {
+            try {
+              FirebaseDatabase.instance.ref('users/$userId/recent_chats/$otherUserId').remove();
+            } catch (_) {}
+            continue;
+          }
+
+          // 2. If user deleted this conversation, skip and clean up from recent_chats
+          if (_deletedConversationIds.contains(cleanOther)) {
+            try {
+              FirebaseDatabase.instance.ref('users/$userId/recent_chats/$otherUserId').remove();
+            } catch (_) {}
+            continue;
+          }
+
           final curId = (_currentUserId ?? '').toLowerCase().trim();
           final curUname = (_currentUsername ?? '').toLowerCase().trim();
-          if (otherUserId.toLowerCase().trim() == curId ||
-              otherUserId.toLowerCase().trim() == curUname) {
+          if (cleanOther == curId || cleanOther == curUname) {
             continue;
           }
 
@@ -1212,7 +1321,15 @@ class PrivateChatProvider extends ChangeNotifier {
             final data = Map<String, dynamic>.from(entry.value as Map);
             final senderName = data['senderName']?.toString() ?? 'User';
             final senderUsername = data['senderUsername']?.toString() ?? 'user';
-            if (senderUsername.toLowerCase().trim() == curUname) continue;
+            final normSenderUname = _normalizeIdentifier(senderUsername);
+
+            if (normSenderUname == curUname) continue;
+            if (_deletedConversationIds.contains(normSenderUname)) {
+              try {
+                FirebaseDatabase.instance.ref('users/$userId/recent_chats/$otherUserId').remove();
+              } catch (_) {}
+              continue;
+            }
 
             if (!_contacts.any((c) => c.id == otherUserId) &&
                 !_tempContacts.containsKey(otherUserId)) {
@@ -1265,6 +1382,15 @@ class PrivateChatProvider extends ChangeNotifier {
             if (entry.value is Map) {
               final contactJson = Map<String, dynamic>.from(entry.value as Map);
               var contact = PrivateContactModel.fromJson(contactJson);
+              final cleanContactId = contact.id.toLowerCase().trim();
+              final normContactUname = _normalizeIdentifier(contact.username);
+
+              // Skip if marked as deleted by user
+              if (_deletedConversationIds.contains(cleanContactId) ||
+                  (normContactUname.isNotEmpty && _deletedConversationIds.contains(normContactUname))) {
+                continue;
+              }
+
               final curId = (_currentUserId ?? '').toLowerCase().trim();
               final curUname = (_currentUsername ?? '').toLowerCase().trim();
               if (contact.id.toLowerCase().trim() == curId || contact.username.toLowerCase().trim() == curUname) {
@@ -1466,6 +1592,26 @@ class PrivateChatProvider extends ChangeNotifier {
           final reqJson = Map<String, dynamic>.from(entry.value as Map);
           final req = FriendRequestModel.fromJson(reqJson);
 
+          if (req.senderId.startsWith('chat_') ||
+              req.senderUsername.startsWith('chat_') ||
+              req.id.startsWith('chat_')) {
+            // Clean up corrupted friend request node
+            if (_currentUserId != null) {
+              final safeUid = sanitizeDbKey(_currentUserId!);
+              try {
+                FirebaseDatabase.instance.ref('friend_requests/$safeUid/${req.id}').remove();
+              } catch (_) {}
+            }
+            continue;
+          }
+
+          final cleanSenderId = req.senderId.toLowerCase().trim();
+          final normReqUname = _normalizeIdentifier(req.senderUsername);
+          if (_deletedConversationIds.contains(cleanSenderId) ||
+              (normReqUname.isNotEmpty && _deletedConversationIds.contains(normReqUname))) {
+            continue;
+          }
+
           bool matchesSender(FriendRequestModel r) {
             if (r.id == req.id) return true;
             if (r.senderId.isNotEmpty && req.senderId.isNotEmpty && r.senderId == req.senderId) return true;
@@ -1600,6 +1746,9 @@ class PrivateChatProvider extends ChangeNotifier {
     if (contactId.startsWith('group_')) {
       return contactId;
     }
+    if (contactId.startsWith('chat_')) {
+      return contactId;
+    }
     if (_currentUserId == null || _currentUserId!.isEmpty) return contactId;
 
     final canonicalTarget = resolveCanonicalId(contactId);
@@ -1621,6 +1770,9 @@ class PrivateChatProvider extends ChangeNotifier {
   }
 
   void setActiveChat(String chatId, {String? displayName, String? username}) {
+    _unDeleteConversation(chatId);
+    if (username != null) _unDeleteConversation(username);
+
     final cleanChatId = sanitizeDbKey(chatId).toLowerCase().trim();
     final cleanUname = username != null ? sanitizeDbKey(username).toLowerCase().trim() : '';
     final curId = (_currentUserId ?? '').toLowerCase().trim();
@@ -1633,6 +1785,7 @@ class PrivateChatProvider extends ChangeNotifier {
     }
 
     final canonicalId = resolveCanonicalId(chatId);
+    _unDeleteConversation(canonicalId);
     _mergeMessageKeys(chatId, canonicalId);
     _mergeMessageKeys('usr_$chatId', canonicalId);
     _mergeMessageKeys('@$chatId', canonicalId);
@@ -1664,7 +1817,9 @@ class PrivateChatProvider extends ChangeNotifier {
         ),
       );
 
-      if (req.id.isNotEmpty) {
+      if (canonicalId.startsWith('chat_')) {
+        // Do not add internal transport keys to _tempContacts
+      } else if (req.id.isNotEmpty) {
         _tempContacts[canonicalId] = PrivateContactModel(
           id: canonicalId,
           displayName: req.senderName,
@@ -1758,6 +1913,9 @@ class PrivateChatProvider extends ChangeNotifier {
   }
 
   Future<void> _fetchUserForChatIfMissing(String chatId) async {
+    if (chatId.startsWith('chat_')) return;
+    final cleanId = chatId.toLowerCase().trim();
+    if (_deletedConversationIds.contains(cleanId)) return;
     if (_contacts.any((c) => c.id == chatId) || _tempContacts.containsKey(chatId)) return;
     try {
       final snap = await FirebaseDatabase.instance.ref('users/$chatId').get();
@@ -1815,7 +1973,7 @@ class PrivateChatProvider extends ChangeNotifier {
         final targetCanonical = resolveCanonicalId(_activeChatId!);
         // Write to recipient's recent_chats under their canonical ID
         FirebaseDatabase.instance.ref('users/$targetCanonical/recent_chats/$_currentUserId').set(dataForRecipient);
-        if (_activeChatId != targetCanonical) {
+        if (_activeChatId != targetCanonical && !_activeChatId!.startsWith('chat_')) {
           FirebaseDatabase.instance.ref('users/$_activeChatId/recent_chats/$_currentUserId').set(dataForRecipient);
         }
         if (myUname.isNotEmpty && myUname != _currentUserId) {
@@ -1853,7 +2011,7 @@ class PrivateChatProvider extends ChangeNotifier {
           'senderUsername': contactUname,
         };
         FirebaseDatabase.instance.ref('users/$_currentUserId/recent_chats/$targetCanonical').set(dataForSender);
-        if (_activeChatId != targetCanonical) {
+        if (_activeChatId != targetCanonical && !_activeChatId!.startsWith('chat_')) {
           FirebaseDatabase.instance.ref('users/$_currentUserId/recent_chats/$_activeChatId').set(dataForSender);
         }
         if (myUname.isNotEmpty && myUname != _currentUserId) {
@@ -1922,6 +2080,7 @@ class PrivateChatProvider extends ChangeNotifier {
 
   void sendTextMessage(String text, {String? replyToText}) {
     if (text.trim().isEmpty || _activeChatId == null) return;
+    _unDeleteConversation(_activeChatId!);
     final cleanActive = _activeChatId!.toLowerCase().trim();
     final curId = (_currentUserId ?? '').toLowerCase().trim();
     final curUname = (_currentUsername ?? '').toLowerCase().trim();
@@ -2008,6 +2167,7 @@ class PrivateChatProvider extends ChangeNotifier {
     String? fileSize,
   }) {
     if (_activeChatId == null) return;
+    _unDeleteConversation(_activeChatId!);
     final cleanActive = _activeChatId!.toLowerCase().trim();
     final curId = (_currentUserId ?? '').toLowerCase().trim();
     final curUname = (_currentUsername ?? '').toLowerCase().trim();
@@ -2420,17 +2580,7 @@ class PrivateChatProvider extends ChangeNotifier {
 
   void deleteCurrentChat() {
     if (_activeChatId == null) return;
-    final channelId = getConversationChannelId(_activeChatId!);
-    try {
-      FirebaseDatabase.instance.ref('chats/$channelId').remove();
-      if (_currentUserId != null) {
-        FirebaseDatabase.instance.ref('users/$_currentUserId/contacts/$_activeChatId').remove();
-      }
-    } catch (_) {}
-    _messages.remove(_activeChatId);
-    _contacts.removeWhere((c) => c.id == _activeChatId);
-    _activeChatId = null;
-    notifyListeners();
+    deleteConversation(_activeChatId!);
   }
 
   void clearActiveChat() {
@@ -2672,6 +2822,8 @@ class PrivateChatProvider extends ChangeNotifier {
     _tempContacts.remove(_normalizeIdentifier(req.senderUsername));
 
     if (accept) {
+      _unDeleteConversation(req.senderId);
+      _unDeleteConversation(req.senderUsername);
       final newContact = PrivateContactModel(
         id: req.senderId,
         displayName: req.senderName,
@@ -2744,22 +2896,72 @@ class PrivateChatProvider extends ChangeNotifier {
 
   /// Delete an entire conversation directly from the sidebar or settings
   Future<void> deleteConversation(String contactId) async {
-    _messages.remove(contactId);
-    _contacts.removeWhere((c) => c.id == contactId || c.username == contactId);
-    _tempContacts.remove(contactId);
-    if (_activeChatId == contactId) {
+    final cleanId = contactId.trim();
+    if (cleanId.isEmpty) return;
+
+    final canonicalId = resolveCanonicalId(cleanId);
+    final channelId = getConversationChannelId(cleanId);
+
+    // Find contact to get username
+    final contact = getContact(cleanId);
+    final uname = contact?.username ?? '';
+    final normUname = _normalizeIdentifier(uname);
+
+    final allKeysToRemove = <String>{
+      cleanId,
+      cleanId.toLowerCase(),
+      canonicalId,
+      canonicalId.toLowerCase(),
+      channelId,
+      channelId.toLowerCase(),
+      if (uname.isNotEmpty) uname,
+      if (uname.isNotEmpty) uname.toLowerCase(),
+      if (normUname.isNotEmpty) normUname,
+      if (normUname.isNotEmpty) 'usr_$normUname',
+      if (normUname.isNotEmpty) '@$normUname',
+    };
+
+    // 1. In-memory cleanup IMMEDIATELY (synchronously)
+    for (final k in allKeysToRemove) {
+      _deletedConversationIds.add(k.toLowerCase().trim());
+      _messages.remove(k);
+      _tempContacts.remove(k);
+    }
+    _contacts.removeWhere((c) =>
+        allKeysToRemove.contains(c.id) ||
+        allKeysToRemove.contains(c.id.toLowerCase()) ||
+        allKeysToRemove.contains(c.username) ||
+        allKeysToRemove.contains(c.username.toLowerCase()) ||
+        allKeysToRemove.contains(_normalizeIdentifier(c.username)));
+
+    // Cancel active stream subscription for this channel
+    final sub = _channelSubscriptions.remove(channelId);
+    sub?.cancel();
+
+    if (_activeChatId != null && allKeysToRemove.contains(_activeChatId!)) {
       _activeChatId = null;
     }
+
     notifyListeners();
 
+    // 2. Persist to local storage so it stays deleted on app reopen
+    await _persistDeletedConversations();
+
+    // 3. Remove from Firebase Realtime Database
     if (_currentUserId != null) {
+      final curUid = sanitizeDbKey(_currentUserId!);
+      final curUname = _currentUsername != null ? sanitizeDbKey(_currentUsername!) : '';
+
       try {
-        await FirebaseDatabase.instance
-            .ref('users/$_currentUserId/recent_chats/$contactId')
-            .remove();
-        await FirebaseDatabase.instance
-            .ref('users/$_currentUserId/contacts/$contactId')
-            .remove();
+        for (final k in allKeysToRemove) {
+          final safeK = sanitizeDbKey(k);
+          await FirebaseDatabase.instance.ref('users/$curUid/recent_chats/$safeK').remove();
+          await FirebaseDatabase.instance.ref('users/$curUid/contacts/$safeK').remove();
+          if (curUname.isNotEmpty && curUname != curUid) {
+            await FirebaseDatabase.instance.ref('users/$curUname/recent_chats/$safeK').remove();
+            await FirebaseDatabase.instance.ref('users/$curUname/contacts/$safeK').remove();
+          }
+        }
       } catch (e) {
         debugPrint('Firebase delete conversation error: $e');
       }
