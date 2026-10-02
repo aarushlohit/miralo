@@ -5,9 +5,15 @@ import 'package:http/http.dart' as http;
 
 /// Service for uploading media & documents to Cloudinary (Free Tier).
 class CloudinaryService {
-  // Configurable Cloudinary Cloud Name and Upload Preset
-  static String cloudName = 'ri3utim4'; 
-  static String uploadPreset = 'miralo_preset';
+  // Configurable Cloudinary Cloud Name and Upload Preset with dart-define support
+  static String cloudName = const String.fromEnvironment(
+    'CLOUDINARY_CLOUD_NAME',
+    defaultValue: 'ri3utim4',
+  );
+  static String uploadPreset = const String.fromEnvironment(
+    'CLOUDINARY_UPLOAD_PRESET',
+    defaultValue: 'miralo_preset',
+  );
 
   /// Configure Cloudinary credentials dynamically
   static void configure({required String newCloudName, required String newUploadPreset}) {

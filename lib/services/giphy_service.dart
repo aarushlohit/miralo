@@ -104,6 +104,8 @@ class GiphyService {
     if (_customApiKey != null && _customApiKey!.isNotEmpty) {
       return _customApiKey!;
     }
+    const fromEnv = String.fromEnvironment('GIPHY_API_KEY');
+    if (fromEnv.isNotEmpty) return fromEnv;
     // Attempt local .env read if available
     try {
       final envFile = File('.env');
