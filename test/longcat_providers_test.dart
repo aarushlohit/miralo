@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:longcat/models/friend_request_model.dart';
+import 'package:longcat/models/private_message_model.dart';
 import 'package:longcat/models/user_model.dart';
 import 'package:longcat/models/private_contact_model.dart';
 import 'package:longcat/models/library_item_model.dart';
@@ -575,6 +576,68 @@ void main() {
       final wrongUnlock = await vault.unlockLibraryAsync('0000');
       expect(wrongUnlock, isFalse);
       expect(vault.isLibraryUnlocked, isFalse);
+    });
+
+    test('PrivateChatProvider deduplicates friend requests from same sender ID', () async {
+      final chat = PrivateChatProvider();
+      chat.initUserSession('user_me', username: 'me');
+
+      final req1 = FriendRequestModel(
+        id: 'req_1',
+        senderId: 'user_friend_1',
+        senderName: 'Friend 1',
+        senderUsername: 'friend1',
+        receiverId: 'user_me',
+        receiverUsername: 'me',
+        status: 'pending',
+        createdAt: DateTime.now(),
+      );
+
+      final req2 = FriendRequestModel(
+        id: 'req_2',
+        senderId: 'user_friend_1',
+        senderName: 'Friend 1 Duplicate',
+        senderUsername: 'friend1',
+        receiverId: 'user_me',
+        receiverUsername: 'me',
+        status: 'pending',
+        createdAt: DateTime.now().add(const Duration(seconds: 1)),
+      );
+
+      // Add duplicate requests to provider internal list
+      chat.pendingFriendRequestsInternal.addAll([req1, req2]);
+
+      // pendingFriendRequests getter must deduplicate by sender
+      expect(chat.pendingFriendRequests.length, 1);
+      expect(chat.pendingFriendRequests.first.senderId, 'user_friend_1');
+    });
+
+    test('PrivateChatProvider coldDmLimitReached does not block once other user replies or if friend', () async {
+      final chat = PrivateChatProvider();
+      chat.initUserSession('user_me', username: 'me');
+      chat.setActiveChat('user_partner', displayName: 'Partner', username: 'partner');
+
+      expect(chat.coldDmLimitReached, isFalse);
+
+      // User sends 1 message
+      chat.sendTextMessage('Hello');
+      expect(chat.activeMessages.length, 1);
+      expect(chat.coldDmLimitReached, isTrue);
+
+      // Other user sends a reply in the chat
+      final replyMsg = PrivateMessageModel(
+        id: 'pmsg_partner_reply',
+        chatId: chat.getConversationChannelId('user_partner'),
+        senderId: 'user_partner',
+        senderName: 'Partner',
+        type: 'text',
+        text: 'Hi there!',
+        createdAt: DateTime.now(),
+      );
+      chat.injectMessageForTest('user_partner', replyMsg);
+
+      // Once there is a reply from the other person, coldDmLimitReached must be false!
+      expect(chat.coldDmLimitReached, isFalse);
     });
   });
 }

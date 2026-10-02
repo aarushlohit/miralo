@@ -131,6 +131,14 @@ class PrivateChatProvider extends ChangeNotifier {
       }
     }
 
+    // 4. Check cached user profiles
+    for (final entry in _cachedUserProfiles.entries) {
+      final uname = _normalizeIdentifier((entry.value['username'] ?? '').toString());
+      if (uname == norm || entry.key.toLowerCase() == norm) {
+        return entry.key;
+      }
+    }
+
     return idOrUsername;
   }
 
@@ -356,7 +364,32 @@ class PrivateChatProvider extends ChangeNotifier {
     }
   }
 
-  List<FriendRequestModel> get pendingFriendRequests => _pendingFriendRequests;
+  List<FriendRequestModel> get pendingFriendRequests {
+    final seenSenders = <String>{};
+    final list = <FriendRequestModel>[];
+    for (final req in _pendingFriendRequests) {
+      if (req.status != 'pending') continue;
+      final senderKey = req.senderId.isNotEmpty
+          ? req.senderId
+          : _normalizeIdentifier(req.senderUsername);
+      if (senderKey.isEmpty) continue;
+      if (isContact(req.senderId, req.senderUsername)) continue;
+      if (seenSenders.add(senderKey)) {
+        list.add(req);
+      }
+    }
+    return list;
+  }
+
+  @visibleForTesting
+  List<FriendRequestModel> get pendingFriendRequestsInternal => _pendingFriendRequests;
+
+  @visibleForTesting
+  void injectMessageForTest(String chatId, PrivateMessageModel msg) {
+    _messages.putIfAbsent(chatId, () => []).add(msg);
+    notifyListeners();
+  }
+
   String? get activeChatId => _activeChatId;
   bool get isAutoBackupEnabled => _isAutoBackupEnabled;
   Set<String> get blockedUserIds => _blockedUserIds;
@@ -444,7 +477,15 @@ class PrivateChatProvider extends ChangeNotifier {
 
   List<PrivateMessageModel> get activeMessages {
     if (_activeChatId == null) return [];
-    return _messages[_activeChatId] ?? [];
+    final byActive = _messages[_activeChatId];
+    if (byActive != null && byActive.isNotEmpty) return byActive;
+    final canonical = resolveCanonicalId(_activeChatId!);
+    final byCanonical = _messages[canonical];
+    if (byCanonical != null && byCanonical.isNotEmpty) return byCanonical;
+    final channelId = getConversationChannelId(_activeChatId!);
+    final byChannel = _messages[channelId];
+    if (byChannel != null && byChannel.isNotEmpty) return byChannel;
+    return byActive ?? byCanonical ?? byChannel ?? [];
   }
 
   /// Returns all images from all conversations, newest first (excluding GIFs)
@@ -1285,19 +1326,34 @@ class PrivateChatProvider extends ChangeNotifier {
       final ref = FirebaseDatabase.instance.ref('chats/$channelId/messages');
       bool isFirstSnapshot = true;
       _channelSubscriptions[channelId] = ref.onValue.listen((event) {
-        final list = _messages.putIfAbsent(contactId, () => []);
-        list.clear();
+        final msgs = <PrivateMessageModel>[];
         if (event.snapshot.value != null && event.snapshot.value is Map) {
           final rawMap = Map<String, dynamic>.from(event.snapshot.value as Map);
-          final msgs = rawMap.values
+          msgs.addAll(rawMap.values
               .whereType<Map>()
               .map((val) => _parseAndDecryptMessage(Map<String, dynamic>.from(val), channelId))
-              .toList();
+              .toList());
           msgs.sort((a, b) => a.createdAt.compareTo(b.createdAt));
-          list.addAll(msgs);
+        }
 
+        // Store messages across channelId, contactId, canonical UID, and activeChatId
+        _messages[channelId] = msgs;
+        _messages[contactId] = msgs;
+        final canonicalId = resolveCanonicalId(contactId);
+        _messages[canonicalId] = msgs;
+        if (_activeChatId != null &&
+            (getConversationChannelId(_activeChatId!) == channelId ||
+             resolveCanonicalId(_activeChatId!) == canonicalId ||
+             _activeChatId == contactId)) {
+          _messages[_activeChatId!] = msgs;
+        }
+
+        if (msgs.isNotEmpty) {
           final isAppResumed = WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
-          final isUserViewingActiveChat = _activeChatId == contactId && isAppResumed;
+          final isUserViewingActiveChat = (_activeChatId == contactId ||
+                  _activeChatId == canonicalId ||
+                  (_activeChatId != null && getConversationChannelId(_activeChatId!) == channelId)) &&
+              isAppResumed;
 
           for (final m in msgs) {
             if (!isMyMessage(m)) {
@@ -1409,8 +1465,22 @@ class PrivateChatProvider extends ChangeNotifier {
         if (entry.value is Map) {
           final reqJson = Map<String, dynamic>.from(entry.value as Map);
           final req = FriendRequestModel.fromJson(reqJson);
+
+          bool matchesSender(FriendRequestModel r) {
+            if (r.id == req.id) return true;
+            if (r.senderId.isNotEmpty && req.senderId.isNotEmpty && r.senderId == req.senderId) return true;
+            final rUname = _normalizeIdentifier(r.senderUsername);
+            final reqUname = _normalizeIdentifier(req.senderUsername);
+            if (rUname.isNotEmpty && reqUname.isNotEmpty && rUname == reqUname) return true;
+            return false;
+          }
+
           if (req.status == 'pending') {
-            final idx = _pendingFriendRequests.indexWhere((r) => r.id == req.id);
+            if (isContact(req.senderId, req.senderUsername)) {
+              _pendingFriendRequests.removeWhere(matchesSender);
+              continue;
+            }
+            final idx = _pendingFriendRequests.indexWhere(matchesSender);
             if (idx == -1) {
               _pendingFriendRequests.add(req);
             } else {
@@ -1421,7 +1491,7 @@ class PrivateChatProvider extends ChangeNotifier {
               _subscribeToContactPresence(req.senderId);
             }
           } else {
-            _pendingFriendRequests.removeWhere((r) => r.id == req.id);
+            _pendingFriendRequests.removeWhere(matchesSender);
           }
         }
       }
@@ -1742,13 +1812,17 @@ class PrivateChatProvider extends ChangeNotifier {
           'senderName': myName,
           'senderUsername': myUname,
         };
+        final targetCanonical = resolveCanonicalId(_activeChatId!);
         // Write to recipient's recent_chats under their canonical ID
-        FirebaseDatabase.instance.ref('users/$_activeChatId/recent_chats/$_currentUserId').set(dataForRecipient);
+        FirebaseDatabase.instance.ref('users/$targetCanonical/recent_chats/$_currentUserId').set(dataForRecipient);
+        if (_activeChatId != targetCanonical) {
+          FirebaseDatabase.instance.ref('users/$_activeChatId/recent_chats/$_currentUserId').set(dataForRecipient);
+        }
         if (myUname.isNotEmpty && myUname != _currentUserId) {
-          FirebaseDatabase.instance.ref('users/$_activeChatId/recent_chats/$myUname').set(dataForRecipient);
+          FirebaseDatabase.instance.ref('users/$targetCanonical/recent_chats/$myUname').set(dataForRecipient);
         }
         // If recipient has a distinct username, also write under users/$contactUname
-        if (contactUname.isNotEmpty && contactUname != 'user' && contactUname != _activeChatId) {
+        if (contactUname.isNotEmpty && contactUname != 'user' && contactUname != targetCanonical) {
           FirebaseDatabase.instance.ref('users/$contactUname/recent_chats/$_currentUserId').set(dataForRecipient);
           if (myUname.isNotEmpty && myUname != _currentUserId) {
             FirebaseDatabase.instance.ref('users/$contactUname/recent_chats/$myUname').set(dataForRecipient);
@@ -1774,13 +1848,16 @@ class PrivateChatProvider extends ChangeNotifier {
         final dataForSender = {
           'lastMessage': lastText,
           'timestamp': nowIso,
-          'senderId': _activeChatId,
+          'senderId': targetCanonical,
           'senderName': contactName,
           'senderUsername': contactUname,
         };
-        FirebaseDatabase.instance.ref('users/$_currentUserId/recent_chats/$_activeChatId').set(dataForSender);
+        FirebaseDatabase.instance.ref('users/$_currentUserId/recent_chats/$targetCanonical').set(dataForSender);
+        if (_activeChatId != targetCanonical) {
+          FirebaseDatabase.instance.ref('users/$_currentUserId/recent_chats/$_activeChatId').set(dataForSender);
+        }
         if (myUname.isNotEmpty && myUname != _currentUserId) {
-          FirebaseDatabase.instance.ref('users/$myUname/recent_chats/$_activeChatId').set(dataForSender);
+          FirebaseDatabase.instance.ref('users/$myUname/recent_chats/$targetCanonical').set(dataForSender);
         }
       }
     } catch (e) {
@@ -1803,19 +1880,41 @@ class PrivateChatProvider extends ChangeNotifier {
       if (isContact(activeC.id, activeC.username)) return true;
     }
     for (final c in _contacts) {
-      if (c.id.toLowerCase().trim() == cleanActive || c.username.toLowerCase().trim() == cleanActive) {
+      if (c.id.toLowerCase().trim() == cleanActive ||
+          c.username.toLowerCase().trim() == cleanActive ||
+          _normalizeIdentifier(c.username) == _normalizeIdentifier(cleanActive)) {
         return true;
+      }
+    }
+    final canonical = resolveCanonicalId(_activeChatId!);
+    final cleanCanonical = canonical.toLowerCase().trim();
+    if (cleanCanonical != cleanActive) {
+      if (_sentRequestStatuses[cleanCanonical] == 'accepted') return true;
+      for (final c in _contacts) {
+        if (c.id.toLowerCase().trim() == cleanCanonical ||
+            c.username.toLowerCase().trim() == cleanCanonical ||
+            _normalizeIdentifier(c.username) == _normalizeIdentifier(cleanCanonical)) {
+          return true;
+        }
       }
     }
     return false;
   }
 
-  /// Returns true if current user has already sent a cold DM (before friendship).
+  /// Returns true if current user has already sent a cold DM (before friendship or any response).
   bool get coldDmLimitReached {
     if (_activeChatId == null || _currentUserId == null) return false;
     if (_activeChatId!.startsWith('group_')) return false;
     if (isActiveChatFriend) return false;
-    final msgs = _messages[_activeChatId!] ?? [];
+    final activeC = activeContact;
+    if (activeC != null && isContact(activeC.id, activeC.username)) {
+      return false;
+    }
+    final msgs = activeMessages;
+    // If the other user has replied or sent any message, this is a mutual conversation — NEVER block
+    final hasOtherReplies = msgs.any((m) => !isMyMessage(m));
+    if (hasOtherReplies) return false;
+
     // Count how many messages the CURRENT user has sent in this chat
     final myMsgCount = msgs.where((m) => isMyMessage(m)).length;
     return myMsgCount >= 1;
@@ -1868,7 +1967,14 @@ class PrivateChatProvider extends ChangeNotifier {
       status: initialStatus,
     );
 
+    final canonicalId = resolveCanonicalId(_activeChatId!);
     _messages.putIfAbsent(_activeChatId!, () => []).add(newMsg);
+    if (canonicalId != _activeChatId!) {
+      _messages.putIfAbsent(canonicalId, () => []).add(newMsg);
+    }
+    if (channelId != _activeChatId! && channelId != canonicalId) {
+      _messages.putIfAbsent(channelId, () => []).add(newMsg);
+    }
     notifyListeners();
     _syncMessageToFirebase(newMsg, channelId);
   }
@@ -1936,7 +2042,14 @@ class PrivateChatProvider extends ChangeNotifier {
       status: initialStatus,
     );
 
+    final canonicalId = resolveCanonicalId(_activeChatId!);
     _messages.putIfAbsent(_activeChatId!, () => []).add(newMsg);
+    if (canonicalId != _activeChatId!) {
+      _messages.putIfAbsent(canonicalId, () => []).add(newMsg);
+    }
+    if (channelId != _activeChatId! && channelId != canonicalId) {
+      _messages.putIfAbsent(channelId, () => []).add(newMsg);
+    }
     notifyListeners();
     _syncMessageToFirebase(newMsg, channelId);
   }
@@ -2443,7 +2556,10 @@ class PrivateChatProvider extends ChangeNotifier {
       return;
     }
 
-    final requestId = 'req_${DateTime.now().millisecondsSinceEpoch}';
+    final safeSenderId = sanitizeDbKey(senderId);
+    final safeTargetId = sanitizeDbKey(targetId);
+    final safeTargetUsername = sanitizeDbKey(targetUsername);
+    final requestId = 'req_${safeSenderId}_$safeTargetId';
 
     final request = FriendRequestModel(
       id: requestId,
@@ -2457,9 +2573,6 @@ class PrivateChatProvider extends ChangeNotifier {
     );
 
     // Write to Firebase Realtime Database under target user's real ID AND username
-    final safeTargetId = sanitizeDbKey(targetId);
-    final safeTargetUsername = sanitizeDbKey(targetUsername);
-
     try {
       await FirebaseDatabase.instance
           .ref('friend_requests/$safeTargetId/$requestId')
@@ -2508,6 +2621,7 @@ class PrivateChatProvider extends ChangeNotifier {
     final safeReceiverId = sanitizeDbKey(req.receiverId);
     final safeReceiverUsername = sanitizeDbKey(req.receiverUsername);
     final safeSenderId = sanitizeDbKey(req.senderId);
+    final deterministicId = 'req_${safeSenderId}_$safeReceiverId';
 
     try {
       // Remove friend request node from receiver so it disappears permanently
@@ -2519,15 +2633,36 @@ class PrivateChatProvider extends ChangeNotifier {
             .ref('friend_requests/$safeReceiverUsername/${req.id}')
             .remove();
       }
+      if (deterministicId != req.id) {
+        await FirebaseDatabase.instance
+            .ref('friend_requests/$safeReceiverId/$deterministicId')
+            .remove();
+        if (safeReceiverUsername != safeReceiverId) {
+          await FirebaseDatabase.instance
+              .ref('friend_requests/$safeReceiverUsername/$deterministicId')
+              .remove();
+        }
+      }
       // Update status in the SENDER's sent_requests node so their UI updates in real-time
       await FirebaseDatabase.instance
           .ref('sent_requests/$safeSenderId/${req.id}')
           .update({'status': status});
+      if (deterministicId != req.id) {
+        await FirebaseDatabase.instance
+            .ref('sent_requests/$safeSenderId/$deterministicId')
+            .update({'status': status});
+      }
     } catch (e) {
       debugPrint('Firebase respond to request error: $e');
     }
 
-    _pendingFriendRequests.removeWhere((r) => r.id == req.id);
+    // Remove ALL requests matching this sender ID or username from pending requests
+    _pendingFriendRequests.removeWhere((r) =>
+        r.id == req.id ||
+        (req.senderId.isNotEmpty && r.senderId == req.senderId) ||
+        (_normalizeIdentifier(req.senderUsername).isNotEmpty &&
+            _normalizeIdentifier(r.senderUsername) == _normalizeIdentifier(req.senderUsername)));
+
     _sentRequestStatuses[req.senderId.toLowerCase().trim()] = status;
     _sentRequestStatuses[req.senderUsername.toLowerCase().trim()] = status;
     _tempContacts.remove(req.senderId);
