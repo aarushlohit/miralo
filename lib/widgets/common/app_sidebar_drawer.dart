@@ -73,17 +73,13 @@ class _AppSidebarDrawerState extends State<AppSidebarDrawer> {
 
   void _openPrivateChat(BuildContext context, PrivateChatProvider privateChat, String contactId) {
     final navigator = Navigator.of(context);
-    final routeName = ModalRoute.of(context)?.settings.name;
-    final isAlreadyInPrivateChat = routeName == AppRoutes.privateChat;
     privateChat.setActiveChat(contactId);
     if (widget.isPersistent) {
       widget.onClose?.call();
     } else {
       navigator.pop();
     }
-    if (!isAlreadyInPrivateChat) {
-      navigator.pushNamed(AppRoutes.privateChat);
-    }
+    navigator.pushNamed(AppRoutes.privateChat);
   }
 
   void _showChatOptions(BuildContext context, AiChatProvider ai, AiChatModel chat) {
@@ -506,7 +502,33 @@ class _AppSidebarDrawerState extends State<AppSidebarDrawer> {
                       AddFriendSheet.show(context, initialTab: 2);
                     },
                   ),
-                  if (vault.isPrivateUnlocked)
+                  if (vault.isPrivateUnlocked) ...[
+                    _NavItem(
+                      icon: Icons.chat_bubble_outline_rounded,
+                      label: 'Private Chats',
+                      trailing: privateChat.totalUnreadCount > 0
+                          ? Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppColors.accent,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                '${privateChat.totalUnreadCount}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            )
+                          : const Icon(Icons.arrow_forward_ios_rounded,
+                              size: 12, color: AppColors.accent),
+                      onTap: () {
+                        _close(context);
+                        Navigator.pushNamed(context, AppRoutes.privateChats);
+                      },
+                    ),
                     _NavItem(
                       icon: Icons.photo_library_outlined,
                       label: 'Images',
@@ -542,6 +564,7 @@ class _AppSidebarDrawerState extends State<AppSidebarDrawer> {
                             arguments: AppRoutes.images);
                       },
                     ),
+                  ],
                   _NavItem(
                     icon: Icons.auto_stories_outlined,
                     label: 'Library',
@@ -673,9 +696,19 @@ class _AppSidebarDrawerState extends State<AppSidebarDrawer> {
                 ],
 
                 // ── Private chats & DMs (only after secret unlock) ──────
-                if (vault.isPrivateUnlocked &&
-                    (privateChat.allConversations.isNotEmpty ||
-                        privateChat.pendingFriendRequests.isNotEmpty)) ...[
+                if (vault.isPrivateUnlocked) ...[
+                  if (privateChat.allConversations.isEmpty &&
+                      privateChat.pendingFriendRequests.isEmpty) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    _SectionLabel('PRIVATE CHATS', textMuted),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 8),
+                      child: Text(
+                        'No private conversations yet.\nTap "Add Friend" or "Private Chats" above to start.',
+                        style: TextStyle(fontSize: 12, color: textMuted, height: 1.4),
+                      ),
+                    ),
+                  ],
                   if (privateChat.pendingFriendRequests.isNotEmpty) ...[
                     const SizedBox(height: AppSpacing.md),
                     Padding(
@@ -743,11 +776,8 @@ class _AppSidebarDrawerState extends State<AppSidebarDrawer> {
                                   vault.hideMode.hidePrivateChatNames
                               ? 'Group'
                               : contact.displayName;
-                      final lastMsg = privateChat.getLastMessageForContact(contact.id);
                       final memberCount = contact.memberIds.length;
-                      final subtitle = lastMsg != null && lastMsg.text.isNotEmpty
-                          ? lastMsg.text
-                          : '$memberCount member${memberCount == 1 ? '' : 's'}';
+                      final subtitle = '$memberCount member${memberCount == 1 ? '' : 's'}';
 
                       return _ContactItem(
                         name: displayName,
@@ -773,16 +803,11 @@ class _AppSidebarDrawerState extends State<AppSidebarDrawer> {
                               ? 'Contact'
                               : contact.displayName;
 
-                      final lastMsg = privateChat.getLastMessageForContact(contact.id);
                       final subtitle = contact.isPendingInvitation
                           ? 'New invitation · Tap to chat'
                           : (!isFriend
                               ? 'Pending request'
-                              : (contact.isOnline
-                                  ? 'Online'
-                                  : (lastMsg != null && lastMsg.text.isNotEmpty
-                                      ? lastMsg.text
-                                      : 'Encrypted chat')));
+                              : (contact.isOnline ? 'Online' : 'Encrypted chat'));
 
                       return _ContactItem(
                         name: displayName,

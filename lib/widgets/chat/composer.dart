@@ -722,14 +722,7 @@ class _ComposerState extends State<Composer> {
         final key = text.length > 7 ? text.substring(7).trim() : '';
         _controller.clear();
         final vault = Provider.of<VaultProvider>(context, listen: false);
-        bool isMatch = vault.verifyPasscode(key) || vault.verifyLibraryPin(key);
-        if (!isMatch && vault.currentUserId != null) {
-          isMatch = await vault.verifyPrivateSecretServerSide(key) ||
-              await vault.verifyLibraryPinServerSide(key);
-        }
-        if (!isMatch && !vault.hasPrivateSecret && key.isNotEmpty) {
-          isMatch = true;
-        }
+        final isMatch = await vault.verifyUnhideKeyAsync(key);
 
         if (isMatch) {
           vault.unhideChatMessages();

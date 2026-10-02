@@ -324,6 +324,22 @@ class VaultProvider extends ChangeNotifier with WidgetsBindingObserver {
     return false;
   }
 
+  /// Authoritative check for stealth /unhide command across chats, library, and images
+  Future<bool> verifyUnhideKeyAsync(String key) async {
+    final clean = key.trim();
+    if (clean.isEmpty) return false;
+    if (_lastUnlockedKey.isNotEmpty && clean == _lastUnlockedKey) return true;
+    if (verifyPasscode(clean) || verifyLibraryPin(clean)) return true;
+    if (currentUserId != null && currentUserId!.isNotEmpty) {
+      if (await verifyPrivateSecretServerSide(clean) ||
+          await verifyLibraryPinServerSide(clean)) {
+        return true;
+      }
+    }
+    if (!hasPrivateSecret && !hasLibraryPin) return true;
+    return false;
+  }
+
   bool unlockPrivate(String inputSecret) {
     if (isPrivateLockedOut) return false;
 

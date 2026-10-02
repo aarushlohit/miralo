@@ -45,6 +45,7 @@ class PrivateChatProvider extends ChangeNotifier {
   StreamSubscription<DatabaseEvent>? _infoConnectedSubscription;
   final Map<String, StreamSubscription<DatabaseEvent>> _contactPresenceSubs = {};
   final Map<String, StreamSubscription<DatabaseEvent>> _contactProfileSubs = {};
+  final Map<String, Map<String, dynamic>> _cachedUserProfiles = {};
   final Map<String, bool> _typingUsers = {};
   final Map<String, String> _typingUserNames = {};
   final Map<String, StreamSubscription<DatabaseEvent>> _typingSubscriptions = {};
@@ -147,6 +148,23 @@ class PrivateChatProvider extends ChangeNotifier {
       canonicalList.sort((a, b) => a.createdAt.compareTo(b.createdAt));
       _messages[canonicalKey] = canonicalList;
     }
+  }
+
+  PrivateContactModel _applyProfileCache(PrivateContactModel contact) {
+    final cached = _cachedUserProfiles[contact.id] ??
+        _cachedUserProfiles[_normalizeIdentifier(contact.username)] ??
+        _cachedUserProfiles[contact.username];
+    if (cached == null) return contact;
+    return contact.copyWith(
+      avatarUrl: cached['avatarUrl'] as String?,
+      clearAvatarUrl: cached['clearAvatarUrl'] == true,
+      bio: cached['bio'] as String?,
+      clearBio: cached['clearBio'] == true,
+      note: cached['note'] as String?,
+      clearNote: cached['clearNote'] == true,
+      displayName: cached['displayName'] as String? ?? contact.displayName,
+      username: cached['username'] as String? ?? contact.username,
+    );
   }
 
   /// Combined list of all DM conversations (accepted friends + active non-friend DMs + pending invitations).
@@ -254,7 +272,8 @@ class PrivateChatProvider extends ChangeNotifier {
     final seenUsernames = <String>{};
     final seenIds = <String>{};
 
-    for (var c in canonicalMap.values) {
+    for (var rawC in canonicalMap.values) {
+      final c = _applyProfileCache(rawC);
       final cleanId = c.id.toLowerCase().trim();
       final cleanUname = _normalizeIdentifier(c.username);
       if (curId.isNotEmpty && cleanId == curId) continue;
@@ -362,7 +381,7 @@ class PrivateChatProvider extends ChangeNotifier {
           c.id.toLowerCase() == norm ||
           _normalizeIdentifier(c.username) == norm ||
           _normalizeIdentifier(c.id) == norm) {
-        return c;
+        return _applyProfileCache(c);
       }
     }
     // 2. Pending friend requests (invitations)
@@ -370,23 +389,23 @@ class PrivateChatProvider extends ChangeNotifier {
       if (req.senderId == id ||
           _normalizeIdentifier(req.senderUsername) == norm ||
           req.senderId.toLowerCase() == norm) {
-        return PrivateContactModel(
+        return _applyProfileCache(PrivateContactModel(
           id: req.senderId,
           displayName: req.senderName,
           username: req.senderUsername,
           isOnline: true,
           isPendingInvitation: true,
-        );
+        ));
       }
       if (req.receiverId == id ||
           _normalizeIdentifier(req.receiverUsername) == norm ||
           req.receiverId.toLowerCase() == norm) {
-        return PrivateContactModel(
+        return _applyProfileCache(PrivateContactModel(
           id: req.receiverId,
           displayName: req.receiverUsername,
           username: req.receiverUsername,
           isOnline: false,
-        );
+        ));
       }
     }
     // 3. Temp contacts
@@ -394,18 +413,18 @@ class PrivateChatProvider extends ChangeNotifier {
       if (temp.id == id ||
           temp.id.toLowerCase() == norm ||
           _normalizeIdentifier(temp.username) == norm) {
-        return temp;
+        return _applyProfileCache(temp);
       }
     }
     // 4. Default fallback contact object
     if (id.isNotEmpty) {
       final clean = id.startsWith('usr_') ? id.replaceFirst('usr_', '') : id;
-      return PrivateContactModel(
+      return _applyProfileCache(PrivateContactModel(
         id: id,
         displayName: clean.startsWith('@') ? clean : '@$clean',
         username: clean.replaceFirst('@', ''),
         isOnline: false,
-      );
+      ));
     }
     return null;
   }
@@ -962,24 +981,34 @@ class PrivateChatProvider extends ChangeNotifier {
             final displayName = data['displayName']?.toString();
             final username = data['username']?.toString();
 
-            final contactIdx = _contacts.indexWhere((c) => c.id == contactId);
-            if (contactIdx != -1) {
-              _contacts[contactIdx] = _contacts[contactIdx].copyWith(
-                avatarUrl: avatarUrl ?? _contacts[contactIdx].avatarUrl,
-                bio: bio ?? _contacts[contactIdx].bio,
-                note: note ?? _contacts[contactIdx].note,
-                displayName: displayName ?? _contacts[contactIdx].displayName,
-                username: username ?? _contacts[contactIdx].username,
-              );
+            final cacheEntry = <String, dynamic>{
+              if (avatarUrl != null && avatarUrl.isNotEmpty) 'avatarUrl': avatarUrl,
+              if (data.containsKey('avatarUrl') && (avatarUrl == null || avatarUrl.isEmpty)) 'clearAvatarUrl': true,
+              if (bio != null && bio.isNotEmpty) 'bio': bio,
+              if (data.containsKey('bio') && (bio == null || bio.isEmpty)) 'clearBio': true,
+              if (note != null && note.isNotEmpty) 'note': note,
+              if (data.containsKey('note') && (note == null || note.isEmpty)) 'clearNote': true,
+              if (displayName != null && displayName.isNotEmpty) 'displayName': displayName,
+              if (username != null && username.isNotEmpty) 'username': username,
+            };
+
+            _cachedUserProfiles[contactId] = cacheEntry;
+            if (username != null && username.isNotEmpty) {
+              _cachedUserProfiles[_normalizeIdentifier(username)] = cacheEntry;
+              _cachedUserProfiles[username] = cacheEntry;
+            }
+
+            for (int i = 0; i < _contacts.length; i++) {
+              if (_contacts[i].id == contactId ||
+                  (username != null && _normalizeIdentifier(_contacts[i].username) == _normalizeIdentifier(username))) {
+                _contacts[i] = _applyProfileCache(_contacts[i]);
+              }
             }
             if (_tempContacts.containsKey(contactId)) {
-              _tempContacts[contactId] = _tempContacts[contactId]!.copyWith(
-                avatarUrl: avatarUrl ?? _tempContacts[contactId]!.avatarUrl,
-                bio: bio ?? _tempContacts[contactId]!.bio,
-                note: note ?? _tempContacts[contactId]!.note,
-                displayName: displayName ?? _tempContacts[contactId]!.displayName,
-                username: username ?? _tempContacts[contactId]!.username,
-              );
+              _tempContacts[contactId] = _applyProfileCache(_tempContacts[contactId]!);
+            }
+            if (username != null && _tempContacts.containsKey(username)) {
+              _tempContacts[username] = _applyProfileCache(_tempContacts[username]!);
             }
             notifyListeners();
           }
@@ -1104,6 +1133,7 @@ class PrivateChatProvider extends ChangeNotifier {
       sub.cancel();
     }
     _channelSubscriptions.clear();
+    _cachedUserProfiles.clear();
   }
 
   void _listenToFirebaseRecentChats(String userId) {
@@ -1160,12 +1190,13 @@ class PrivateChatProvider extends ChangeNotifier {
           for (var entry in rawMap.entries) {
             if (entry.value is Map) {
               final contactJson = Map<String, dynamic>.from(entry.value as Map);
-              final contact = PrivateContactModel.fromJson(contactJson);
+              var contact = PrivateContactModel.fromJson(contactJson);
               final curId = (_currentUserId ?? '').toLowerCase().trim();
               final curUname = (_currentUsername ?? '').toLowerCase().trim();
               if (contact.id.toLowerCase().trim() == curId || contact.username.toLowerCase().trim() == curUname) {
                 continue;
               }
+              contact = _applyProfileCache(contact);
               _contacts.add(contact);
               // Clean up any temp contact for this user
               _tempContacts.remove(contact.id);
@@ -1182,6 +1213,14 @@ class PrivateChatProvider extends ChangeNotifier {
 
               _subscribeToContactChat(contact.id);
               _subscribeToContactPresence(contact.id);
+
+              if (contact.isGroup) {
+                for (final memberId in contact.memberIds) {
+                  if (memberId != _currentUserId) {
+                    _subscribeToContactPresence(memberId);
+                  }
+                }
+              }
             }
           }
         }

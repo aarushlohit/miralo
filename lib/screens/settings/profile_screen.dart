@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -5,6 +7,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/private_chat_provider.dart';
 import '../../widgets/common/longcat_app_bar.dart';
 import '../../widgets/common/longcat_avatar.dart';
 import '../../widgets/common/longcat_list_tile.dart';
@@ -61,6 +64,29 @@ class ProfileScreen extends StatelessWidget {
                   if (picked != null) {
                     final bytes = await picked.readAsBytes();
                     await auth.uploadCustomAvatar(bytes, picked.name);
+                  }
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.folder_open_outlined, color: AppColors.accent),
+                title: Text('Choose from Files', style: AppTypography.body(color: textPrimary)),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  try {
+                    final result = await FilePicker.platform.pickFiles(
+                      type: FileType.image,
+                      allowMultiple: false,
+                      withData: true,
+                    );
+                    if (result != null && result.files.isNotEmpty) {
+                      final file = result.files.first;
+                      final bytes = file.bytes ?? (file.path != null ? await File(file.path!).readAsBytes() : null);
+                      if (bytes != null) {
+                        await auth.uploadCustomAvatar(bytes, file.name);
+                      }
+                    }
+                  } catch (e) {
+                    debugPrint('FilePicker avatar error: $e');
                   }
                 },
               ),
@@ -123,6 +149,9 @@ class ProfileScreen extends StatelessWidget {
             TextButton(
               onPressed: () {
                 auth.updateProfile(note: '');
+                try {
+                  Provider.of<PrivateChatProvider>(context, listen: false).updateCurrentUserNote(null);
+                } catch (_) {}
                 Navigator.pop(ctx);
               },
               child: Text('Clear', style: AppTypography.bodyMedium(color: AppColors.danger)),
@@ -138,7 +167,11 @@ class ProfileScreen extends StatelessWidget {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
             onPressed: () {
-              auth.updateProfile(note: ctrl.text.trim());
+              final trimmed = ctrl.text.trim();
+              auth.updateProfile(note: trimmed);
+              try {
+                Provider.of<PrivateChatProvider>(context, listen: false).updateCurrentUserNote(trimmed);
+              } catch (_) {}
               Navigator.pop(ctx);
             },
             child: const Text('Save'),

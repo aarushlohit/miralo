@@ -55,6 +55,7 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
   int _currentMatchIndex = 0;
 
   bool _showCloudNote = true;
+  bool _wasUnhidden = false;
   Timer? _cloudNoteTimer;
   String? _lastActiveChatId;
 
@@ -1141,6 +1142,14 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final chat = Provider.of<PrivateChatProvider>(context);
     final vault = Provider.of<VaultProvider>(context);
+    if (vault.isChatMessagesUnhidden && !_wasUnhidden) {
+      _wasUnhidden = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _resetCloudNoteTimer();
+      });
+    } else if (!vault.isChatMessagesUnhidden && _wasUnhidden) {
+      _wasUnhidden = false;
+    }
     final library = Provider.of<LibraryProvider>(context, listen: false);
     final contact = chat.activeContact;
     final displayName = contact?.displayName ?? 'Mira';
@@ -1327,6 +1336,38 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
             child: MessageList(
               controller: _scrollController,
               itemCount: messages.length,
+              emptyState: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      color: isDark ? LongcatColors.darkSurfaceSecondary : LongcatColors.lightSurfaceSecondary,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      contact?.isGroup == true ? Icons.groups_outlined : Icons.lock_outline_rounded,
+                      size: 32,
+                      color: LongcatColors.accent,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Start conversation',
+                    style: LongcatTypography.titleMedium(
+                      color: isDark ? LongcatColors.darkTextPrimary : LongcatColors.lightTextPrimary,
+                    ).copyWith(fontWeight: FontWeight.w600, fontSize: 17),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Messages are end-to-end encrypted.',
+                    style: LongcatTypography.bodySmall(
+                      color: isDark ? LongcatColors.darkTextSecondary : LongcatColors.lightTextSecondary,
+                    ),
+                  ),
+                ],
+              ),
               itemBuilder: (context, index) {
                 final msg = messages[index];
                 final isMe = chat.isMyMessage(msg);

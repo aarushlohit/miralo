@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
@@ -52,6 +54,8 @@ class LongcatAvatar extends StatelessWidget {
 
     final hasNote = showNote && note != null && note!.trim().isNotEmpty;
 
+    final hasValidImage = imageUrl != null && imageUrl!.trim().isNotEmpty;
+
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -59,17 +63,11 @@ class LongcatAvatar extends StatelessWidget {
           width: size,
           height: size,
           decoration: BoxDecoration(
-            color: imageUrl != null ? Colors.transparent : bg,
+            color: hasValidImage ? Colors.transparent : bg,
             shape: BoxShape.circle,
           ),
-          child: imageUrl != null
-              ? ClipOval(
-                  child: Image.network(
-                    imageUrl!,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => _initialsWidget(radius),
-                  ),
-                )
+          child: hasValidImage
+              ? ClipOval(child: _buildAvatarImage(radius))
               : _initialsWidget(radius),
         ),
         if (isOnline)
@@ -141,5 +139,44 @@ class LongcatAvatar extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Widget _buildAvatarImage(double radius) {
+    if (imageUrl == null || imageUrl!.trim().isEmpty) {
+      return _initialsWidget(radius);
+    }
+    final cleanUrl = imageUrl!.trim();
+    if (cleanUrl.startsWith('data:image')) {
+      try {
+        final commaIdx = cleanUrl.indexOf(',');
+        final base64Str = commaIdx != -1 ? cleanUrl.substring(commaIdx + 1) : cleanUrl;
+        final bytes = base64Decode(base64Str);
+        return Image.memory(
+          bytes,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) => _initialsWidget(radius),
+        );
+      } catch (_) {
+        return _initialsWidget(radius);
+      }
+    } else if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
+      return Image.network(
+        cleanUrl,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => _initialsWidget(radius),
+      );
+    } else {
+      try {
+        final file = File(cleanUrl);
+        if (file.existsSync()) {
+          return Image.file(
+            file,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => _initialsWidget(radius),
+          );
+        }
+      } catch (_) {}
+      return _initialsWidget(radius);
+    }
   }
 }

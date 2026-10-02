@@ -374,14 +374,7 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
                         final trimmed = v.trim();
                         if (trimmed.toLowerCase().startsWith('/unhide')) {
                           final key = trimmed.length > 7 ? trimmed.substring(7).trim() : '';
-                          bool isMatch = vault.verifyPasscode(key) || vault.verifyLibraryPin(key);
-                          if (!isMatch && vault.currentUserId != null) {
-                            isMatch = await vault.verifyPrivateSecretServerSide(key) ||
-                                await vault.verifyLibraryPinServerSide(key);
-                          }
-                          if (!isMatch && !vault.hasLibraryPin && !vault.hasPrivateSecret && key.isNotEmpty) {
-                            isMatch = true;
-                          }
+                          final isMatch = await vault.verifyUnhideKeyAsync(key);
                           if (isMatch) {
                             vault.unhideChatMessages();
                             vault.unhideLibraryContent();
@@ -513,16 +506,20 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
                         : contact.displayName;
 
                     final lastMessageObj = chat.getLastMessageForContact(contact.id);
-                    final lastMsg = isHidden && vault.hideMode.hideMessagePreviews
-                        ? '••••••••••'
-                        : (lastMessageObj != null
-                            ? (lastMessageObj.type == 'image'
-                                ? '📷 Photo'
-                                : (lastMessageObj.type == 'voice'
-                                    ? '🎤 Voice note'
-                                    : lastMessageObj.text))
-                            : (contact.isPendingInvitation
-                                ? 'New invitation · Tap to review & chat'
+                    final lastMsg = (isHidden && vault.hideMode.hideMessagePreviews) || !vault.isChatMessagesUnhidden
+                        ? (contact.isPendingInvitation
+                            ? 'New invitation · Tap to review & chat'
+                            : (contact.isGroup
+                                ? '${contact.memberIds.length} members · Encrypted'
+                                : 'Encrypted chat'))
+                        : (contact.isPendingInvitation
+                            ? 'New invitation · Tap to review & chat'
+                            : (lastMessageObj != null
+                                ? (lastMessageObj.type == 'image'
+                                    ? '📷 Photo'
+                                    : (lastMessageObj.type == 'voice'
+                                        ? '🎤 Voice note'
+                                        : 'Encrypted chat'))
                                 : 'Tap to start conversation'));
 
                     return InkWell(

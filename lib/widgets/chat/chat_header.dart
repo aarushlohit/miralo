@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/longcat_tokens.dart';
@@ -245,16 +246,54 @@ class ChatHeader extends StatelessWidget implements PreferredSizeWidget {
         size: 20,
         color: LongcatColors.accent,
       );
-    } else if (avatarUrl != null && avatarUrl!.isNotEmpty) {
-      child = ClipOval(
-        child: Image.network(
-          avatarUrl!,
-          width: 36,
-          height: 36,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) => _fallbackAvatar(textPrimary),
-        ),
-      );
+    } else if (avatarUrl != null && avatarUrl!.trim().isNotEmpty) {
+      final cleanUrl = avatarUrl!.trim();
+      if (cleanUrl.startsWith('data:image/')) {
+        try {
+          final commaIdx = cleanUrl.indexOf(',');
+          final bytes = base64Decode(commaIdx != -1 ? cleanUrl.substring(commaIdx + 1) : cleanUrl);
+          child = ClipOval(
+            child: Image.memory(
+              bytes,
+              width: 36,
+              height: 36,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => _fallbackAvatar(textPrimary),
+            ),
+          );
+        } catch (_) {
+          child = _fallbackAvatar(textPrimary);
+        }
+      } else if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
+        child = ClipOval(
+          child: Image.network(
+            cleanUrl,
+            width: 36,
+            height: 36,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => _fallbackAvatar(textPrimary),
+          ),
+        );
+      } else {
+        try {
+          final file = File(cleanUrl);
+          if (file.existsSync()) {
+            child = ClipOval(
+              child: Image.file(
+                file,
+                width: 36,
+                height: 36,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => _fallbackAvatar(textPrimary),
+              ),
+            );
+          } else {
+            child = _fallbackAvatar(textPrimary);
+          }
+        } catch (_) {
+          child = _fallbackAvatar(textPrimary);
+        }
+      }
     } else if (avatarBase64 != null && avatarBase64!.isNotEmpty) {
       try {
         final bytes = base64Decode(avatarBase64!);

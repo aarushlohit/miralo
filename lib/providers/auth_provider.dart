@@ -361,18 +361,31 @@ class AuthProvider extends ChangeNotifier {
     return true;
   }
 
-  void _syncUserToFirebase() {
+  Future<void> _syncUserToFirebase() async {
     if (_currentUser == null) return;
     try {
+      final userMap = {
+        'id': _currentUser!.id,
+        'displayName': _currentUser!.displayName,
+        'username': _currentUser!.username,
+        'email': _currentUser!.email,
+        'avatarUrl': _currentUser!.avatarUrl ?? '',
+        'bio': _currentUser!.bio ?? '',
+        'note': _currentUser!.note ?? '',
+        'createdAt': _currentUser!.createdAt.toIso8601String(),
+        'updatedAt': ServerValue.timestamp,
+      };
       final ref = FirebaseDatabase.instance.ref('users/${_currentUser!.id}');
-      ref.update(_currentUser!.toJson());
+      await ref.update(userMap);
       // Also write username index for fast add friend search and uniqueness
-      FirebaseDatabase.instance
-          .ref('user_index/${_currentUser!.username}')
-          .set(_currentUser!.toJson());
+      if (_currentUser!.username.isNotEmpty) {
+        await FirebaseDatabase.instance
+            .ref('user_index/${_currentUser!.username}')
+            .set(userMap);
+      }
       // Also write email index to prevent duplicate account creation
       final safeEmailKey = _currentUser!.email.toLowerCase().replaceAll('.', '_').replaceAll('@', '_at_');
-      FirebaseDatabase.instance
+      await FirebaseDatabase.instance
           .ref('email_index/$safeEmailKey')
           .set({
         'userId': _currentUser!.id,
@@ -384,13 +397,13 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  void updateProfile({
+  Future<void> updateProfile({
     String? displayName,
     String? username,
     String? avatarUrl,
     String? bio,
     String? note,
-  }) {
+  }) async {
     if (_currentUser == null) return;
     if (avatarUrl != null) {
       try {
@@ -405,8 +418,8 @@ class AuthProvider extends ChangeNotifier {
       bio: bio,
       note: note,
     );
-    _saveUser();
-    _syncUserToFirebase();
+    await _saveUser();
+    await _syncUserToFirebase();
     notifyListeners();
   }
 
@@ -421,12 +434,12 @@ class AuthProvider extends ChangeNotifier {
         resourceType: 'image',
       );
       url ??= 'data:image/jpeg;base64,${base64Encode(fileBytes)}';
-      updateProfile(avatarUrl: url);
+      await updateProfile(avatarUrl: url);
       return url;
     } catch (e) {
       debugPrint('Error uploading custom avatar: $e');
       final fallbackUrl = 'data:image/jpeg;base64,${base64Encode(fileBytes)}';
-      updateProfile(avatarUrl: fallbackUrl);
+      await updateProfile(avatarUrl: fallbackUrl);
       return fallbackUrl;
     } finally {
       _isLoading = false;

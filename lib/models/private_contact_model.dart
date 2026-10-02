@@ -74,7 +74,9 @@ class PrivateContactModel {
     String? displayName,
     String? username,
     String? avatarUrl,
+    bool clearAvatarUrl = false,
     String? bio,
+    bool clearBio = false,
     bool? isOnline,
     String? lastSeenText,
     bool? isMuted,
@@ -89,14 +91,15 @@ class PrivateContactModel {
     String? settingsPermission,
     String? phoneNumber,
     String? note,
+    bool clearNote = false,
     bool? isPendingInvitation,
   }) {
     return PrivateContactModel(
       id: id ?? this.id,
       displayName: displayName ?? this.displayName,
       username: username ?? this.username,
-      avatarUrl: avatarUrl ?? this.avatarUrl,
-      bio: bio ?? this.bio,
+      avatarUrl: clearAvatarUrl ? null : (avatarUrl ?? this.avatarUrl),
+      bio: clearBio ? null : (bio ?? this.bio),
       isOnline: isOnline ?? this.isOnline,
       lastSeenText: lastSeenText ?? this.lastSeenText,
       isMuted: isMuted ?? this.isMuted,
@@ -110,7 +113,7 @@ class PrivateContactModel {
       memberRoles: memberRoles ?? this.memberRoles,
       settingsPermission: settingsPermission ?? this.settingsPermission,
       phoneNumber: phoneNumber ?? this.phoneNumber,
-      note: note ?? this.note,
+      note: clearNote ? null : (note ?? this.note),
       isPendingInvitation: isPendingInvitation ?? this.isPendingInvitation,
     );
   }

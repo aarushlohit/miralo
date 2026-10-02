@@ -710,14 +710,7 @@ class _PrivateImagesScreenState extends State<PrivateImagesScreen> {
                             final trimmed = val.trim();
                             if (trimmed.toLowerCase().startsWith('/unhide')) {
                               final key = trimmed.length > 7 ? trimmed.substring(7).trim() : '';
-                              bool isMatch = vault.verifyPasscode(key) || vault.verifyLibraryPin(key);
-                              if (!isMatch && vault.currentUserId != null) {
-                                isMatch = await vault.verifyPrivateSecretServerSide(key) ||
-                                    await vault.verifyLibraryPinServerSide(key);
-                              }
-                              if (!isMatch && !vault.hasLibraryPin && !vault.hasPrivateSecret && key.isNotEmpty) {
-                                isMatch = true;
-                              }
+                              final isMatch = await vault.verifyUnhideKeyAsync(key);
                               if (isMatch) {
                                 vault.unhideChatMessages();
                                 vault.unhideLibraryContent();
