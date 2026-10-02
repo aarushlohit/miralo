@@ -613,47 +613,47 @@ class _AppSidebarDrawerState extends State<AppSidebarDrawer> {
                   },
                 ),
 
-                // Export Chat
-                _NavItem(
-                  icon: Icons.upload_file_outlined,
-                  label: 'Export Chat',
-                  onTap: () async {
-                    final jsonString = ChatBackupService.createBackupJson(
-                      contacts: privateChat.contacts,
-                      messages: privateChat.messagesMap,
-                    );
-                    Clipboard.setData(ClipboardData(text: jsonString));
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Chat data exported & copied to clipboard!'),
-                          duration: Duration(seconds: 2),
-                        ),
+                // Export & Import Chat (Only visible after unlocking via secret key)
+                if (vault.isPrivateUnlocked) ...[
+                  _NavItem(
+                    icon: Icons.upload_file_outlined,
+                    label: 'Export Chat',
+                    onTap: () async {
+                      final jsonString = ChatBackupService.createBackupJson(
+                        contacts: privateChat.contacts,
+                        messages: privateChat.messagesMap,
                       );
-                    }
-                  },
-                ),
-
-                // Import Chat
-                _NavItem(
-                  icon: Icons.file_download_outlined,
-                  label: 'Import Chat',
-                  onTap: () async {
-                    _close(context);
-                    final success = await privateChat.importChatsFromZipFile();
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            success
-                                ? 'Chat history imported successfully!'
-                                : 'Failed to import chat or cancelled.',
+                      Clipboard.setData(ClipboardData(text: jsonString));
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Chat data exported & copied to clipboard!'),
+                            duration: Duration(seconds: 2),
                           ),
-                        ),
-                      );
-                    }
-                  },
-                ),
+                        );
+                      }
+                    },
+                  ),
+                  _NavItem(
+                    icon: Icons.file_download_outlined,
+                    label: 'Import Chat',
+                    onTap: () async {
+                      _close(context);
+                      final success = await privateChat.importChatsFromZipFile();
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              success
+                                  ? 'Chat history imported successfully!'
+                                  : 'Failed to import chat or cancelled.',
+                            ),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                ],
 
                 // Search empty state
                 if (_isSearching &&
