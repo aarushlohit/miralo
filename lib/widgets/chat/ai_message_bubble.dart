@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
@@ -7,6 +6,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../models/ai_chat_model.dart';
 import '../../services/ai_service.dart';
+import '../../services/base64_image_cache.dart';
 
 import '../common/longcat_logo.dart';
 
@@ -141,16 +141,25 @@ class _UserMessage extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (message.imageBase64 != null) ...[
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxHeight: 220),
-                          child: Image.memory(
-                            base64Decode(message.imageBase64!),
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => const SizedBox(),
-                          ),
-                        ),
+                      Builder(
+                        builder: (_) {
+                          final bytes = Base64ImageCache.getBytes(message.imageBase64!);
+                          if (bytes == null) return const SizedBox.shrink();
+                          return ClipRRect(
+                            borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxHeight: 220),
+                              child: Image.memory(
+                                bytes,
+                                key: ValueKey('ai_img_${message.id}'),
+                                fit: BoxFit.cover,
+                                gaplessPlayback: true,
+                                cacheWidth: 480,
+                                errorBuilder: (context, error, stackTrace) => const SizedBox(),
+                              ),
+                            ),
+                          );
+                        },
                       ),
                       if (message.text.isNotEmpty) const SizedBox(height: AppSpacing.xs + 4),
                     ],

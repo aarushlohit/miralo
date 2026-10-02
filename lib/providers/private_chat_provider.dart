@@ -334,11 +334,21 @@ class PrivateChatProvider extends ChangeNotifier {
       if (!isMyMessage(m) && m.status != 'seen') {
         msgs[i] = m.copyWith(status: 'seen');
         changed = true;
-        try {
-          FirebaseDatabase.instance
-              .ref('chats/$channelId/messages/${m.id}/status')
-              .set('seen');
-        } catch (_) {}
+        if (!_pendingStatusUpdates.contains(m.id)) {
+          _pendingStatusUpdates.add(m.id);
+          try {
+            FirebaseDatabase.instance
+                .ref('chats/$channelId/messages/${m.id}/status')
+                .set('seen')
+                .then((_) {
+              _pendingStatusUpdates.remove(m.id);
+            }).catchError((_) {
+              _pendingStatusUpdates.remove(m.id);
+            });
+          } catch (_) {
+            _pendingStatusUpdates.remove(m.id);
+          }
+        }
       }
     }
     if (changed) {
@@ -1199,6 +1209,8 @@ class PrivateChatProvider extends ChangeNotifier {
   }
 
   final Map<String, StreamSubscription<DatabaseEvent>> _channelSubscriptions = {};
+  final Set<String> _pendingStatusUpdates = {};
+  final Map<String, bool> _myTypingStatus = {};
 
   void _listenToFirebaseUserContacts(String userId) {
     _contactsSubscription?.cancel();
@@ -1290,20 +1302,36 @@ class PrivateChatProvider extends ChangeNotifier {
           for (final m in msgs) {
             if (!isMyMessage(m)) {
               if (isUserViewingActiveChat && _sendReadReceipts) {
-                if (m.status != 'seen') {
+                if (m.status != 'seen' && !_pendingStatusUpdates.contains(m.id)) {
+                  _pendingStatusUpdates.add(m.id);
                   try {
                     FirebaseDatabase.instance
                         .ref('chats/$channelId/messages/${m.id}/status')
-                        .set('seen');
-                  } catch (_) {}
+                        .set('seen')
+                        .then((_) {
+                      _pendingStatusUpdates.remove(m.id);
+                    }).catchError((_) {
+                      _pendingStatusUpdates.remove(m.id);
+                    });
+                  } catch (_) {
+                    _pendingStatusUpdates.remove(m.id);
+                  }
                 }
               } else {
-                if (m.status == 'sent') {
+                if (m.status == 'sent' && !_pendingStatusUpdates.contains(m.id)) {
+                  _pendingStatusUpdates.add(m.id);
                   try {
                     FirebaseDatabase.instance
                         .ref('chats/$channelId/messages/${m.id}/status')
-                        .set('delivered');
-                  } catch (_) {}
+                        .set('delivered')
+                        .then((_) {
+                      _pendingStatusUpdates.remove(m.id);
+                    }).catchError((_) {
+                      _pendingStatusUpdates.remove(m.id);
+                    });
+                  } catch (_) {
+                    _pendingStatusUpdates.remove(m.id);
+                  }
                 }
                 
                 if (isFirstSnapshot) {
@@ -1588,8 +1616,7 @@ class PrivateChatProvider extends ChangeNotifier {
         _fetchUserForChatIfMissing(canonicalId);
       }
     }
-    final channelId = getConversationChannelId(canonicalId);
-    _listenToFirebaseChat(canonicalId, channelId);
+    _subscribeToContactChat(canonicalId);
     _subscribeToContactPresence(canonicalId);
     _listenToTyping(canonicalId);
     Future.microtask(() {
@@ -1600,6 +1627,8 @@ class PrivateChatProvider extends ChangeNotifier {
 
   void setTypingStatus(String contactId, bool isTyping) {
     if (_currentUserId == null || _currentUserId!.isEmpty) return;
+    if (_myTypingStatus[contactId] == isTyping) return;
+    _myTypingStatus[contactId] = isTyping;
     final channelId = getConversationChannelId(contactId);
     try {
       final ref = FirebaseDatabase.instance.ref('typing/$channelId/$_currentUserId');
@@ -1676,54 +1705,6 @@ class PrivateChatProvider extends ChangeNotifier {
         notifyListeners();
       }
     } catch (_) {}
-  }
-
-  void _listenToFirebaseChat(String contactId, String channelId) {
-    _messagesSubscription?.cancel();
-    _messagesSubscription = null;
-    try {
-      final ref = FirebaseDatabase.instance.ref('chats/$channelId/messages');
-      _messagesSubscription = ref.onValue.listen((event) {
-        if (event.snapshot.value != null && event.snapshot.value is Map) {
-          final rawMap = Map<String, dynamic>.from(event.snapshot.value as Map);
-          final msgs = rawMap.values
-              .whereType<Map>()
-              .map((val) => _parseAndDecryptMessage(Map<String, dynamic>.from(val), channelId))
-              .toList();
-          msgs.sort((a, b) => a.createdAt.compareTo(b.createdAt));
-          _messages[contactId] = msgs;
-
-          final isActiveChat = _activeChatId == contactId;
-          for (final m in msgs) {
-            if (!isMyMessage(m)) {
-              if (isActiveChat && _sendReadReceipts) {
-                if (m.status != 'seen') {
-                  try {
-                    FirebaseDatabase.instance
-                        .ref('chats/$channelId/messages/${m.id}/status')
-                        .set('seen');
-                  } catch (_) {}
-                }
-              } else if (m.status == 'sent') {
-                try {
-                  FirebaseDatabase.instance
-                      .ref('chats/$channelId/messages/${m.id}/status')
-                      .set('delivered');
-                } catch (_) {}
-              }
-            }
-          }
-        }
-        if (_activeChatId == contactId) {
-          markMessagesAsSeen(contactId);
-        }
-        notifyListeners();
-      }, onError: (e) {
-        debugPrint('Firebase RTDB chat error: $e');
-      });
-    } catch (e) {
-      debugPrint('Firebase RTDB not initialized or offline: $e');
-    }
   }
 
   void _syncMessageToFirebase(PrivateMessageModel msg, String channelId) {

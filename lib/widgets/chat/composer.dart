@@ -210,6 +210,7 @@ class _ComposerState extends State<Composer> {
 
   // Typing indicator debounce
   Timer? _typingDebounce;
+  bool _isUserTyping = false;
 
   // Voice Note Pre-send Review Stage
   String? _recordedReviewPath;
@@ -397,16 +398,23 @@ class _ComposerState extends State<Composer> {
       final chatId = chat.activeChatId;
       if (chatId != null) {
         if (has) {
-          chat.setTypingStatus(chatId, true);
+          if (!_isUserTyping) {
+            _isUserTyping = true;
+            chat.setTypingStatus(chatId, true);
+          }
           _typingDebounce?.cancel();
-          _typingDebounce = Timer(const Duration(seconds: 2), () {
+          _typingDebounce = Timer(const Duration(seconds: 3), () {
             if (mounted) {
+              _isUserTyping = false;
               chat.setTypingStatus(chatId, false);
             }
           });
         } else {
-          _typingDebounce?.cancel();
-          chat.setTypingStatus(chatId, false);
+          if (_isUserTyping) {
+            _isUserTyping = false;
+            _typingDebounce?.cancel();
+            chat.setTypingStatus(chatId, false);
+          }
         }
       }
     }
@@ -678,6 +686,7 @@ class _ComposerState extends State<Composer> {
 
     // Stop typing indicator immediately on send
     if (widget.isPrivate) {
+      _isUserTyping = false;
       _typingDebounce?.cancel();
       try {
         final chat = Provider.of<PrivateChatProvider>(context, listen: false);

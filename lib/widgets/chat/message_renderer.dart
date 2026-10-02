@@ -1,7 +1,7 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/theme/longcat_tokens.dart';
+import '../../services/base64_image_cache.dart';
 import 'image_viewer.dart';
 import 'voice_note_player.dart';
 
@@ -189,14 +189,22 @@ class MessageRenderer extends StatelessWidget {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   if (replyToImageBase64 != null && replyToImageBase64!.isNotEmpty) ...[
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(4),
-                                      child: Image.memory(
-                                        base64Decode(replyToImageBase64!),
-                                        width: 36,
-                                        height: 36,
-                                        fit: BoxFit.cover,
-                                      ),
+                                    Builder(
+                                      builder: (_) {
+                                        final bytes = Base64ImageCache.getBytes(replyToImageBase64!);
+                                        if (bytes == null) return const SizedBox.shrink();
+                                        return ClipRRect(
+                                          borderRadius: BorderRadius.circular(4),
+                                          child: Image.memory(
+                                            bytes,
+                                            width: 36,
+                                            height: 36,
+                                            fit: BoxFit.cover,
+                                            gaplessPlayback: true,
+                                            cacheWidth: 80,
+                                          ),
+                                        );
+                                      },
                                     ),
                                     const SizedBox(width: 8),
                                   ] else if (replyToMediaUrl != null &&
@@ -423,23 +431,30 @@ class MessageRenderer extends StatelessWidget {
 
   Widget _renderImage() {
     if (imageBase64 != null && imageBase64!.isNotEmpty) {
-      try {
-        final bytes = base64Decode(imageBase64!);
+      final bytes = Base64ImageCache.getBytes(imageBase64!);
+      if (bytes != null) {
         return Image.memory(
           bytes,
+          key: ValueKey('img_$id'),
           width: 240,
           height: 180,
           fit: BoxFit.cover,
+          gaplessPlayback: true,
+          cacheWidth: 480,
+          errorBuilder: (_, _, _) => _buildImagePlaceholder(),
         );
-      } catch (_) {}
+      }
     }
 
     if (imageUrl != null && imageUrl!.startsWith('http')) {
       return Image.network(
         imageUrl!,
+        key: ValueKey('img_$id'),
         width: 240,
         height: 180,
         fit: BoxFit.cover,
+        gaplessPlayback: true,
+        cacheWidth: 480,
         errorBuilder: (_, _, _) => _buildImagePlaceholder(),
       );
     }

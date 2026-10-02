@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/routes/app_routes.dart';
@@ -10,6 +9,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/library_provider.dart';
 import '../../providers/private_chat_provider.dart';
 import '../../providers/vault_provider.dart';
+import '../../services/base64_image_cache.dart';
 import '../../widgets/chat/image_viewer.dart';
 import '../../widgets/common/longcat_app_bar.dart';
 import '../../widgets/common/longcat_avatar.dart';
@@ -1049,19 +1049,25 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
 
   Widget _buildImageThumbnail(PrivateMessageModel msg, Color textMuted) {
     if (msg.imageBase64 != null && msg.imageBase64!.isNotEmpty) {
-      try {
-        final bytes = base64Decode(msg.imageBase64!);
+      final bytes = Base64ImageCache.getBytes(msg.imageBase64!);
+      if (bytes != null) {
         return Image.memory(
           bytes,
+          key: ValueKey('thumb_${msg.id}'),
           fit: BoxFit.cover,
+          gaplessPlayback: true,
+          cacheWidth: 300,
           errorBuilder: (_, _, _) => Center(child: Icon(Icons.broken_image_outlined, color: textMuted)),
         );
-      } catch (_) {}
+      }
     }
     if (msg.mediaUrl != null && msg.mediaUrl!.startsWith('http')) {
       return Image.network(
         msg.mediaUrl!,
+        key: ValueKey('thumb_${msg.id}'),
         fit: BoxFit.cover,
+        gaplessPlayback: true,
+        cacheWidth: 300,
         errorBuilder: (_, _, _) => Center(child: Icon(Icons.broken_image_outlined, color: textMuted)),
       );
     }
