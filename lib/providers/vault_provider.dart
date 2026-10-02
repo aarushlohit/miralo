@@ -47,6 +47,7 @@ class HideModeSettings {
 class VaultProvider extends ChangeNotifier with WidgetsBindingObserver {
   Timer? _inactivityTimer;
   GlobalKey<NavigatorState>? _navigatorKey;
+  DateTime? _backgroundTime;
 
   VaultProvider() {
     WidgetsBinding.instance.addObserver(this);
@@ -66,7 +67,8 @@ class VaultProvider extends ChangeNotifier with WidgetsBindingObserver {
   void resetInactivityTimer() {
     _inactivityTimer?.cancel();
     if (_isPrivateUnlocked || _isLibraryUnlocked || _isChatMessagesUnhidden || _isLibraryContentUnhidden) {
-      _inactivityTimer = Timer(const Duration(minutes: 2), () {
+      final lockMinutes = _autoLockMinutes > 0 ? _autoLockMinutes : 5;
+      _inactivityTimer = Timer(Duration(minutes: lockMinutes), () {
         lockAllAndReturnToAiMode();
       });
     }
@@ -81,6 +83,7 @@ class VaultProvider extends ChangeNotifier with WidgetsBindingObserver {
     _lastUnlockedKey = '';
     _inactivityTimer?.cancel();
     _inactivityTimer = null;
+    _backgroundTime = null;
     notifyListeners();
 
     if (wasUnlocked && _navigatorKey?.currentState != null) {
@@ -92,9 +95,32 @@ class VaultProvider extends ChangeNotifier with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.detached) {
+    // Note: AppLifecycleState.inactive happens when opening notification bar, quick settings,
+    // or receiving system dialogs/overlays. We deliberately DO NOT lock on inactive!
+    if (state == AppLifecycleState.paused) {
+      // App minimized or switched away
+      if (_isPrivateUnlocked || _isLibraryUnlocked || _isChatMessagesUnhidden || _isLibraryContentUnhidden) {
+        _backgroundTime = DateTime.now();
+      }
+    } else if (state == AppLifecycleState.resumed) {
+      // App came back to foreground
+      if (_backgroundTime != null &&
+          (_isPrivateUnlocked || _isLibraryUnlocked || _isChatMessagesUnhidden || _isLibraryContentUnhidden)) {
+        final awaySeconds = DateTime.now().difference(_backgroundTime!).inSeconds;
+        final lockDurationSeconds = (_autoLockMinutes > 0 ? _autoLockMinutes : 5) * 60;
+        if (awaySeconds >= lockDurationSeconds) {
+          lockAllAndReturnToAiMode();
+        } else {
+          // Still within the 5-minute window! Restart timer with remaining time
+          final remainingSeconds = lockDurationSeconds - awaySeconds;
+          _inactivityTimer?.cancel();
+          _inactivityTimer = Timer(Duration(seconds: remainingSeconds > 0 ? remainingSeconds : 1), () {
+            lockAllAndReturnToAiMode();
+          });
+        }
+      }
+      _backgroundTime = null;
+    } else if (state == AppLifecycleState.detached) {
       if (_isPrivateUnlocked || _isLibraryUnlocked || _isChatMessagesUnhidden || _isLibraryContentUnhidden) {
         lockAllAndReturnToAiMode();
       }
