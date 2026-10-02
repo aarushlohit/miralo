@@ -72,46 +72,80 @@ class ChatHeader extends StatelessWidget implements PreferredSizeWidget {
         preferredSize: const Size.fromHeight(0.6),
         child: Container(color: border, height: 0.6),
       ),
-      leading: onBack != null
-          ? IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-              color: textPrimary,
-              onPressed: onBack,
-              tooltip: 'Back',
-            )
-          : (onMenu != null
-              ? Consumer<PrivateChatProvider>(
-                  builder: (context, privateChat, _) {
-                    final hasUnread = privateChat.totalUnreadCount > 0;
-                    return Stack(
-                      clipBehavior: Clip.none,
-                      alignment: Alignment.center,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.menu_rounded, size: 26),
-                          color: textPrimary,
-                          onPressed: onMenu,
-                          tooltip: 'Menu',
-                        ),
-                        if (hasUnread)
-                          Positioned(
-                            top: 10,
-                            right: 10,
-                            child: Container(
-                              width: 9,
-                              height: 9,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF007AFF),
-                                shape: BoxShape.circle,
-                                border: Border.all(color: bg, width: 1.5),
-                              ),
-                            ),
+      leading: (!isPrivate && onMenu != null)
+          ? Consumer<PrivateChatProvider>(
+              builder: (context, privateChat, _) {
+                final hasUnread = privateChat.totalUnreadCount > 0 ||
+                    privateChat.pendingFriendRequests.isNotEmpty;
+                return Stack(
+                  clipBehavior: Clip.none,
+                  alignment: Alignment.center,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.menu_rounded, size: 26),
+                      color: textPrimary,
+                      onPressed: onMenu,
+                      tooltip: 'Menu',
+                    ),
+                    if (hasUnread)
+                      Positioned(
+                        top: 10,
+                        right: 10,
+                        child: Container(
+                          width: 9,
+                          height: 9,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF007AFF),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: bg, width: 1.5),
                           ),
-                      ],
-                    );
-                  },
+                        ),
+                      ),
+                  ],
+                );
+              },
+            )
+          : (onBack != null
+              ? IconButton(
+                  icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+                  color: textPrimary,
+                  onPressed: onBack,
+                  tooltip: 'Back',
                 )
-              : null),
+              : (onMenu != null
+                  ? Consumer<PrivateChatProvider>(
+                      builder: (context, privateChat, _) {
+                        final hasUnread = privateChat.totalUnreadCount > 0 ||
+                            privateChat.pendingFriendRequests.isNotEmpty;
+                        return Stack(
+                          clipBehavior: Clip.none,
+                          alignment: Alignment.center,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.menu_rounded, size: 26),
+                              color: textPrimary,
+                              onPressed: onMenu,
+                              tooltip: 'Menu',
+                            ),
+                            if (hasUnread)
+                              Positioned(
+                                top: 10,
+                                right: 10,
+                                child: Container(
+                                  width: 9,
+                                  height: 9,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF007AFF),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: bg, width: 1.5),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        );
+                      },
+                    )
+                  : null)),
       title: isPrivate
           ? GestureDetector(
               behavior: HitTestBehavior.opaque,

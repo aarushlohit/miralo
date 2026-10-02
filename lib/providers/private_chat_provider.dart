@@ -42,6 +42,7 @@ class PrivateChatProvider extends ChangeNotifier {
   StreamSubscription<DatabaseEvent>? _sentRequestsSubscription;
   StreamSubscription<DatabaseEvent>? _blockedSubscription;
   StreamSubscription<DatabaseEvent>? _recentChatsSubscription;
+  StreamSubscription<DatabaseEvent>? _recentChatsUsernameSubscription;
   StreamSubscription<DatabaseEvent>? _infoConnectedSubscription;
   final Map<String, StreamSubscription<DatabaseEvent>> _contactPresenceSubs = {};
   final Map<String, StreamSubscription<DatabaseEvent>> _contactProfileSubs = {};
@@ -1119,6 +1120,8 @@ class PrivateChatProvider extends ChangeNotifier {
     _blockedSubscription = null;
     _recentChatsSubscription?.cancel();
     _recentChatsSubscription = null;
+    _recentChatsUsernameSubscription?.cancel();
+    _recentChatsUsernameSubscription = null;
     _infoConnectedSubscription?.cancel();
     _infoConnectedSubscription = null;
     for (final sub in _contactPresenceSubs.values) {
@@ -1138,42 +1141,60 @@ class PrivateChatProvider extends ChangeNotifier {
 
   void _listenToFirebaseRecentChats(String userId) {
     _recentChatsSubscription?.cancel();
+    _recentChatsSubscription = null;
+    _recentChatsUsernameSubscription?.cancel();
+    _recentChatsUsernameSubscription = null;
+
+    void processRecentChatsSnapshot(DataSnapshot snapshot) {
+      if (snapshot.value != null && snapshot.value is Map) {
+        final rawMap = Map<String, dynamic>.from(snapshot.value as Map);
+        for (var entry in rawMap.entries) {
+          final otherUserId = entry.key;
+          final curId = (_currentUserId ?? '').toLowerCase().trim();
+          final curUname = (_currentUsername ?? '').toLowerCase().trim();
+          if (otherUserId.toLowerCase().trim() == curId ||
+              otherUserId.toLowerCase().trim() == curUname) {
+            continue;
+          }
+
+          if (entry.value is Map) {
+            final data = Map<String, dynamic>.from(entry.value as Map);
+            final senderName = data['senderName']?.toString() ?? 'User';
+            final senderUsername = data['senderUsername']?.toString() ?? 'user';
+            if (senderUsername.toLowerCase().trim() == curUname) continue;
+
+            if (!_contacts.any((c) => c.id == otherUserId) &&
+                !_tempContacts.containsKey(otherUserId)) {
+              _tempContacts[otherUserId] = PrivateContactModel(
+                id: otherUserId,
+                displayName: senderName,
+                username: senderUsername,
+                isOnline: false,
+                lastSeenText: 'Active recently',
+                unreadCount: 0,
+              );
+            }
+          }
+          _subscribeToContactChat(otherUserId);
+          _subscribeToContactPresence(otherUserId);
+        }
+        notifyListeners();
+      }
+    }
+
     try {
       final ref = FirebaseDatabase.instance.ref('users/$userId/recent_chats');
       _recentChatsSubscription = ref.onValue.listen((event) {
-        if (event.snapshot.value != null && event.snapshot.value is Map) {
-          final rawMap = Map<String, dynamic>.from(event.snapshot.value as Map);
-          for (var entry in rawMap.entries) {
-            final otherUserId = entry.key;
-            final curId = (_currentUserId ?? '').toLowerCase().trim();
-            final curUname = (_currentUsername ?? '').toLowerCase().trim();
-            if (otherUserId.toLowerCase().trim() == curId || otherUserId.toLowerCase().trim() == curUname) {
-              continue;
-            }
-
-            if (entry.value is Map) {
-              final data = Map<String, dynamic>.from(entry.value as Map);
-              final senderName = data['senderName']?.toString() ?? 'User';
-              final senderUsername = data['senderUsername']?.toString() ?? 'user';
-              if (senderUsername.toLowerCase().trim() == curUname) continue;
-
-              if (!_contacts.any((c) => c.id == otherUserId) && !_tempContacts.containsKey(otherUserId)) {
-                _tempContacts[otherUserId] = PrivateContactModel(
-                  id: otherUserId,
-                  displayName: senderName,
-                  username: senderUsername,
-                  isOnline: false,
-                  lastSeenText: 'Active recently',
-                  unreadCount: 0,
-                );
-              }
-            }
-            _subscribeToContactChat(otherUserId);
-            _subscribeToContactPresence(otherUserId);
-          }
-        }
-        notifyListeners();
+        processRecentChatsSnapshot(event.snapshot);
       }, onError: (_) {});
+
+      final uname = _currentUsername;
+      if (uname != null && uname.isNotEmpty && uname != userId) {
+        final uRef = FirebaseDatabase.instance.ref('users/$uname/recent_chats');
+        _recentChatsUsernameSubscription = uRef.onValue.listen((event) {
+          processRecentChatsSnapshot(event.snapshot);
+        }, onError: (_) {});
+      }
     } catch (_) {}
   }
 
@@ -1288,15 +1309,17 @@ class PrivateChatProvider extends ChangeNotifier {
                 if (isFirstSnapshot) {
                   _notifiedMessageIds.add(m.id);
                 } else if (_notifiedMessageIds.add(m.id)) {
-                  if (m.type == 'urgent') {
-                    StealthNotificationService.showUrgentNotification();
-                  } else if (m.type == 'redacted') {
-                    StealthNotificationService.showSystemPushNotification(
-                      title: 'Longcat Redacted Notice',
-                      body: m.text,
-                    );
-                  } else {
-                    StealthNotificationService.showSystemPushNotification();
+                  if (!StealthNotificationService.isAppActive) {
+                    if (m.type == 'urgent') {
+                      StealthNotificationService.showUrgentNotification();
+                    } else if (m.type == 'redacted') {
+                      StealthNotificationService.showSystemPushNotification(
+                        title: 'Longcat Redacted Notice',
+                        body: m.text,
+                      );
+                    } else {
+                      StealthNotificationService.showSystemPushNotification();
+                    }
                   }
                 }
               }
@@ -1364,6 +1387,10 @@ class PrivateChatProvider extends ChangeNotifier {
               _pendingFriendRequests.add(req);
             } else {
               _pendingFriendRequests[idx] = req;
+            }
+            if (req.senderId.isNotEmpty) {
+              _subscribeToContactChat(req.senderId);
+              _subscribeToContactPresence(req.senderId);
             }
           } else {
             _pendingFriendRequests.removeWhere((r) => r.id == req.id);
@@ -1565,7 +1592,9 @@ class PrivateChatProvider extends ChangeNotifier {
     _listenToFirebaseChat(canonicalId, channelId);
     _subscribeToContactPresence(canonicalId);
     _listenToTyping(canonicalId);
-    markMessagesAsSeen(canonicalId);
+    Future.microtask(() {
+      markMessagesAsSeen(canonicalId);
+    });
     notifyListeners();
   }
 
@@ -1655,8 +1684,6 @@ class PrivateChatProvider extends ChangeNotifier {
     try {
       final ref = FirebaseDatabase.instance.ref('chats/$channelId/messages');
       _messagesSubscription = ref.onValue.listen((event) {
-        final list = _messages.putIfAbsent(contactId, () => []);
-        list.clear();
         if (event.snapshot.value != null && event.snapshot.value is Map) {
           final rawMap = Map<String, dynamic>.from(event.snapshot.value as Map);
           final msgs = rawMap.values
@@ -1664,7 +1691,7 @@ class PrivateChatProvider extends ChangeNotifier {
               .map((val) => _parseAndDecryptMessage(Map<String, dynamic>.from(val), channelId))
               .toList();
           msgs.sort((a, b) => a.createdAt.compareTo(b.createdAt));
-          list.addAll(msgs);
+          _messages[contactId] = msgs;
 
           final isActiveChat = _activeChatId == contactId;
           for (final m in msgs) {
@@ -1734,7 +1761,33 @@ class PrivateChatProvider extends ChangeNotifier {
           'senderName': myName,
           'senderUsername': myUname,
         };
+        // Write to recipient's recent_chats under their canonical ID
         FirebaseDatabase.instance.ref('users/$_activeChatId/recent_chats/$_currentUserId').set(dataForRecipient);
+        if (myUname.isNotEmpty && myUname != _currentUserId) {
+          FirebaseDatabase.instance.ref('users/$_activeChatId/recent_chats/$myUname').set(dataForRecipient);
+        }
+        // If recipient has a distinct username, also write under users/$contactUname
+        if (contactUname.isNotEmpty && contactUname != 'user' && contactUname != _activeChatId) {
+          FirebaseDatabase.instance.ref('users/$contactUname/recent_chats/$_currentUserId').set(dataForRecipient);
+          if (myUname.isNotEmpty && myUname != _currentUserId) {
+            FirebaseDatabase.instance.ref('users/$contactUname/recent_chats/$myUname').set(dataForRecipient);
+          }
+        }
+
+        // If it's a group, sync recent_chats to all group members
+        if (activeContact?.isGroup == true && activeContact?.memberIds != null) {
+          for (final memberId in activeContact!.memberIds) {
+            if (memberId != _currentUserId) {
+              FirebaseDatabase.instance.ref('users/$memberId/recent_chats/$_activeChatId').set({
+                'lastMessage': lastText,
+                'timestamp': nowIso,
+                'senderId': _activeChatId,
+                'senderName': contactName,
+                'senderUsername': contactUname,
+              });
+            }
+          }
+        }
 
         // 2. Data for ME: shows the other user (activeContact) as my contact
         final dataForSender = {
@@ -1745,6 +1798,9 @@ class PrivateChatProvider extends ChangeNotifier {
           'senderUsername': contactUname,
         };
         FirebaseDatabase.instance.ref('users/$_currentUserId/recent_chats/$_activeChatId').set(dataForSender);
+        if (myUname.isNotEmpty && myUname != _currentUserId) {
+          FirebaseDatabase.instance.ref('users/$myUname/recent_chats/$_activeChatId').set(dataForSender);
+        }
       }
     } catch (e) {
       debugPrint('Firebase RTDB sync error: $e');
@@ -1806,19 +1862,11 @@ class PrivateChatProvider extends ChangeNotifier {
     if (finalContent.toLowerCase().startsWith('/urgent ')) {
       msgType = 'urgent';
       finalContent = finalContent.substring(8).trim();
-      StealthNotificationService.showUrgentNotification(
-        title: 'Longcat Urgent Notice',
-        body: 'longcat  reminds urgent critical  news check it out !!! ',
-      );
     } else if (finalContent.toLowerCase().startsWith('/redact ') ||
         finalContent.toLowerCase().startsWith('/redacted ')) {
       msgType = 'redacted';
       final isShort = finalContent.toLowerCase().startsWith('/redact ');
       finalContent = finalContent.substring(isShort ? 8 : 10).trim();
-      StealthNotificationService.showSystemPushNotification(
-        title: 'Longcat Redacted Notice',
-        body: finalContent,
-      );
     }
 
     final senderId = _currentUserId ?? 'me';
@@ -2688,6 +2736,7 @@ class PrivateChatProvider extends ChangeNotifier {
     _sentRequestsSubscription?.cancel();
     _blockedSubscription?.cancel();
     _recentChatsSubscription?.cancel();
+    _recentChatsUsernameSubscription?.cancel();
     _infoConnectedSubscription?.cancel();
     for (final sub in _contactPresenceSubs.values) {
       sub.cancel();

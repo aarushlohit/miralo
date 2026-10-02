@@ -80,24 +80,36 @@ class StealthNotificationService {
     }
   }
 
+  /// Returns true if the app is currently in the foreground and active
+  static bool get isAppActive =>
+      WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
+
   /// Display a stealth push notification into the system notification bar (top status bar / notification shade)
   static Future<void> showStealthInAppNotification(
     BuildContext? context, {
     VoidCallback? onTap,
     String title = stealthTitle,
     String body = stealthBody,
+    bool force = false,
   }) async {
     // Exclusively push real notification to system status bar / notification drawer.
-    // No in-app SnackBars inside Home screen or app views.
-    await showSystemPushNotification(title: title, body: body);
+    // Suppressed if the user is actively in the app unless force is true.
+    await showSystemPushNotification(title: title, body: body, force: force);
   }
 
-  /// Pushes a native notification directly to the device's System Notification Bar
+  /// Pushes a native notification directly to the device's System Notification Bar.
+  /// Automatically suppressed when the user is actively using the app unless [force] is true.
   static Future<void> showSystemPushNotification({
     String title = stealthTitle,
     String body = stealthBody,
     String? payload,
+    bool force = false,
   }) async {
+    if (!force && isAppActive) {
+      debugPrint('StealthNotificationService: Suppressing push notification while app is active.');
+      return;
+    }
+
     if (!_isInitialized) {
       await init();
     }
@@ -143,10 +155,13 @@ class StealthNotificationService {
   static Future<void> showUrgentNotification({
     String title = 'Urgent Notice',
     String body = 'longcat  reminds urgent critical  news check it out !!! ',
+    bool force = false,
   }) async {
     await showSystemPushNotification(
       title: title,
       body: body,
+      force: force,
     );
   }
 }
+

@@ -66,6 +66,7 @@ class SettingsScreen extends StatelessWidget {
                         children: [
                           LongcatAvatar(
                             name: user?.displayName ?? 'User',
+                            imageUrl: user?.avatarUrl,
                             size: 72,
                           ),
                           const SizedBox(height: LongcatSpacing.sm),
