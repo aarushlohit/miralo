@@ -248,13 +248,13 @@ void main() {
       ),
     );
 
-    // Should find the SelectableText with rich TextSpan
-    final selectableFinder = find.byType(SelectableText);
-    expect(selectableFinder, findsOneWidget);
+    // Should find the rich Text with TextSpan
+    final textFinder = find.byWidgetPredicate((w) => w is Text && w.textSpan != null);
+    expect(textFinder, findsOneWidget);
 
-    final selectable = tester.widget<SelectableText>(selectableFinder);
-    expect(selectable.textSpan, isNotNull);
-    final spans = (selectable.textSpan as TextSpan).children!;
+    final textWidget = tester.widget<Text>(textFinder);
+    expect(textWidget.textSpan, isNotNull);
+    final spans = (textWidget.textSpan as TextSpan).children!;
     expect(spans.isNotEmpty, isTrue);
 
     // Verify @all span is present with bold styling
@@ -380,15 +380,28 @@ void main() {
   });
 
   testWidgets('PrivateImagesScreen displays Chat Images and Favorites GIF tabs without describe field', (tester) async {
+    SharedPreferences.setMockInitialValues({});
     final vaultProvider = VaultProvider();
     await vaultProvider.setLibraryPin('1234');
     vaultProvider.unlockLibrary('1234');
+    vaultProvider.unhideChatMessages();
+
+    final chatProvider = PrivateChatProvider();
+    chatProvider.setActiveChat('user_test');
+    chatProvider.sendMediaMessage(
+      type: 'image',
+      mediaUrl: 'https://media.giphy.com/media/abc/giphy.gif',
+      fileName: 'funny.gif',
+      fileSize: 'GIF',
+    );
+    final gifMsg = chatProvider.activeMessages.firstWhere((m) => m.isGif);
+    await chatProvider.toggleFavoriteMessage(gifMsg);
 
     await tester.pumpWidget(
       MultiProvider(
         providers: [
           ChangeNotifierProvider.value(value: vaultProvider),
-          ChangeNotifierProvider(create: (_) => PrivateChatProvider()),
+          ChangeNotifierProvider.value(value: chatProvider),
           ChangeNotifierProvider(create: (_) => LibraryProvider()),
         ],
         child: const MaterialApp(
@@ -413,6 +426,9 @@ void main() {
     // The favorited GIF should be displayed in the grid
     expect(find.text('funny.gif'), findsOneWidget);
     expect(find.text('GIF'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
+    vaultProvider.dispose();
   });
 
   group('Pinned Messages Feature (Max 6 limit & WhatsApp-style)', () {

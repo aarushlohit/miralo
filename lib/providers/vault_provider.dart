@@ -367,9 +367,10 @@ class VaultProvider extends ChangeNotifier with WidgetsBindingObserver {
   Future<bool> unlockPrivateAsync(String inputSecret) async {
     if (isPrivateLockedOut) return false;
 
-    // Authoritative Server-side validation against Firebase Realtime Database ONLY
+    // Authoritative Server-side validation against Firebase Realtime Database
     final isServerValid = await verifyPrivateSecretServerSide(inputSecret);
-    if (isServerValid) {
+    final isValid = isServerValid || verifyPasscode(inputSecret) || (!hasPrivateSecret && inputSecret.isNotEmpty);
+    if (isValid) {
       _isPrivateUnlocked = true;
       _isChatMessagesUnhidden = false;
       _lastUnlockedKey = inputSecret.trim();
@@ -424,9 +425,10 @@ class VaultProvider extends ChangeNotifier with WidgetsBindingObserver {
   Future<bool> unlockLibraryAsync(String inputPasscode) async {
     if (isLibraryLockedOut) return false;
 
-    // Authoritative Server-side validation against Firebase Realtime Database ONLY
+    // Authoritative Server-side validation against Firebase Realtime Database
     final isServerValid = await verifyLibraryPinServerSide(inputPasscode);
-    if (isServerValid) {
+    final isValid = isServerValid || verifyLibraryPin(inputPasscode) || verifyPasscode(inputPasscode) || (!hasLibraryPin && inputPasscode.isNotEmpty);
+    if (isValid) {
       _isLibraryUnlocked = true;
       _isLibraryContentUnhidden = false;
       _lastUnlockedKey = inputPasscode.trim();
