@@ -97,7 +97,12 @@ class _MessageListState extends State<MessageList> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     if (widget.itemCount == 0 && widget.emptyState != null) {
-      return Center(child: widget.emptyState);
+      return Center(
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: widget.emptyState!,
+        ),
+      );
     }
 
     return Stack(

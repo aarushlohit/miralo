@@ -1336,37 +1336,44 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
             child: MessageList(
               controller: _scrollController,
               itemCount: messages.length,
-              emptyState: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 64,
-                    height: 64,
-                    decoration: BoxDecoration(
-                      color: isDark ? LongcatColors.darkSurfaceSecondary : LongcatColors.lightSurfaceSecondary,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      contact?.isGroup == true ? Icons.groups_outlined : Icons.lock_outline_rounded,
-                      size: 32,
-                      color: LongcatColors.accent,
-                    ),
+              emptyState: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: isDark ? LongcatColors.darkSurfaceSecondary : LongcatColors.lightSurfaceSecondary,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          contact?.isGroup == true ? Icons.groups_outlined : Icons.lock_outline_rounded,
+                          size: 28,
+                          color: LongcatColors.accent,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Start conversation',
+                        style: LongcatTypography.titleMedium(
+                          color: isDark ? LongcatColors.darkTextPrimary : LongcatColors.lightTextPrimary,
+                        ).copyWith(fontWeight: FontWeight.w600, fontSize: 17),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Messages are end-to-end encrypted.',
+                        style: LongcatTypography.bodySmall(
+                          color: isDark ? LongcatColors.darkTextSecondary : LongcatColors.lightTextSecondary,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Start conversation',
-                    style: LongcatTypography.titleMedium(
-                      color: isDark ? LongcatColors.darkTextPrimary : LongcatColors.lightTextPrimary,
-                    ).copyWith(fontWeight: FontWeight.w600, fontSize: 17),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Messages are end-to-end encrypted.',
-                    style: LongcatTypography.bodySmall(
-                      color: isDark ? LongcatColors.darkTextSecondary : LongcatColors.lightTextSecondary,
-                    ),
-                  ),
-                ],
+                ),
               ),
               itemBuilder: (context, index) {
                 final msg = messages[index];
