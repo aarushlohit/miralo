@@ -325,6 +325,51 @@ class AiChatProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> _streamResponseToMessage({
+    required String targetChatId,
+    required String assistantMsgId,
+    required String fullResponse,
+  }) async {
+    final totalLength = fullResponse.length;
+    if (totalLength == 0) return;
+
+    // Smooth streaming: dynamically adjust chunk step so streaming takes ~1-2.5 seconds total
+    final int step = (totalLength / 50).ceil().clamp(4, 60);
+    int currentPos = 0;
+
+    while (currentPos < totalLength) {
+      if (!_isStreaming) break;
+      await Future.delayed(const Duration(milliseconds: 20));
+      currentPos = (currentPos + step).clamp(0, totalLength);
+      final currentSlice = fullResponse.substring(0, currentPos);
+
+      final liveIndex = _conversations.indexWhere((c) => c.id == targetChatId);
+      if (liveIndex != -1) {
+        final msgs = List<AiMessageModel>.from(_conversations[liveIndex].messages);
+        final asstIdx = msgs.indexWhere((m) => m.id == assistantMsgId);
+        if (asstIdx != -1) {
+          msgs[asstIdx] = msgs[asstIdx].copyWith(text: currentSlice, isError: false);
+          _conversations[liveIndex] = _conversations[liveIndex].copyWith(messages: msgs);
+          notifyListeners();
+        }
+      }
+    }
+
+    // Always commit 100% of the fullResponse at completion if not canceled
+    if (_isStreaming) {
+      final finalIndex = _conversations.indexWhere((c) => c.id == targetChatId);
+      if (finalIndex != -1) {
+        final msgs = List<AiMessageModel>.from(_conversations[finalIndex].messages);
+        final asstIdx = msgs.indexWhere((m) => m.id == assistantMsgId);
+        if (asstIdx != -1 && msgs[asstIdx].text != fullResponse) {
+          msgs[asstIdx] = msgs[asstIdx].copyWith(text: fullResponse, isError: false);
+          _conversations[finalIndex] = _conversations[finalIndex].copyWith(messages: msgs);
+          notifyListeners();
+        }
+      }
+    }
+  }
+
   Future<void> sendPrompt(
     String prompt, {
     String? imageBase64,
@@ -335,6 +380,7 @@ class AiChatProvider extends ChangeNotifier {
     if (_activeChatId == null) {
       createNewChat();
     }
+    final targetChatId = _activeChatId!;
 
     final userMsg = AiMessageModel(
       id: 'msg_${DateTime.now().millisecondsSinceEpoch}',
@@ -344,7 +390,7 @@ class AiChatProvider extends ChangeNotifier {
       timestamp: DateTime.now(),
     );
 
-    final chatIndex = _conversations.indexWhere((c) => c.id == _activeChatId);
+    final chatIndex = _conversations.indexWhere((c) => c.id == targetChatId);
     if (chatIndex == -1) return;
 
     final currentChat = _conversations[chatIndex];
@@ -387,28 +433,14 @@ class AiChatProvider extends ChangeNotifier {
         isSpecialUser: isSpecialUser,
       );
 
-      final words = fullResponse.split(' ');
-      String currentText = '';
-
-      for (int i = 0; i < words.length; i++) {
-        if (!_isStreaming) break; // Interrupted by stop indicator!
-        await Future.delayed(const Duration(milliseconds: 20));
-        currentText += (i == 0 ? '' : ' ') + words[i];
-
-        final liveIndex = _conversations.indexWhere((c) => c.id == _activeChatId);
-        if (liveIndex != -1) {
-          final msgs = List<AiMessageModel>.from(_conversations[liveIndex].messages);
-          final asstIdx = msgs.indexWhere((m) => m.id == assistantMsgId);
-          if (asstIdx != -1) {
-            msgs[asstIdx] = msgs[asstIdx].copyWith(text: currentText, isError: false);
-            _conversations[liveIndex] = _conversations[liveIndex].copyWith(messages: msgs);
-            notifyListeners();
-          }
-        }
-      }
+      await _streamResponseToMessage(
+        targetChatId: targetChatId,
+        assistantMsgId: assistantMsgId,
+        fullResponse: fullResponse,
+      );
     } catch (e) {
       debugPrint('AI Chat API Error: $e');
-      final liveIndex = _conversations.indexWhere((c) => c.id == _activeChatId);
+      final liveIndex = _conversations.indexWhere((c) => c.id == targetChatId);
       if (liveIndex != -1) {
         final msgs = List<AiMessageModel>.from(_conversations[liveIndex].messages);
         final asstIdx = msgs.indexWhere((m) => m.id == assistantMsgId);
@@ -461,16 +493,10 @@ class AiChatProvider extends ChangeNotifier {
     final chat = activeChat;
     if (chat == null || chat.messages.isEmpty) return;
 
-    final lastUserMsg = chat.messages.lastWhere(
-      (m) => m.role == 'user',
-      orElse: () => chat.messages.first,
-    );
-
-    sendPrompt(
-      lastUserMsg.text,
-      imageBase64: lastUserMsg.imageBase64,
-      isSpecialUser: isSpecialUser,
-    );
+    final lastAsstIdx = chat.messages.lastIndexWhere((m) => m.role == 'assistant');
+    if (lastAsstIdx != -1) {
+      retryAssistantMessage(chat.messages[lastAsstIdx].id, isSpecialUser: isSpecialUser);
+    }
   }
 
   /// Edits a previous user prompt in-place with version tracking & vanishes previous output
@@ -480,7 +506,8 @@ class AiChatProvider extends ChangeNotifier {
     bool isSpecialUser = false,
   }) async {
     if (_activeChatId == null || editedText.trim().isEmpty) return;
-    final chatIndex = _conversations.indexWhere((c) => c.id == _activeChatId);
+    final targetChatId = _activeChatId!;
+    final chatIndex = _conversations.indexWhere((c) => c.id == targetChatId);
     if (chatIndex == -1) return;
 
     final currentChat = _conversations[chatIndex];
@@ -531,28 +558,14 @@ class AiChatProvider extends ChangeNotifier {
         isSpecialUser: isSpecialUser,
       );
 
-      final words = fullResponse.split(' ');
-      String currentText = '';
-
-      for (int i = 0; i < words.length; i++) {
-        if (!_isStreaming) break;
-        await Future.delayed(const Duration(milliseconds: 20));
-        currentText += (i == 0 ? '' : ' ') + words[i];
-
-        final liveIndex = _conversations.indexWhere((c) => c.id == _activeChatId);
-        if (liveIndex != -1) {
-          final msgs = List<AiMessageModel>.from(_conversations[liveIndex].messages);
-          final asstIdx = msgs.indexWhere((m) => m.id == assistantMsgId);
-          if (asstIdx != -1) {
-            msgs[asstIdx] = msgs[asstIdx].copyWith(text: currentText, isError: false);
-            _conversations[liveIndex] = _conversations[liveIndex].copyWith(messages: msgs);
-            notifyListeners();
-          }
-        }
-      }
+      await _streamResponseToMessage(
+        targetChatId: targetChatId,
+        assistantMsgId: assistantMsgId,
+        fullResponse: fullResponse,
+      );
     } catch (e) {
       debugPrint('AI Chat API Error (on edit): $e');
-      final liveIndex = _conversations.indexWhere((c) => c.id == _activeChatId);
+      final liveIndex = _conversations.indexWhere((c) => c.id == targetChatId);
       if (liveIndex != -1) {
         final msgs = List<AiMessageModel>.from(_conversations[liveIndex].messages);
         final asstIdx = msgs.indexWhere((m) => m.id == assistantMsgId);
@@ -572,10 +585,12 @@ class AiChatProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Retries generating response for an assistant message that failed
+  /// Retries generating response for an assistant message:
+  /// Vanishes current output and streams fresh response without duplicating prompt.
   Future<void> retryAssistantMessage(String assistantMsgId, {bool isSpecialUser = false}) async {
     if (_activeChatId == null) return;
-    final chatIndex = _conversations.indexWhere((c) => c.id == _activeChatId);
+    final targetChatId = _activeChatId!;
+    final chatIndex = _conversations.indexWhere((c) => c.id == targetChatId);
     if (chatIndex == -1) return;
 
     final currentChat = _conversations[chatIndex];
@@ -591,6 +606,7 @@ class AiChatProvider extends ChangeNotifier {
     }
     if (userMsg == null) return;
 
+    // Vanish existing output immediately!
     final msgs = List<AiMessageModel>.from(currentChat.messages);
     msgs[asstIdx] = msgs[asstIdx].copyWith(text: '', isError: false);
     _conversations[chatIndex] = currentChat.copyWith(messages: msgs);
@@ -605,28 +621,14 @@ class AiChatProvider extends ChangeNotifier {
         isSpecialUser: isSpecialUser,
       );
 
-      final words = fullResponse.split(' ');
-      String currentText = '';
-
-      for (int i = 0; i < words.length; i++) {
-        if (!_isStreaming) break;
-        await Future.delayed(const Duration(milliseconds: 20));
-        currentText += (i == 0 ? '' : ' ') + words[i];
-
-        final liveIndex = _conversations.indexWhere((c) => c.id == _activeChatId);
-        if (liveIndex != -1) {
-          final liveMsgs = List<AiMessageModel>.from(_conversations[liveIndex].messages);
-          final liveAsstIdx = liveMsgs.indexWhere((m) => m.id == assistantMsgId);
-          if (liveAsstIdx != -1) {
-            liveMsgs[liveAsstIdx] = liveMsgs[liveAsstIdx].copyWith(text: currentText, isError: false);
-            _conversations[liveIndex] = _conversations[liveIndex].copyWith(messages: liveMsgs);
-            notifyListeners();
-          }
-        }
-      }
+      await _streamResponseToMessage(
+        targetChatId: targetChatId,
+        assistantMsgId: assistantMsgId,
+        fullResponse: fullResponse,
+      );
     } catch (e) {
       debugPrint('AI Chat API Error (retry): $e');
-      final liveIndex = _conversations.indexWhere((c) => c.id == _activeChatId);
+      final liveIndex = _conversations.indexWhere((c) => c.id == targetChatId);
       if (liveIndex != -1) {
         final liveMsgs = List<AiMessageModel>.from(_conversations[liveIndex].messages);
         final liveAsstIdx = liveMsgs.indexWhere((m) => m.id == assistantMsgId);

@@ -59,7 +59,7 @@ class _AppSidebarDrawerState extends State<AppSidebarDrawer> {
   void _openAiChat(BuildContext context, AiChatProvider ai, String chatId) {
     final navigator = Navigator.of(context);
     final routeName = ModalRoute.of(context)?.settings.name;
-    final isAlreadyInChat = routeName == AppRoutes.chat || routeName == AppRoutes.home;
+    final isAlreadyInChat = routeName == AppRoutes.chat;
     ai.openChat(chatId);
     if (widget.isPersistent) {
       widget.onClose?.call();

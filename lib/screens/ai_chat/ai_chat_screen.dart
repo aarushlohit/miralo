@@ -272,8 +272,8 @@ class _AiChatScreenState extends State<AiChatScreen> {
                 return AiMessageBubble(
                   message: msg,
                   onLike: (liked) => ai.likeMessage(msg.id, liked),
-                  onRegenerate: i == chat.messages.length - 1
-                      ? () => ai.regenerateLast(isSpecialUser: auth.isSpecialUser)
+                  onRegenerate: (msg.role == 'assistant' && i == chat.messages.length - 1)
+                      ? () => ai.retryAssistantMessage(msg.id, isSpecialUser: auth.isSpecialUser)
                       : null,
                   onRetry: msg.isError
                       ? () => ai.retryAssistantMessage(msg.id, isSpecialUser: auth.isSpecialUser)

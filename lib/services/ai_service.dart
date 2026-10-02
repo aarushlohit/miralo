@@ -342,10 +342,10 @@ REQUIREMENTS:
         ],
         'generationConfig': {
           'temperature': 0.7,
-          'maxOutputTokens': 2048,
+          'maxOutputTokens': 8192,
         }
       }),
-    ).timeout(const Duration(seconds: 25));
+    ).timeout(const Duration(seconds: 60));
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
@@ -393,9 +393,9 @@ REQUIREMENTS:
           {'role': 'user', 'content': content}
         ],
         'temperature': 0.6,
-        'max_tokens': 1024,
+        'max_tokens': 4096,
       }),
-    ).timeout(const Duration(seconds: 30));
+    ).timeout(const Duration(seconds: 60));
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
