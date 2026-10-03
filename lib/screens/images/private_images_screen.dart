@@ -715,7 +715,6 @@ class _PrivateImagesScreenState extends State<PrivateImagesScreen> {
                               final isMatch = await vault.verifyUnhideKeyAsync(key);
                               if (isMatch) {
                                 vault.unhideChatMessages();
-                                vault.unhideLibraryContent();
                                 vault.resetInactivityTimer();
                                 _searchCtrl.clear();
                                 setState(() => _searchQuery = '');

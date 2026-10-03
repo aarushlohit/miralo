@@ -385,6 +385,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) {
           vault.hideLibraryContent();
+          vault.hideChatMessages();
           vault.resetInactivityTimer();
         }
       },
@@ -406,6 +407,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                     iconSize: 16,
                     onPressed: () {
                       vault.hideLibraryContent();
+                      vault.hideChatMessages();
                       Navigator.pop(context);
                     },
                   ),
@@ -471,7 +473,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
                                     final isMatch = await vault.verifyUnhideKeyAsync(key);
                                     if (isMatch) {
                                       vault.unhideLibraryContent();
-                                      vault.unhideChatMessages();
                                       vault.resetInactivityTimer();
                                       _searchCtrl.clear();
                                       library.setSearchQuery('');

@@ -451,6 +451,7 @@ class VaultProvider extends ChangeNotifier with WidgetsBindingObserver {
   void lockLibrary() {
     _isLibraryUnlocked = false;
     _isLibraryContentUnhidden = false;
+    _isChatMessagesUnhidden = false;
     _inactivityTimer?.cancel();
     notifyListeners();
   }

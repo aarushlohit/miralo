@@ -349,6 +349,8 @@ class _LibraryFolderScreenState extends State<LibraryFolderScreen> {
       canPop: true,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) {
+          vault.hideLibraryContent();
+          vault.hideChatMessages();
           vault.resetInactivityTimer();
         }
       },
@@ -368,7 +370,11 @@ class _LibraryFolderScreenState extends State<LibraryFolderScreen> {
                   leading: LongcatCircularIconButton(
                     icon: Icons.arrow_back_ios_new_rounded,
                     iconSize: 16,
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () {
+                      vault.hideLibraryContent();
+                      vault.hideChatMessages();
+                      Navigator.pop(context);
+                    },
                   ),
                   title: folder?.name ?? 'Folder',
                 ),
@@ -416,7 +422,6 @@ class _LibraryFolderScreenState extends State<LibraryFolderScreen> {
                                 final isMatch = await vault.verifyUnhideKeyAsync(key);
                                 if (isMatch) {
                                   vault.unhideLibraryContent();
-                                  vault.unhideChatMessages();
                                   vault.resetInactivityTimer();
                                   _searchCtrl.clear();
                                   setState(() => _searchQuery = '');
