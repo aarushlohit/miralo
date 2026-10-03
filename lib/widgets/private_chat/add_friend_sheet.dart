@@ -276,6 +276,7 @@ class _AddFriendSheetState extends State<AddFriendSheet> {
       final uid = (item['id'] ?? '').toString().trim();
       final uname = (item['username'] ?? '').toString().toLowerCase().trim();
       final uemail = (item['email'] ?? '').toString().toLowerCase().trim();
+      if (uname.isEmpty) return false;
       if (currentUid.isNotEmpty && uid == currentUid) return false;
       if (currentUname.isNotEmpty && uname == currentUname) return false;
       if (currentUemail.isNotEmpty && uemail == currentUemail) return false;

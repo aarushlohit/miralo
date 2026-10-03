@@ -539,6 +539,8 @@ class PrivateChatProvider extends ChangeNotifier with WidgetsBindingObserver {
   bool isContact(String targetId, String targetUsername) {
     final cleanId = targetId.toLowerCase().trim();
     final cleanUsername = targetUsername.toLowerCase().trim();
+    if (cleanId.isEmpty && cleanUsername.isEmpty) return false;
+
     final normId = _normalizeIdentifier(targetId);
     final normUname = _normalizeIdentifier(targetUsername);
 
@@ -547,12 +549,13 @@ class PrivateChatProvider extends ChangeNotifier with WidgetsBindingObserver {
       final cUname = c.username.toLowerCase().trim();
       final normCId = _normalizeIdentifier(c.id);
       final normCUname = _normalizeIdentifier(c.username);
-      return cId == cleanId ||
-             cUname == cleanUsername ||
-             cId == cleanUsername ||
-             cUname == cleanId ||
-             (normId.isNotEmpty && (normCId == normId || normCUname == normId)) ||
-             (normUname.isNotEmpty && (normCId == normUname || normCUname == normUname));
+
+      final matchesId = cleanId.isNotEmpty && cId.isNotEmpty && (cId == cleanId || cUname == cleanId);
+      final matchesUname = cleanUsername.isNotEmpty && cUname.isNotEmpty && (cUname == cleanUsername || cId == cleanUsername);
+      final matchesNormId = normId.isNotEmpty && normCId.isNotEmpty && (normCId == normId || normCUname == normId);
+      final matchesNormUname = normUname.isNotEmpty && normCUname.isNotEmpty && (normCId == normUname || normCUname == normUname);
+
+      return matchesId || matchesUname || matchesNormId || matchesNormUname;
     });
   }
 
@@ -3021,6 +3024,9 @@ class PrivateChatProvider extends ChangeNotifier with WidgetsBindingObserver {
     final cleanWithoutAt = clean.startsWith('@') ? clean.substring(1).trim() : clean;
 
     final results = <Map<String, String>>[];
+    final seenUsernames = <String>{};
+    final seenIds = <String>{};
+
     try {
       final snap = await FirebaseDatabase.instance.ref('users').get();
       if (snap.exists && snap.value is Map) {
@@ -3028,34 +3034,51 @@ class PrivateChatProvider extends ChangeNotifier with WidgetsBindingObserver {
         for (var entry in rawMap.entries) {
           if (entry.value is Map) {
             final u = Map<String, dynamic>.from(entry.value as Map);
-            final uname = (u['username'] ?? '').toString().toLowerCase();
-            final email = (u['email'] ?? '').toString().toLowerCase();
-            final name = (u['displayName'] ?? '').toString();
-            final id = (u['id'] ?? entry.key).toString();
+            final uname = (u['username'] ?? '').toString().trim().toLowerCase();
+            final email = (u['email'] ?? '').toString().trim().toLowerCase();
+            final name = (u['displayName'] ?? u['name'] ?? '').toString().trim();
+            final id = (u['id'] ?? entry.key).toString().trim();
             final avatarUrl = (u['avatarUrl'] ?? u['photoUrl'] ?? '').toString();
 
-            // Filter out ghost users (missing username AND name AND email) or system nodes
-            if (uname.trim().isEmpty && name.trim().isEmpty && email.trim().isEmpty) {
+            // A valid user MUST have a non-empty username
+            if (uname.isEmpty) {
               continue;
             }
-            if (id.startsWith('chat_') || entry.key.startsWith('chat_') || entry.key == 'contacts' || entry.key == 'recent_chats') {
+
+            // Exclude system nodes or ghost keys
+            final keyLower = entry.key.toLowerCase();
+            final idLower = id.toLowerCase();
+            if (idLower.startsWith('chat_') ||
+                keyLower.startsWith('chat_') ||
+                keyLower == 'contacts' ||
+                keyLower == 'recent_chats' ||
+                keyLower == 'blocked_users' ||
+                keyLower == 'friend_requests' ||
+                keyLower == 'invitations' ||
+                keyLower == 'messages') {
               continue;
             }
 
             // Exclude current user from search results to prevent self-friend requests
-            if (id == _currentUserId ||
-                (_currentUsername != null && uname == _currentUsername?.toLowerCase()) ||
-                (_currentUserEmail != null && email == _currentUserEmail?.toLowerCase())) {
+            if ((_currentUserId != null && _currentUserId!.isNotEmpty && id == _currentUserId) ||
+                (_currentUsername != null && _currentUsername!.isNotEmpty && uname == _currentUsername?.toLowerCase()) ||
+                (_currentUserEmail != null && _currentUserEmail!.isNotEmpty && email == _currentUserEmail?.toLowerCase())) {
               continue;
             }
 
-            final idLower = id.toLowerCase();
+            // Deduplicate search results by username and id
+            if (seenUsernames.contains(uname) || (id.isNotEmpty && seenIds.contains(id))) {
+              continue;
+            }
+
             final matchesUname = uname.contains(clean) || (cleanWithoutAt.isNotEmpty && uname.contains(cleanWithoutAt));
             final matchesEmail = email.contains(clean);
             final matchesName = name.toLowerCase().contains(clean) || (cleanWithoutAt.isNotEmpty && name.toLowerCase().contains(cleanWithoutAt));
-            final matchesId = idLower.contains(clean) || (cleanWithoutAt.isNotEmpty && idLower.contains(cleanWithoutAt));
 
-            if (matchesUname || matchesEmail || matchesName || matchesId) {
+            if (matchesUname || matchesEmail || matchesName) {
+              seenUsernames.add(uname);
+              if (id.isNotEmpty) seenIds.add(id);
+
               results.add({
                 'id': id,
                 'name': name.isEmpty ? uname : name,
