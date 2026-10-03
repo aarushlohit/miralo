@@ -51,7 +51,7 @@ class AiModels {
   static String modelIdFor(String model) {
     switch (model) {
       case nemotronSuper120b:
-        return 'nvidia/nemotron-3-super-120b-a12b';
+        return 'nvidia/nemotron-3.5-lightning-30b-a3b';
       case nemotronOmni30b:
         return 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning';
       case llamaVision11b:
@@ -61,11 +61,11 @@ class AiModels {
       case gptOss20b:
         return 'openai/gpt-oss-20b';
       case gemini25Flash:
-        return 'gemini-2.5-flash';
+        return 'gemini-3.6-flash';
       case gemini25Pro:
-        return 'gemini-2.5-pro';
+        return 'gemini-3.5-flash';
       default:
-        return model.contains('/') ? model : 'nvidia/nemotron-3-super-120b-a12b';
+        return model.contains('/') ? model : 'nvidia/nemotron-3.5-lightning-30b-a3b';
     }
   }
 
@@ -209,7 +209,7 @@ class AiService {
         return await _callNvidiaNimApi(
           prompt: prompt,
           apiKey: effectiveNvidiaKey,
-          model: 'nvidia/nemotron-3-super-120b-a12b',
+          model: 'nvidia/nemotron-3.5-lightning-30b-a3b',
           imageBase64: imageBase64,
         );
       }
@@ -238,7 +238,7 @@ class AiService {
         return await _callGeminiApi(
           prompt: prompt,
           apiKey: effectiveGeminiKey,
-          model: 'gemini-2.5-flash',
+          model: 'gemini-3.6-flash',
           imageBase64: imageBase64,
         );
       }
@@ -248,7 +248,7 @@ class AiService {
     return await _callGeminiApi(
       prompt: prompt,
       apiKey: effectiveGeminiKey,
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.6-flash',
       imageBase64: imageBase64,
     );
   }
@@ -310,51 +310,66 @@ REQUIREMENTS:
     required String model,
     String? imageBase64,
   }) async {
-    // Standardize Gemini model ID for Google Generative Language API
-    final effectiveModel = (model == 'gemini-1.5-flash' ||
-            model == 'gemini-1.5-pro' ||
-            model == 'gemini-2.5-pro' ||
-            model.contains('3.'))
-        ? 'gemini-2.5-flash'
-        : model;
+    final candidateModels = <String>[
+      if (model.isNotEmpty) model,
+      'gemini-3.6-flash',
+      'gemini-3.5-flash',
+      'gemini-2.5-flash-lite',
+      'gemini-flash-latest',
+    ];
 
-    final url = Uri.parse(
-      'https://generativelanguage.googleapis.com/v1beta/models/$effectiveModel:generateContent?key=$apiKey',
-    );
+    String lastError = '';
+    for (final m in candidateModels.toSet()) {
+      final effectiveModel = (m == 'gemini-1.5-flash' ||
+              m == 'gemini-1.5-pro' ||
+              m == 'gemini-2.5-pro' ||
+              m == 'gemini-2.5-flash')
+          ? 'gemini-3.6-flash'
+          : m;
 
-    final parts = <Map<String, dynamic>>[];
-    if (imageBase64 != null && imageBase64.isNotEmpty) {
-      parts.add({
-        'inlineData': {
-          'mimeType': 'image/jpeg',
-          'data': imageBase64,
+      final url = Uri.parse(
+        'https://generativelanguage.googleapis.com/v1beta/models/$effectiveModel:generateContent?key=$apiKey',
+      );
+
+      final parts = <Map<String, dynamic>>[];
+      if (imageBase64 != null && imageBase64.isNotEmpty) {
+        parts.add({
+          'inlineData': {
+            'mimeType': 'image/jpeg',
+            'data': imageBase64,
+          }
+        });
+      }
+      parts.add({'text': prompt});
+
+      try {
+        final response = await http.post(
+          url,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'contents': [
+              {'parts': parts}
+            ],
+            'generationConfig': {
+              'temperature': 0.7,
+              'maxOutputTokens': 8192,
+            }
+          }),
+        ).timeout(const Duration(seconds: 45));
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          final text = data['candidates']?[0]?['content']?['parts']?[0]?['text'];
+          if (text != null && text is String && text.trim().isNotEmpty) {
+            return text.trim();
+          }
         }
-      });
-    }
-    parts.add({'text': prompt});
-
-    final response = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'contents': [
-          {'parts': parts}
-        ],
-        'generationConfig': {
-          'temperature': 0.7,
-          'maxOutputTokens': 8192,
-        }
-      }),
-    ).timeout(const Duration(seconds: 60));
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      final text = data['candidates']?[0]?['content']?['parts']?[0]?['text'];
-      if (text != null && text is String && text.trim().isNotEmpty) {
-        return text.trim();
+        lastError = 'Gemini HTTP ${response.statusCode}: ${response.body}';
+      } catch (e) {
+        lastError = e.toString();
       }
     }
-    throw Exception('Gemini HTTP ${response.statusCode}: ${response.body}');
+    throw Exception(lastError.isNotEmpty ? lastError : 'Gemini API requests failed');
   }
 
   Future<String> _callNvidiaNimApi({
@@ -363,52 +378,72 @@ REQUIREMENTS:
     required String model,
     String? imageBase64,
   }) async {
-    final url = Uri.parse('https://integrate.api.nvidia.com/v1/chat/completions');
+    final candidateModels = <String>[
+      if (model.isNotEmpty) model,
+      'nvidia/nemotron-3.5-lightning-30b-a3b',
+      'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning',
+      'meta/llama-3.2-11b-vision-instruct',
+      'openai/gpt-oss-20b',
+    ];
 
-    dynamic content;
-    if (imageBase64 != null && imageBase64.isNotEmpty) {
-      content = [
-        {'type': 'text', 'text': prompt},
-        {
-          'type': 'image_url',
-          'image_url': {
-            'url': 'data:image/jpeg;base64,$imageBase64',
+    String lastError = '';
+    for (final m in candidateModels.toSet()) {
+      final effectiveModel = m == 'nvidia/nemotron-3-super-120b-a12b'
+          ? 'nvidia/nemotron-3.5-lightning-30b-a3b'
+          : m;
+
+      final url = Uri.parse('https://integrate.api.nvidia.com/v1/chat/completions');
+
+      dynamic content;
+      if (imageBase64 != null && imageBase64.isNotEmpty) {
+        content = [
+          {'type': 'text', 'text': prompt},
+          {
+            'type': 'image_url',
+            'image_url': {
+              'url': 'data:image/jpeg;base64,$imageBase64',
+            }
+          }
+        ];
+      } else {
+        content = prompt;
+      }
+
+      try {
+        final response = await http.post(
+          url,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $apiKey',
+            'Accept': 'application/json',
+          },
+          body: jsonEncode({
+            'model': effectiveModel,
+            'messages': [
+              {'role': 'user', 'content': content}
+            ],
+            'temperature': 0.6,
+            'max_tokens': 4096,
+          }),
+        ).timeout(const Duration(seconds: 45));
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          final text = data['choices']?[0]?['message']?['content'];
+          if (text != null && text is String && text.trim().isNotEmpty) {
+            return text.trim();
+          }
+          final reasoning = data['choices']?[0]?['message']?['reasoning_content'];
+          if (reasoning != null && reasoning is String && reasoning.trim().isNotEmpty) {
+            return reasoning.trim();
           }
         }
-      ];
-    } else {
-      content = prompt;
-    }
-
-    final response = await http.post(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $apiKey',
-        'Accept': 'application/json',
-      },
-      body: jsonEncode({
-        'model': model,
-        'messages': [
-          {'role': 'user', 'content': content}
-        ],
-        'temperature': 0.6,
-        'max_tokens': 4096,
-      }),
-    ).timeout(const Duration(seconds: 60));
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      final text = data['choices']?[0]?['message']?['content'];
-      if (text != null && text is String && text.trim().isNotEmpty) {
-        return text.trim();
-      }
-      final reasoning = data['choices']?[0]?['message']?['reasoning_content'];
-      if (reasoning != null && reasoning is String && reasoning.trim().isNotEmpty) {
-        return reasoning.trim();
+        lastError = 'NVIDIA NIM HTTP ${response.statusCode}: ${response.body}';
+      } catch (e) {
+        lastError = e.toString();
       }
     }
-    throw Exception('NVIDIA NIM HTTP ${response.statusCode}: ${response.body}');
+    throw Exception(lastError.isNotEmpty ? lastError : 'NVIDIA NIM API requests failed');
   }
 }
 
