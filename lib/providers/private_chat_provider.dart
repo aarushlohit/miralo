@@ -43,6 +43,8 @@ class PrivateChatProvider extends ChangeNotifier {
   StreamSubscription<DatabaseEvent>? _blockedSubscription;
   StreamSubscription<DatabaseEvent>? _recentChatsSubscription;
   StreamSubscription<DatabaseEvent>? _recentChatsUsernameSubscription;
+  StreamSubscription<DatabaseEvent>? _recentChatsLowerSubscription;
+  StreamSubscription<DatabaseEvent>? _contactsLowerSubscription;
   StreamSubscription<DatabaseEvent>? _infoConnectedSubscription;
   final Map<String, StreamSubscription<DatabaseEvent>> _contactPresenceSubs = {};
   final Map<String, StreamSubscription<DatabaseEvent>> _contactProfileSubs = {};
@@ -137,9 +139,9 @@ class PrivateChatProvider extends ChangeNotifier {
     if (norm.startsWith('chat_')) {
       final parts = norm.substring(5).split('_');
       if (parts.length >= 2 && _currentUserId != null) {
-        final cur = sanitizeDbKey(_currentUserId!);
-        if (parts[0] == cur) return parts[1];
-        if (parts[1] == cur) return parts[0];
+        final cur = _normalizeIdentifier(_currentUserId!);
+        if (_normalizeIdentifier(parts[0]) == cur) return parts[1];
+        if (_normalizeIdentifier(parts[1]) == cur) return parts[0];
       }
       return idOrUsername;
     }
@@ -342,13 +344,27 @@ class PrivateChatProvider extends ChangeNotifier {
         }
       }
       if (!merged && !canonicalMap.containsKey(msgKey)) {
-        canonicalMap[msgKey] = PrivateContactModel(
-          id: msgKey,
-          displayName: msgKey.startsWith('usr_') ? msgKey.replaceFirst('usr_', '@') : msgKey,
-          username: msgKey.startsWith('usr_') ? msgKey.replaceFirst('usr_', '') : msgKey,
-          isOnline: false,
-          unreadCount: 0,
-        );
+        final cached = _cachedUserProfiles[msgKey] ?? _cachedUserProfiles[normMsgKey];
+        if (cached != null && (cached['displayName'] != null || cached['username'] != null)) {
+          canonicalMap[msgKey] = PrivateContactModel(
+            id: msgKey,
+            displayName: cached['displayName']?.toString() ?? cached['username']?.toString() ?? 'Contact',
+            username: cached['username']?.toString() ?? normMsgKey,
+            isOnline: false,
+            unreadCount: 0,
+          );
+        } else if (!msgKey.startsWith('usr_') && msgKey.length >= 20 && !msgKey.contains(' ') && !msgKey.contains('@')) {
+          // Raw UID hash without profile: fetch profile in background, do not show raw hash as contact
+          _fetchUserForChatIfMissing(msgKey);
+        } else {
+          canonicalMap[msgKey] = PrivateContactModel(
+            id: msgKey,
+            displayName: msgKey.startsWith('usr_') ? msgKey.replaceFirst('usr_', '@') : msgKey,
+            username: msgKey.startsWith('usr_') ? msgKey.replaceFirst('usr_', '') : msgKey,
+            isOnline: false,
+            unreadCount: 0,
+          );
+        }
       }
     }
 
@@ -1251,6 +1267,8 @@ class PrivateChatProvider extends ChangeNotifier {
     _messagesSubscription = null;
     _contactsSubscription?.cancel();
     _contactsSubscription = null;
+    _contactsLowerSubscription?.cancel();
+    _contactsLowerSubscription = null;
     _requestsSubscription?.cancel();
     _requestsSubscription = null;
     _usernameRequestsSubscription?.cancel();
@@ -1265,6 +1283,8 @@ class PrivateChatProvider extends ChangeNotifier {
     _recentChatsSubscription = null;
     _recentChatsUsernameSubscription?.cancel();
     _recentChatsUsernameSubscription = null;
+    _recentChatsLowerSubscription?.cancel();
+    _recentChatsLowerSubscription = null;
     _infoConnectedSubscription?.cancel();
     _infoConnectedSubscription = null;
     for (final sub in _contactPresenceSubs.values) {
@@ -1356,8 +1376,16 @@ class PrivateChatProvider extends ChangeNotifier {
         processRecentChatsSnapshot(event.snapshot);
       }, onError: (_) {});
 
+      final lowerId = userId.toLowerCase().trim();
+      if (lowerId != userId) {
+        final lowerRef = FirebaseDatabase.instance.ref('users/$lowerId/recent_chats');
+        _recentChatsLowerSubscription = lowerRef.onValue.listen((event) {
+          processRecentChatsSnapshot(event.snapshot);
+        }, onError: (_) {});
+      }
+
       final uname = _currentUsername;
-      if (uname != null && uname.isNotEmpty && uname != userId) {
+      if (uname != null && uname.isNotEmpty && uname != userId && uname != lowerId) {
         final uRef = FirebaseDatabase.instance.ref('users/$uname/recent_chats');
         _recentChatsUsernameSubscription = uRef.onValue.listen((event) {
           processRecentChatsSnapshot(event.snapshot);
@@ -1370,64 +1398,88 @@ class PrivateChatProvider extends ChangeNotifier {
   final Set<String> _pendingStatusUpdates = {};
   final Map<String, bool> _myTypingStatus = {};
 
-  void _listenToFirebaseUserContacts(String userId) {
-    _contactsSubscription?.cancel();
-    try {
-      final ref = FirebaseDatabase.instance.ref('users/$userId/contacts');
-      _contactsSubscription = ref.onValue.listen((event) {
-        _contacts.clear();
-        if (event.snapshot.value != null && event.snapshot.value is Map) {
-          final rawMap = Map<String, dynamic>.from(event.snapshot.value as Map);
-          for (var entry in rawMap.entries) {
-            if (entry.value is Map) {
-              final contactJson = Map<String, dynamic>.from(entry.value as Map);
-              var contact = PrivateContactModel.fromJson(contactJson);
-              final cleanContactId = contact.id.toLowerCase().trim();
-              final normContactUname = _normalizeIdentifier(contact.username);
+  void _processContactsSnapshot(dynamic value) {
+    if (value != null && value is Map) {
+      final rawMap = Map<String, dynamic>.from(value);
+      for (var entry in rawMap.entries) {
+        if (entry.value is Map) {
+          final contactJson = Map<String, dynamic>.from(entry.value as Map);
+          var contact = PrivateContactModel.fromJson(contactJson);
+          final cleanContactId = contact.id.toLowerCase().trim();
+          final normContactUname = _normalizeIdentifier(contact.username);
 
-              // Skip if marked as deleted by user
-              if (_deletedConversationIds.contains(cleanContactId) ||
-                  (normContactUname.isNotEmpty && _deletedConversationIds.contains(normContactUname))) {
-                continue;
-              }
+          // Skip if marked as deleted by user
+          if (_deletedConversationIds.contains(cleanContactId) ||
+              (normContactUname.isNotEmpty && _deletedConversationIds.contains(normContactUname))) {
+            continue;
+          }
 
-              final curId = (_currentUserId ?? '').toLowerCase().trim();
-              final curUname = (_currentUsername ?? '').toLowerCase().trim();
-              if (contact.id.toLowerCase().trim() == curId || contact.username.toLowerCase().trim() == curUname) {
-                continue;
-              }
-              contact = _applyProfileCache(contact);
-              _contacts.add(contact);
-              // Clean up any temp contact for this user
-              _tempContacts.remove(contact.id);
-              _tempContacts.remove(contact.username);
-              _tempContacts.remove('usr_${contact.username}');
-              _tempContacts.remove('@${contact.username}');
-              _tempContacts.remove(_normalizeIdentifier(contact.username));
+          final curId = (_currentUserId ?? '').toLowerCase().trim();
+          final curUname = (_currentUsername ?? '').toLowerCase().trim();
+          if (contact.id.toLowerCase().trim() == curId || contact.username.toLowerCase().trim() == curUname) {
+            continue;
+          }
+          contact = _applyProfileCache(contact);
+          final existingIdx = _contacts.indexWhere((c) =>
+              c.id.toLowerCase() == cleanContactId ||
+              (_normalizeIdentifier(c.username).isNotEmpty &&
+               _normalizeIdentifier(c.username) == normContactUname));
+          if (existingIdx != -1) {
+            _contacts[existingIdx] = contact;
+          } else {
+            _contacts.add(contact);
+          }
 
-              // Merge messages from username / usr_ keys into canonical contact.id
-              _mergeMessageKeys(contact.username, contact.id);
-              _mergeMessageKeys('usr_${contact.username}', contact.id);
-              _mergeMessageKeys('@${contact.username}', contact.id);
-              _mergeMessageKeys(_normalizeIdentifier(contact.username), contact.id);
+          // Clean up any temp contact for this user
+          _tempContacts.remove(contact.id);
+          _tempContacts.remove(contact.username);
+          _tempContacts.remove('usr_${contact.username}');
+          _tempContacts.remove('@${contact.username}');
+          _tempContacts.remove(_normalizeIdentifier(contact.username));
 
-              _subscribeToContactChat(contact.id);
-              _subscribeToContactPresence(contact.id);
+          // Merge messages from username / usr_ keys into canonical contact.id
+          _mergeMessageKeys(contact.username, contact.id);
+          _mergeMessageKeys('usr_${contact.username}', contact.id);
+          _mergeMessageKeys('@${contact.username}', contact.id);
+          _mergeMessageKeys(_normalizeIdentifier(contact.username), contact.id);
 
-              if (contact.isGroup) {
-                for (final memberId in contact.memberIds) {
-                  if (memberId != _currentUserId) {
-                    _subscribeToContactPresence(memberId);
-                  }
-                }
+          _subscribeToContactChat(contact.id);
+          _subscribeToContactPresence(contact.id);
+
+          if (contact.isGroup) {
+            for (final memberId in contact.memberIds) {
+              if (memberId != _currentUserId) {
+                _subscribeToContactPresence(memberId);
               }
             }
           }
         }
-        notifyListeners();
+      }
+      notifyListeners();
+    }
+  }
+
+  void _listenToFirebaseUserContacts(String userId) {
+    _contactsSubscription?.cancel();
+    _contactsLowerSubscription?.cancel();
+    _contacts.clear();
+    try {
+      final ref = FirebaseDatabase.instance.ref('users/$userId/contacts');
+      _contactsSubscription = ref.onValue.listen((event) {
+        _processContactsSnapshot(event.snapshot.value);
       }, onError: (e) {
         debugPrint('Firebase RTDB contacts error: $e');
       });
+
+      final lowerId = userId.toLowerCase().trim();
+      if (lowerId != userId) {
+        final lowerRef = FirebaseDatabase.instance.ref('users/$lowerId/contacts');
+        _contactsLowerSubscription = lowerRef.onValue.listen((event) {
+          _processContactsSnapshot(event.snapshot.value);
+        }, onError: (e) {
+          debugPrint('Firebase RTDB lower contacts error: $e');
+        });
+      }
     } catch (e) {
       debugPrint('Firebase RTDB not initialized or offline: $e');
     }
@@ -1435,10 +1487,31 @@ class PrivateChatProvider extends ChangeNotifier {
 
   PrivateMessageModel _parseAndDecryptMessage(Map<String, dynamic> rawJson, String channelId) {
     final msg = PrivateMessageModel.fromJson(rawJson);
-    final decryptedText = EncryptionService.decryptText(msg.text, channelId);
-    final decryptedReply = msg.replyToText != null && msg.replyToText!.isNotEmpty
-        ? EncryptionService.decryptText(msg.replyToText!, channelId)
-        : msg.replyToText;
+    final normChannel = getConversationChannelId(channelId);
+
+    String decryptedText = EncryptionService.decryptText(msg.text, normChannel);
+    if (decryptedText.startsWith('🔒') && msg.chatId.isNotEmpty && msg.chatId != normChannel) {
+      final alt = EncryptionService.decryptText(msg.text, msg.chatId);
+      if (!alt.startsWith('🔒')) decryptedText = alt;
+    }
+    if (decryptedText.startsWith('🔒') && channelId != normChannel) {
+      final alt = EncryptionService.decryptText(msg.text, channelId);
+      if (!alt.startsWith('🔒')) decryptedText = alt;
+    }
+
+    String? decryptedReply = msg.replyToText;
+    if (msg.replyToText != null && msg.replyToText!.isNotEmpty) {
+      decryptedReply = EncryptionService.decryptText(msg.replyToText!, normChannel);
+      if (decryptedReply.startsWith('🔒') && msg.chatId.isNotEmpty && msg.chatId != normChannel) {
+        final alt = EncryptionService.decryptText(msg.replyToText!, msg.chatId);
+        if (!alt.startsWith('🔒')) decryptedReply = alt;
+      }
+      if (decryptedReply.startsWith('🔒') && channelId != normChannel) {
+        final alt = EncryptionService.decryptText(msg.replyToText!, channelId);
+        if (!alt.startsWith('🔒')) decryptedReply = alt;
+      }
+    }
+
     return msg.copyWith(
       text: decryptedText,
       replyToText: decryptedReply,
@@ -1467,9 +1540,16 @@ class PrivateChatProvider extends ChangeNotifier {
         _messages[contactId] = msgs;
         final canonicalId = resolveCanonicalId(contactId);
         _messages[canonicalId] = msgs;
+        final normContact = _normalizeIdentifier(contactId);
+        if (normContact.isNotEmpty) _messages[normContact] = msgs;
+        final normCanonical = _normalizeIdentifier(canonicalId);
+        if (normCanonical.isNotEmpty) _messages[normCanonical] = msgs;
+
         if (_activeChatId != null &&
             (getConversationChannelId(_activeChatId!) == channelId ||
              resolveCanonicalId(_activeChatId!) == canonicalId ||
+             _normalizeIdentifier(_activeChatId!) == normCanonical ||
+             _normalizeIdentifier(_activeChatId!) == normContact ||
              _activeChatId == contactId)) {
           _messages[_activeChatId!] = msgs;
         }
@@ -1747,15 +1827,23 @@ class PrivateChatProvider extends ChangeNotifier {
       return contactId;
     }
     if (contactId.startsWith('chat_')) {
+      final parts = contactId.substring(5).split('_');
+      if (parts.length == 2) {
+        final u1 = _normalizeIdentifier(resolveCanonicalId(parts[0]));
+        final u2 = _normalizeIdentifier(resolveCanonicalId(parts[1]));
+        final sorted = [u1, u2]..sort();
+        return 'chat_${sorted[0]}_${sorted[1]}';
+      }
       return contactId;
     }
     if (_currentUserId == null || _currentUserId!.isEmpty) return contactId;
 
     final canonicalTarget = resolveCanonicalId(contactId);
+    final normCurrent = _normalizeIdentifier(_currentUserId!);
+    final normTarget = _normalizeIdentifier(canonicalTarget);
 
-    return _currentUserId!.compareTo(canonicalTarget) < 0
-        ? 'chat_${_currentUserId}_$canonicalTarget'
-        : 'chat_${canonicalTarget}_$_currentUserId';
+    final sorted = [normCurrent, normTarget]..sort();
+    return 'chat_${sorted[0]}_${sorted[1]}';
   }
 
   bool isMyMessage(PrivateMessageModel msg) {
@@ -1971,13 +2059,28 @@ class PrivateChatProvider extends ChangeNotifier {
           'senderUsername': myUname,
         };
         final targetCanonical = resolveCanonicalId(_activeChatId!);
+        final lowerTarget = targetCanonical.toLowerCase().trim();
+        final lowerMe = _currentUserId!.toLowerCase().trim();
+
         // Write to recipient's recent_chats under their canonical ID
         FirebaseDatabase.instance.ref('users/$targetCanonical/recent_chats/$_currentUserId').set(dataForRecipient);
+        if (lowerTarget != targetCanonical) {
+          FirebaseDatabase.instance.ref('users/$lowerTarget/recent_chats/$_currentUserId').set(dataForRecipient);
+        }
+        if (lowerMe != _currentUserId) {
+          FirebaseDatabase.instance.ref('users/$targetCanonical/recent_chats/$lowerMe').set(dataForRecipient);
+          if (lowerTarget != targetCanonical) {
+            FirebaseDatabase.instance.ref('users/$lowerTarget/recent_chats/$lowerMe').set(dataForRecipient);
+          }
+        }
         if (_activeChatId != targetCanonical && !_activeChatId!.startsWith('chat_')) {
           FirebaseDatabase.instance.ref('users/$_activeChatId/recent_chats/$_currentUserId').set(dataForRecipient);
         }
         if (myUname.isNotEmpty && myUname != _currentUserId) {
           FirebaseDatabase.instance.ref('users/$targetCanonical/recent_chats/$myUname').set(dataForRecipient);
+          if (lowerTarget != targetCanonical) {
+            FirebaseDatabase.instance.ref('users/$lowerTarget/recent_chats/$myUname').set(dataForRecipient);
+          }
         }
         // If recipient has a distinct username, also write under users/$contactUname
         if (contactUname.isNotEmpty && contactUname != 'user' && contactUname != targetCanonical) {
@@ -2011,6 +2114,15 @@ class PrivateChatProvider extends ChangeNotifier {
           'senderUsername': contactUname,
         };
         FirebaseDatabase.instance.ref('users/$_currentUserId/recent_chats/$targetCanonical').set(dataForSender);
+        if (lowerMe != _currentUserId) {
+          FirebaseDatabase.instance.ref('users/$lowerMe/recent_chats/$targetCanonical').set(dataForSender);
+        }
+        if (lowerTarget != targetCanonical) {
+          FirebaseDatabase.instance.ref('users/$_currentUserId/recent_chats/$lowerTarget').set(dataForSender);
+          if (lowerMe != _currentUserId) {
+            FirebaseDatabase.instance.ref('users/$lowerMe/recent_chats/$lowerTarget').set(dataForSender);
+          }
+        }
         if (_activeChatId != targetCanonical && !_activeChatId!.startsWith('chat_')) {
           FirebaseDatabase.instance.ref('users/$_currentUserId/recent_chats/$_activeChatId').set(dataForSender);
         }
@@ -2860,15 +2972,35 @@ class PrivateChatProvider extends ChangeNotifier {
 
       if (_currentUserId != null) {
         try {
+          final curUid = _currentUserId!;
+          final lowerCurUid = curUid.toLowerCase().trim();
+          final senderId = req.senderId;
+          final lowerSenderId = senderId.toLowerCase().trim();
+
           // 1. Add sender to receiver's contacts
           await FirebaseDatabase.instance
-              .ref('users/$_currentUserId/contacts/${req.senderId}')
+              .ref('users/$curUid/contacts/$senderId')
               .set(newContact.toJson());
+          if (lowerCurUid != curUid) {
+            await FirebaseDatabase.instance
+                .ref('users/$lowerCurUid/contacts/$senderId')
+                .set(newContact.toJson());
+          }
+          if (lowerSenderId != senderId) {
+            await FirebaseDatabase.instance
+                .ref('users/$curUid/contacts/$lowerSenderId')
+                .set(newContact.toJson());
+            if (lowerCurUid != curUid) {
+              await FirebaseDatabase.instance
+                  .ref('users/$lowerCurUid/contacts/$lowerSenderId')
+                  .set(newContact.toJson());
+            }
+          }
 
           // 2. Also add receiver to sender's contacts (fetch receiver's display name)
           String receiverDisplayName = req.receiverUsername;
           try {
-            final receiverSnap = await FirebaseDatabase.instance.ref('users/$_currentUserId').get();
+            final receiverSnap = await FirebaseDatabase.instance.ref('users/$curUid').get();
             if (receiverSnap.exists && receiverSnap.value is Map) {
               final data = Map<String, dynamic>.from(receiverSnap.value as Map);
               receiverDisplayName = data['displayName']?.toString() ?? req.receiverUsername;
@@ -2876,7 +3008,7 @@ class PrivateChatProvider extends ChangeNotifier {
           } catch (_) {}
 
           final receiverContact = PrivateContactModel(
-            id: _currentUserId!,
+            id: curUid,
             displayName: receiverDisplayName,
             username: req.receiverUsername,
             isOnline: true,
@@ -2884,8 +3016,23 @@ class PrivateChatProvider extends ChangeNotifier {
             unreadCount: 0,
           );
           await FirebaseDatabase.instance
-              .ref('users/${req.senderId}/contacts/$_currentUserId')
+              .ref('users/$senderId/contacts/$curUid')
               .set(receiverContact.toJson());
+          if (lowerSenderId != senderId) {
+            await FirebaseDatabase.instance
+                .ref('users/$lowerSenderId/contacts/$curUid')
+                .set(receiverContact.toJson());
+          }
+          if (lowerCurUid != curUid) {
+            await FirebaseDatabase.instance
+                .ref('users/$senderId/contacts/$lowerCurUid')
+                .set(receiverContact.toJson());
+            if (lowerSenderId != senderId) {
+              await FirebaseDatabase.instance
+                  .ref('users/$lowerSenderId/contacts/$lowerCurUid')
+                  .set(receiverContact.toJson());
+            }
+          }
         } catch (e) {
           debugPrint('Firebase contact write error on accept: $e');
         }

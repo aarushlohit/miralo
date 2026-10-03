@@ -675,5 +675,28 @@ void main() {
       expect(chat.allConversations.any((c) => c.id == 'user_to_delete'), isFalse);
       expect(chat.activeMessages.isEmpty, isTrue);
     });
+
+    test('PrivateChatProvider getConversationChannelId is deterministic regardless of UID casing on both sides', () {
+      final userA = PrivateChatProvider();
+      userA.initUserSession('rfTQYOEpDTNUy0aU2IqqG4pNdZZ2', username: 'aarushlohit');
+
+      final userB = PrivateChatProvider();
+      userB.initUserSession('bRsVK5pEZwPiCyHAF4PnbL3Cmcd2', username: 'shashi');
+
+      // User A generates channel for User B
+      final channelFromA = userA.getConversationChannelId('bRsVK5pEZwPiCyHAF4PnbL3Cmcd2');
+      // User A generates channel if target is lowercased
+      final channelFromALower = userA.getConversationChannelId('brsvk5pezwpicyhaf4pnbl3cmcd2');
+      // User B generates channel for User A
+      final channelFromB = userB.getConversationChannelId('rfTQYOEpDTNUy0aU2IqqG4pNdZZ2');
+      // User B generates channel if target is lowercased
+      final channelFromBLower = userB.getConversationChannelId('rftqyoepdtnuy0au2iqqg4pndzz2');
+
+      // ALL 4 MUST BE EXACTLY IDENTICAL
+      expect(channelFromA, equals(channelFromB));
+      expect(channelFromA, equals(channelFromALower));
+      expect(channelFromA, equals(channelFromBLower));
+      expect(channelFromA, equals('chat_brsvk5pezwpicyhaf4pnbl3cmcd2_rftqyoepdtnuy0au2iqqg4pndzz2'));
+    });
   });
 }
