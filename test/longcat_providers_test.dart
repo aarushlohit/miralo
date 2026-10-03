@@ -263,24 +263,24 @@ void main() {
     test('Special users aarushlohit and ashlinmirsha cannot block each other', () async {
       final chatProvider = PrivateChatProvider();
 
-      // ashlinmirsha attempts to block aarushlohit -> prohibited
+      // ashlinmirsha attempts to block aarushlohit -> prohibited with cuddle message
       final ashlinAttempts = await chatProvider.blockUser(
         targetId: 'usr_aarush_id',
         targetUsername: 'aarushlohit',
         targetDisplayName: 'Aarush',
         currentUsername: 'ashlinmirsha',
       );
-      expect(ashlinAttempts, isFalse);
+      expect(ashlinAttempts, contains('cuddle'));
       expect(chatProvider.isBlocked('usr_aarush_id'), isFalse);
 
-      // aarushlohit attempts to block ashlinmirsha -> prohibited
+      // aarushlohit attempts to block ashlinmirsha -> prohibited with cuddle message
       final aarushAttempts = await chatProvider.blockUser(
         targetId: 'usr_ashlin_id',
         targetUsername: 'ashlinmirsha',
         targetDisplayName: 'Ashlin',
         currentUsername: 'aarushlohit',
       );
-      expect(aarushAttempts, isFalse);
+      expect(aarushAttempts, contains('cuddle'));
       expect(chatProvider.isBlocked('usr_ashlin_id'), isFalse);
 
       // Regular user can be blocked
@@ -290,7 +290,7 @@ void main() {
         targetDisplayName: 'Random',
         currentUsername: 'aarushlohit',
       );
-      expect(regularBlock, isTrue);
+      expect(regularBlock, isNull);
       expect(chatProvider.isBlocked('usr_regular_id'), isTrue);
     });
   });

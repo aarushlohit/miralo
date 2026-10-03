@@ -780,8 +780,8 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                   dense: true,
                   onTap: () {
                     Navigator.pop(ctx);
-                    if (chat.isBlocked(contact.id)) {
-                      chat.unblockUser(contact.id);
+                    if (chat.isBlocked(contact.id, contact.username)) {
+                      chat.unblockUser(contact.id, contact.username);
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text('@${contact.username} has been unblocked.')),
                       );
@@ -789,17 +789,19 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                     }
 
                     final auth = Provider.of<AuthProvider>(context, listen: false);
-                    final cur = auth.currentUser?.username.toLowerCase().trim() ?? '';
-                    final target = contact.username.toLowerCase().trim();
+                    final cur = auth.currentUser?.username ?? '';
 
-                    if ((cur == 'ashlinmirsha' && target == 'aarushlohit') ||
-                        (cur == 'aarushlohit' && target == 'ashlinmirsha')) {
-                      final msg = cur == 'ashlinmirsha'
-                          ? "! how u can block your future hubby go cuddle him"
-                          : "bruh you made me for chatting with your loved one's how u can block its wrong !!!";
+                    final cuddleCheck = chat.checkBlockCuddleEasterEgg(
+                      targetId: contact.id,
+                      targetUsername: contact.username,
+                      targetDisplayName: contact.displayName,
+                      currentUsername: cur,
+                    );
+
+                    if (cuddleCheck != null) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text(msg),
+                          content: Text(cuddleCheck),
                           backgroundColor: LongcatColors.accent,
                           duration: const Duration(seconds: 4),
                         ),
@@ -817,20 +819,17 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                           TextButton(
                             onPressed: () async {
                               Navigator.pop(dCtx);
-                              final ok = await chat.blockUser(
+                              final cuddleMsg = await chat.blockUser(
                                 targetId: contact.id,
                                 targetUsername: contact.username,
                                 targetDisplayName: contact.displayName,
                                 currentUsername: cur,
                               );
-                              if (!ok) {
+                              if (cuddleMsg != null) {
                                 if (context.mounted) {
-                                  final msg = cur == 'ashlinmirsha'
-                                      ? "bruh you made me for chatting with your loved one's how u can block its wrong !!! how u can block your future hubby go cuddle him"
-                                      : "bruh you made me for chatting with your loved one's how u can block its wrong !!!";
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                      content: Text(msg),
+                                      content: Text(cuddleMsg),
                                       backgroundColor: LongcatColors.accent,
                                       duration: const Duration(seconds: 4),
                                     ),

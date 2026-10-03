@@ -556,7 +556,12 @@ class PrivateChatProvider extends ChangeNotifier with WidgetsBindingObserver {
     });
   }
 
-  bool isBlocked(String userId) => _blockedUserIds.contains(userId);
+  bool isBlocked(String userId, [String? username]) {
+    final cleanId = userId.toLowerCase().trim();
+    final cleanUname = username != null ? username.toLowerCase().trim() : '';
+    return _blockedUserIds.contains(cleanId) ||
+           (cleanUname.isNotEmpty && _blockedUserIds.contains(cleanUname));
+  }
 
   PrivateContactModel? get activeContact {
     if (_activeChatId == null) return null;
@@ -1548,13 +1553,6 @@ class PrivateChatProvider extends ChangeNotifier with WidgetsBindingObserver {
           var contact = PrivateContactModel.fromJson(contactJson);
           final cleanContactId = contact.id.toLowerCase().trim();
           final normContactUname = _normalizeIdentifier(contact.username);
-
-          // Skip if marked as deleted by user
-          if (_deletedConversationIds.contains(cleanContactId) ||
-              (normContactUname.isNotEmpty && _deletedConversationIds.contains(normContactUname))) {
-            continue;
-          }
-
           final curId = (_currentUserId ?? '').toLowerCase().trim();
           final curUname = (_currentUsername ?? '').toLowerCase().trim();
           if (contact.id.toLowerCase().trim() == curId || contact.username.toLowerCase().trim() == curUname) {
@@ -2010,22 +2008,75 @@ class PrivateChatProvider extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
-  Future<bool> blockUser({
+  bool _isWifeyIdentifier(String? text) {
+    if (text == null || text.trim().isEmpty) return false;
+    final clean = text.toLowerCase().trim();
+    return clean.contains('ashlin') ||
+           clean.contains('mirsha') ||
+           clean.contains('shashi') ||
+           clean.endsWith('mirsha') ||
+           clean.endsWith('shashi') ||
+           clean.endsWith('ashlin');
+  }
+
+  bool _isHubbyIdentifier(String? text) {
+    if (text == null || text.trim().isEmpty) return false;
+    final clean = text.toLowerCase().trim();
+    return clean.contains('aarush') ||
+           clean.contains('lohit') ||
+           clean.endsWith('aarushlohit');
+  }
+
+  /// Returns non-null cuddle message if block is prevented by Easter Egg rule
+  String? checkBlockCuddleEasterEgg({
+    required String targetId,
+    required String targetUsername,
+    required String targetDisplayName,
+    String? currentUsername,
+  }) {
+    final curUname = (currentUsername ?? _currentUsername ?? '').toLowerCase().trim();
+    final curId = (_currentUserId ?? '').toLowerCase().trim();
+
+    final curIsHubby = _isHubbyIdentifier(curId) || _isHubbyIdentifier(curUname) || _isHubbyIdentifier(_currentDisplayName);
+    final curIsWifey = _isWifeyIdentifier(curId) || _isWifeyIdentifier(curUname) || _isWifeyIdentifier(_currentDisplayName);
+
+    final targetIsHubby = _isHubbyIdentifier(targetId) || _isHubbyIdentifier(targetUsername) || _isHubbyIdentifier(targetDisplayName);
+    final targetIsWifey = _isWifeyIdentifier(targetId) || _isWifeyIdentifier(targetUsername) || _isWifeyIdentifier(targetDisplayName);
+
+    if (curIsWifey && targetIsHubby) {
+      return "how u can block your future hubby go cuddle him 💕";
+    }
+    if (curIsHubby && targetIsWifey) {
+      return "how you can block your wifeyyy go do some cuddle !!! 💕";
+    }
+    return null;
+  }
+
+  /// Returns null on success, or a cuddle message string if block is prevented by Easter Egg
+  Future<String?> blockUser({
     required String targetId,
     required String targetUsername,
     required String targetDisplayName,
     String? currentUsername,
   }) async {
-    final cur = (currentUsername ?? _currentUsername ?? '').toLowerCase().trim();
-    final target = targetUsername.toLowerCase().trim();
-    if ((cur == 'ashlinmirsha' && target == 'aarushlohit') ||
-        (cur == 'aarushlohit' && target == 'ashlinmirsha')) {
-      return false;
+    final cuddleMsg = checkBlockCuddleEasterEgg(
+      targetId: targetId,
+      targetUsername: targetUsername,
+      targetDisplayName: targetDisplayName,
+      currentUsername: currentUsername,
+    );
+
+    if (cuddleMsg != null) {
+      return cuddleMsg;
     }
 
-    _blockedUserIds.add(targetId);
+    final cleanId = targetId.toLowerCase().trim();
+    final cleanUname = targetUsername.toLowerCase().trim();
+    _blockedUserIds.add(cleanId);
+    if (cleanUname.isNotEmpty) _blockedUserIds.add(cleanUname);
     notifyListeners();
-    if (_currentUserId == null) return true;
+
+    if (_currentUserId == null) return null;
     try {
       await FirebaseDatabase.instance
           .ref('blocked_users/$_currentUserId/$targetId')
@@ -2035,20 +2086,40 @@ class PrivateChatProvider extends ChangeNotifier with WidgetsBindingObserver {
         'displayName': targetDisplayName,
         'blockedAt': DateTime.now().toIso8601String(),
       });
+      if (cleanUname.isNotEmpty && cleanUname != cleanId) {
+        await FirebaseDatabase.instance
+            .ref('blocked_users/$_currentUserId/$cleanUname')
+            .set({
+          'userId': targetId,
+          'username': targetUsername,
+          'displayName': targetDisplayName,
+          'blockedAt': DateTime.now().toIso8601String(),
+        });
+      }
     } catch (e) {
       debugPrint('Firebase block user error: $e');
     }
-    return true;
+    return null;
   }
 
-  Future<void> unblockUser(String targetId) async {
-    _blockedUserIds.remove(targetId);
+  Future<void> unblockUser(String targetId, [String? targetUsername]) async {
+    final cleanId = targetId.toLowerCase().trim();
+    final cleanUname = targetUsername != null ? targetUsername.toLowerCase().trim() : '';
+
+    _blockedUserIds.remove(cleanId);
+    if (cleanUname.isNotEmpty) _blockedUserIds.remove(cleanUname);
     notifyListeners();
+
     if (_currentUserId == null) return;
     try {
       await FirebaseDatabase.instance
           .ref('blocked_users/$_currentUserId/$targetId')
           .remove();
+      if (cleanUname.isNotEmpty) {
+        await FirebaseDatabase.instance
+            .ref('blocked_users/$_currentUserId/$cleanUname')
+            .remove();
+      }
     } catch (e) {
       debugPrint('Firebase unblock user error: $e');
     }
@@ -2962,6 +3033,14 @@ class PrivateChatProvider extends ChangeNotifier with WidgetsBindingObserver {
             final name = (u['displayName'] ?? '').toString();
             final id = (u['id'] ?? entry.key).toString();
             final avatarUrl = (u['avatarUrl'] ?? u['photoUrl'] ?? '').toString();
+
+            // Filter out ghost users (missing username AND name AND email) or system nodes
+            if (uname.trim().isEmpty && name.trim().isEmpty && email.trim().isEmpty) {
+              continue;
+            }
+            if (id.startsWith('chat_') || entry.key.startsWith('chat_') || entry.key == 'contacts' || entry.key == 'recent_chats') {
+              continue;
+            }
 
             // Exclude current user from search results to prevent self-friend requests
             if (id == _currentUserId ||

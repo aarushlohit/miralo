@@ -199,20 +199,17 @@ class _AddFriendSheetState extends State<AddFriendSheet> {
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              final ok = await chat.blockUser(
+              final cuddleMsg = await chat.blockUser(
                 targetId: targetId,
                 targetUsername: targetUsername,
                 targetDisplayName: displayName,
                 currentUsername: currentUsername,
               );
-              if (!ok) {
+              if (cuddleMsg != null) {
                 if (context.mounted) {
-                  final msg = currentUsername == 'ashlinmirsha'
-                      ? "! how u can block your future hubby go cuddle him"
-                      : "bruh you made me for chatting with your loved one's how u can block its wrong !!!";
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(msg),
+                      content: Text(cuddleMsg),
                       backgroundColor: AppColors.accent,
                       duration: const Duration(seconds: 4),
                     ),
