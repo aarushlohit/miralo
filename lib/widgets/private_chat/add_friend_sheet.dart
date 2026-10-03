@@ -524,7 +524,7 @@ class _AddFriendSheetState extends State<AddFriendSheet> {
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           child: Row(
                             children: [
-                              LongcatAvatar(name: name, size: 36, isOnline: !blocked),
+                              LongcatAvatar(name: name, size: 36, isOnline: privateChat.isUserOnline(targetId)),
                               const SizedBox(width: AppSpacing.sm),
                               Expanded(
                                 child: Column(
@@ -672,7 +672,7 @@ class _AddFriendSheetState extends State<AddFriendSheet> {
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           child: Row(
                             children: [
-                              LongcatAvatar(name: req.senderName, size: 36, isOnline: true),
+                              LongcatAvatar(name: req.senderName, size: 36, isOnline: privateChat.isUserOnline(req.senderId)),
                               const SizedBox(width: AppSpacing.sm),
                               Expanded(
                                 child: Column(

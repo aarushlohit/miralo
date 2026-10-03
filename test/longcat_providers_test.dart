@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:longcat/models/friend_request_model.dart';
@@ -727,6 +728,21 @@ void main() {
 
       // Must appear in allConversations
       expect(chat.allConversations.any((c) => c.username == 'shashi' || c.id == 'RouqD7kNfOeXwqfeHJ2oXqpUMY83'), isTrue);
+    });
+
+    test('PrivateChatProvider presence lifecycle and offline status', () {
+      final chat = PrivateChatProvider();
+
+      // Default presence is offline for any unknown user
+      expect(chat.isUserOnline('unknown_user'), isFalse);
+      expect(chat.getUserLastSeen('unknown_user'), equals('Active recently'));
+
+      // App lifecycle transitions
+      chat.didChangeAppLifecycleState(AppLifecycleState.paused);
+      expect(chat.isUserOnline('any_user'), isFalse);
+
+      chat.didChangeAppLifecycleState(AppLifecycleState.resumed);
+      expect(chat.isUserOnline('any_user'), isFalse);
     });
   });
 }

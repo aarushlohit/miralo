@@ -169,7 +169,9 @@ class PrivateContactModel {
       avatarUrl: json['avatarUrl']?.toString(),
       bio: json['bio']?.toString(),
       isOnline: json['isOnline'] == true,
-      lastSeenText: json['lastSeenText']?.toString() ?? 'recently',
+      lastSeenText: (json['lastSeenText'] != null && json['lastSeenText'].toString().isNotEmpty && json['lastSeenText'] != 'recently')
+          ? json['lastSeenText'].toString()
+          : 'Active recently',
       isMuted: json['isMuted'] == true,
       isPinned: json['isPinned'] == true,
       unreadCount: json['unreadCount'] is num

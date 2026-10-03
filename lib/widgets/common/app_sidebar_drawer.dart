@@ -815,7 +815,9 @@ class _AppSidebarDrawerState extends State<AppSidebarDrawer> {
                           ? 'New invitation · Tap to chat'
                           : (hasPendingRequest
                               ? 'Pending request'
-                              : (contact.isOnline ? 'Online' : 'Encrypted chat'));
+                              : (contact.isOnline
+                                  ? 'Online'
+                                  : (contact.lastSeenText.isNotEmpty ? contact.lastSeenText : 'Last seen recently')));
 
                       return _ContactItem(
                         name: displayName,

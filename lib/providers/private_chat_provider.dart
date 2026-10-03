@@ -13,7 +13,7 @@ import '../services/encryption_service.dart';
 import '../services/stealth_notification_service.dart';
 import 'library_provider.dart';
 
-class PrivateChatProvider extends ChangeNotifier {
+class PrivateChatProvider extends ChangeNotifier with WidgetsBindingObserver {
   final List<PrivateContactModel> _contacts = [];
   final List<FriendRequestModel> _pendingFriendRequests = [];
   final Map<String, List<PrivateMessageModel>> _messages = {};
@@ -28,6 +28,43 @@ class PrivateChatProvider extends ChangeNotifier {
   bool get showLastSeen => _showLastSeen;
   bool _sendReadReceipts = true;
   bool get sendReadReceipts => _sendReadReceipts;
+
+  // Presence lifecycle state & in-memory presence caches
+  bool _isAppForeground = true;
+  final Map<String, bool> _onlineStatusCache = {};
+  final Map<String, String> _lastSeenCache = {};
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _isAppForeground = true;
+      _syncMyPresence();
+    } else if (state == AppLifecycleState.paused ||
+               state == AppLifecycleState.inactive ||
+               state == AppLifecycleState.detached ||
+               state == AppLifecycleState.hidden) {
+      _isAppForeground = false;
+      _setMyPresenceOffline();
+    }
+  }
+
+  bool isUserOnline(String? idOrUsername) {
+    if (idOrUsername == null || idOrUsername.isEmpty) return false;
+    final canonicalId = resolveCanonicalId(idOrUsername);
+    return _onlineStatusCache[canonicalId] ??
+        _onlineStatusCache[canonicalId.toLowerCase()] ??
+        _onlineStatusCache[_normalizeIdentifier(idOrUsername)] ??
+        false;
+  }
+
+  String getUserLastSeen(String? idOrUsername) {
+    if (idOrUsername == null || idOrUsername.isEmpty) return 'Active recently';
+    final canonicalId = resolveCanonicalId(idOrUsername);
+    return _lastSeenCache[canonicalId] ??
+        _lastSeenCache[canonicalId.toLowerCase()] ??
+        _lastSeenCache[_normalizeIdentifier(idOrUsername)] ??
+        'Active recently';
+  }
 
   // sent_requests: targetUsername -> status ('pending'|'accepted'|'rejected')
   final Map<String, String> _sentRequestStatuses = {};
@@ -268,7 +305,8 @@ class PrivateChatProvider extends ChangeNotifier {
           id: senderId,
           displayName: req.senderName,
           username: senderUsername,
-          isOnline: true,
+          isOnline: isUserOnline(senderId),
+          lastSeenText: getUserLastSeen(senderId),
           unreadCount: 0,
           isPendingInvitation: true,
         );
@@ -534,7 +572,8 @@ class PrivateChatProvider extends ChangeNotifier {
           id: req.senderId,
           displayName: req.senderName,
           username: req.senderUsername,
-          isOnline: true,
+          isOnline: isUserOnline(req.senderId),
+          lastSeenText: getUserLastSeen(req.senderId),
           isPendingInvitation: true,
         ));
       }
@@ -545,7 +584,8 @@ class PrivateChatProvider extends ChangeNotifier {
           id: req.receiverId,
           displayName: req.receiverUsername,
           username: req.receiverUsername,
-          isOnline: false,
+          isOnline: isUserOnline(req.receiverId),
+          lastSeenText: getUserLastSeen(req.receiverId),
         ));
       }
     }
@@ -564,7 +604,8 @@ class PrivateChatProvider extends ChangeNotifier {
         id: id,
         displayName: clean.startsWith('@') ? clean : '@$clean',
         username: clean.replaceFirst('@', ''),
-        isOnline: false,
+        isOnline: isUserOnline(id),
+        lastSeenText: getUserLastSeen(id),
       ));
     }
     return null;
@@ -897,6 +938,9 @@ class PrivateChatProvider extends ChangeNotifier {
   }
 
   PrivateChatProvider() {
+    try {
+      WidgetsBinding.instance.addObserver(this);
+    } catch (_) {}
     _loadPrivacySettings();
     _loadFavoriteGifs();
     _loadDeletedConversations();
@@ -1106,23 +1150,75 @@ class PrivateChatProvider extends ChangeNotifier {
   void _syncMyPresence() {
     if (_currentUserId == null) return;
     try {
-      final presenceRef = FirebaseDatabase.instance.ref('users/$_currentUserId/presence');
+      final curUid = _currentUserId!;
+      final lowerCurUid = curUid.toLowerCase().trim();
+      final isOnline = _isAppForeground && _showOnlineStatus;
+      final presenceData = {
+        'isOnline': isOnline,
+        'lastSeen': ServerValue.timestamp,
+      };
+
+      final presenceRef = FirebaseDatabase.instance.ref('users/$curUid/presence');
       presenceRef.onDisconnect().set({
         'isOnline': false,
         'lastSeen': ServerValue.timestamp,
       });
-      presenceRef.set({
-        'isOnline': _showOnlineStatus,
+      presenceRef.set(presenceData);
+
+      if (lowerCurUid != curUid) {
+        final lowerRef = FirebaseDatabase.instance.ref('users/$lowerCurUid/presence');
+        lowerRef.onDisconnect().set({
+          'isOnline': false,
+          'lastSeen': ServerValue.timestamp,
+        });
+        lowerRef.set(presenceData);
+      }
+
+      if (_currentUsername != null && _currentUsername!.isNotEmpty) {
+        final uname = _normalizeIdentifier(_currentUsername!);
+        if (uname.isNotEmpty && uname != curUid && uname != lowerCurUid) {
+          final unameRef = FirebaseDatabase.instance.ref('users/$uname/presence');
+          unameRef.onDisconnect().set({
+            'isOnline': false,
+            'lastSeen': ServerValue.timestamp,
+          });
+          unameRef.set(presenceData);
+        }
+      }
+    } catch (_) {}
+  }
+
+  void _setMyPresenceOffline() {
+    if (_currentUserId == null) return;
+    try {
+      final curUid = _currentUserId!;
+      final lowerCurUid = curUid.toLowerCase().trim();
+      final offlineData = {
+        'isOnline': false,
         'lastSeen': ServerValue.timestamp,
-      });
+      };
+
+      FirebaseDatabase.instance.ref('users/$curUid/presence').set(offlineData);
+      if (lowerCurUid != curUid) {
+        FirebaseDatabase.instance.ref('users/$lowerCurUid/presence').set(offlineData);
+      }
+      if (_currentUsername != null && _currentUsername!.isNotEmpty) {
+        final uname = _normalizeIdentifier(_currentUsername!);
+        if (uname.isNotEmpty && uname != curUid && uname != lowerCurUid) {
+          FirebaseDatabase.instance.ref('users/$uname/presence').set(offlineData);
+        }
+      }
     } catch (_) {}
   }
 
   void _subscribeToContactPresence(String contactId) {
-    if (!_contactProfileSubs.containsKey(contactId)) {
+    if (contactId.isEmpty || contactId.startsWith('chat_')) return;
+    final canonicalId = resolveCanonicalId(contactId);
+
+    if (!_contactProfileSubs.containsKey(canonicalId)) {
       try {
-        final profileRef = FirebaseDatabase.instance.ref('users/$contactId');
-        _contactProfileSubs[contactId] = profileRef.onValue.listen((event) {
+        final profileRef = FirebaseDatabase.instance.ref('users/$canonicalId');
+        _contactProfileSubs[canonicalId] = profileRef.onValue.listen((event) {
           if (event.snapshot.value != null && event.snapshot.value is Map) {
             final data = Map<String, dynamic>.from(event.snapshot.value as Map);
             final avatarUrl = data['avatarUrl']?.toString();
@@ -1142,20 +1238,20 @@ class PrivateChatProvider extends ChangeNotifier {
               if (username != null && username.isNotEmpty) 'username': username,
             };
 
-            _cachedUserProfiles[contactId] = cacheEntry;
+            _cachedUserProfiles[canonicalId] = cacheEntry;
             if (username != null && username.isNotEmpty) {
               _cachedUserProfiles[_normalizeIdentifier(username)] = cacheEntry;
               _cachedUserProfiles[username] = cacheEntry;
             }
 
             for (int i = 0; i < _contacts.length; i++) {
-              if (_contacts[i].id == contactId ||
+              if (_contacts[i].id == canonicalId ||
                   (username != null && _normalizeIdentifier(_contacts[i].username) == _normalizeIdentifier(username))) {
                 _contacts[i] = _applyProfileCache(_contacts[i]);
               }
             }
-            if (_tempContacts.containsKey(contactId)) {
-              _tempContacts[contactId] = _applyProfileCache(_tempContacts[contactId]!);
+            if (_tempContacts.containsKey(canonicalId)) {
+              _tempContacts[canonicalId] = _applyProfileCache(_tempContacts[canonicalId]!);
             }
             if (username != null && _tempContacts.containsKey(username)) {
               _tempContacts[username] = _applyProfileCache(_tempContacts[username]!);
@@ -1166,77 +1262,108 @@ class PrivateChatProvider extends ChangeNotifier {
       } catch (_) {}
     }
 
-    if (_contactPresenceSubs.containsKey(contactId)) return;
+    if (_contactPresenceSubs.containsKey(canonicalId)) return;
     try {
-      final ref = FirebaseDatabase.instance.ref('users/$contactId/presence');
-      _contactPresenceSubs[contactId] = ref.onValue.listen((event) {
+      final ref = FirebaseDatabase.instance.ref('users/$canonicalId/presence');
+      _contactPresenceSubs[canonicalId] = ref.onValue.listen((event) {
+        bool isOnline = false;
+        String lastSeenStr = 'Active recently';
+
         if (event.snapshot.value != null && event.snapshot.value is Map) {
           final data = Map<String, dynamic>.from(event.snapshot.value as Map);
-          final isOnline = data['isOnline'] == true;
+          isOnline = data['isOnline'] == true;
           final lastSeenRaw = data['lastSeen'];
           int? lastSeenMs;
           if (lastSeenRaw is num) {
             lastSeenMs = lastSeenRaw.toInt();
           }
 
-          String lastSeenStr = 'Active recently';
           if (isOnline) {
             lastSeenStr = 'Online';
           } else if (lastSeenMs != null) {
             final dt = DateTime.fromMillisecondsSinceEpoch(lastSeenMs);
             final now = DateTime.now();
             final diff = now.difference(dt);
-            if (diff.inMinutes < 2) {
+            if (diff.inSeconds < 60) {
               lastSeenStr = 'Last seen just now';
-            } else if (diff.inHours < 1) {
+            } else if (diff.inMinutes < 60) {
               lastSeenStr = 'Last seen ${diff.inMinutes}m ago';
-            } else if (diff.inDays == 0 && now.day == dt.day) {
+            } else if (diff.inHours < 24 && now.day == dt.day) {
               final h = dt.hour.toString().padLeft(2, '0');
               final m = dt.minute.toString().padLeft(2, '0');
               lastSeenStr = 'Last seen today at $h:$m';
+            } else if (diff.inDays <= 1 || (diff.inHours < 48 && now.day - dt.day == 1)) {
+              final h = dt.hour.toString().padLeft(2, '0');
+              final m = dt.minute.toString().padLeft(2, '0');
+              lastSeenStr = 'Last seen yesterday at $h:$m';
             } else {
               lastSeenStr = 'Last seen recently';
             }
           }
+        }
 
-          final contactIdx = _contacts.indexWhere((c) => c.id == contactId);
-          if (contactIdx != -1) {
-            _contacts[contactIdx] = _contacts[contactIdx].copyWith(
+        // Cache presence
+        _onlineStatusCache[canonicalId] = isOnline;
+        _onlineStatusCache[canonicalId.toLowerCase()] = isOnline;
+        _lastSeenCache[canonicalId] = lastSeenStr;
+        _lastSeenCache[canonicalId.toLowerCase()] = lastSeenStr;
+
+        final normCanonical = _normalizeIdentifier(canonicalId);
+        if (normCanonical.isNotEmpty) {
+          _onlineStatusCache[normCanonical] = isOnline;
+          _lastSeenCache[normCanonical] = lastSeenStr;
+        }
+
+        for (int i = 0; i < _contacts.length; i++) {
+          final c = _contacts[i];
+          if (c.id == canonicalId ||
+              c.id.toLowerCase() == canonicalId.toLowerCase() ||
+              _normalizeIdentifier(c.username) == normCanonical) {
+            _contacts[i] = c.copyWith(
               isOnline: isOnline,
               lastSeenText: lastSeenStr,
             );
           }
-          if (_tempContacts.containsKey(contactId)) {
-            _tempContacts[contactId] = _tempContacts[contactId]!.copyWith(
+        }
+
+        for (final key in _tempContacts.keys.toList()) {
+          final tc = _tempContacts[key];
+          if (tc != null &&
+              (tc.id == canonicalId ||
+               tc.id.toLowerCase() == canonicalId.toLowerCase() ||
+               _normalizeIdentifier(tc.username) == normCanonical)) {
+            _tempContacts[key] = tc.copyWith(
               isOnline: isOnline,
               lastSeenText: lastSeenStr,
             );
           }
-          if (isOnline) {
-            final msgs = _messages[contactId];
-            if (msgs != null && msgs.isNotEmpty) {
-              final channelId = getConversationChannelId(contactId);
-              for (int i = 0; i < msgs.length; i++) {
-                final m = msgs[i];
-                if (isMyMessage(m) && m.status == 'sent') {
-                  msgs[i] = m.copyWith(status: 'delivered');
-                  try {
-                    FirebaseDatabase.instance
-                        .ref('chats/$channelId/messages/${m.id}/status')
-                        .set('delivered');
-                  } catch (_) {}
-                }
+        }
+
+        if (isOnline) {
+          final msgs = _messages[canonicalId];
+          if (msgs != null && msgs.isNotEmpty) {
+            final channelId = getConversationChannelId(canonicalId);
+            for (int i = 0; i < msgs.length; i++) {
+              final m = msgs[i];
+              if (isMyMessage(m) && m.status == 'sent') {
+                msgs[i] = m.copyWith(status: 'delivered');
+                try {
+                  FirebaseDatabase.instance
+                      .ref('chats/$channelId/messages/${m.id}/status')
+                      .set('delivered');
+                } catch (_) {}
               }
             }
           }
-          notifyListeners();
         }
+        notifyListeners();
       }, onError: (_) {});
     } catch (_) {}
   }
 
   /// Called on logout — cancels all Firebase subscriptions and clears all state.
   void clearSession() {
+    _setMyPresenceOffline();
     _clearAllSubscriptions();
     _contacts.clear();
     _tempContacts.clear();
@@ -1249,6 +1376,8 @@ class PrivateChatProvider extends ChangeNotifier {
     _currentUsername = null;
     _currentUserEmail = null;
     _currentDisplayName = null;
+    _onlineStatusCache.clear();
+    _lastSeenCache.clear();
     notifyListeners();
   }
 
@@ -1414,6 +1543,10 @@ class PrivateChatProvider extends ChangeNotifier {
             continue;
           }
           contact = _applyProfileCache(contact);
+          contact = contact.copyWith(
+            isOnline: isUserOnline(contact.id),
+            lastSeenText: getUserLastSeen(contact.id),
+          );
           final existingIdx = _contacts.indexWhere((c) =>
               c.id.toLowerCase() == cleanContactId ||
               (_normalizeIdentifier(c.username).isNotEmpty &&
@@ -1976,7 +2109,8 @@ class PrivateChatProvider extends ChangeNotifier {
           id: canonicalId,
           displayName: req.senderName,
           username: req.senderUsername,
-          isOnline: true,
+          isOnline: isUserOnline(canonicalId),
+          lastSeenText: getUserLastSeen(canonicalId),
           unreadCount: 0,
           isPendingInvitation: true,
         );
@@ -1985,8 +2119,8 @@ class PrivateChatProvider extends ChangeNotifier {
           id: canonicalId,
           displayName: displayName ?? username ?? 'User',
           username: username ?? (chatId.startsWith('usr_') ? chatId.replaceFirst('usr_', '') : chatId),
-          isOnline: false,
-          lastSeenText: 'Active recently',
+          isOnline: isUserOnline(canonicalId),
+          lastSeenText: getUserLastSeen(canonicalId),
           unreadCount: 0,
         );
       } else {
@@ -3046,8 +3180,8 @@ class PrivateChatProvider extends ChangeNotifier {
         id: req.senderId,
         displayName: req.senderName,
         username: req.senderUsername,
-        isOnline: true,
-        lastSeenText: 'Online',
+        isOnline: isUserOnline(req.senderId),
+        lastSeenText: getUserLastSeen(req.senderId),
         unreadCount: 0,
       );
       final existingIndex = _contacts.indexWhere(
@@ -3117,8 +3251,8 @@ class PrivateChatProvider extends ChangeNotifier {
             id: curUid,
             displayName: receiverDisplayName,
             username: req.receiverUsername,
-            isOnline: true,
-            lastSeenText: 'Online',
+            isOnline: _showOnlineStatus && _isAppForeground,
+            lastSeenText: (_showOnlineStatus && _isAppForeground) ? 'Online' : 'Active recently',
             unreadCount: 0,
           );
           await FirebaseDatabase.instance
@@ -3331,24 +3465,15 @@ class PrivateChatProvider extends ChangeNotifier {
 
   @override
   void dispose() {
+    try {
+      WidgetsBinding.instance.removeObserver(this);
+    } catch (_) {}
+    _setMyPresenceOffline();
     for (var sub in _channelSubscriptions.values) {
       sub.cancel();
     }
     _channelSubscriptions.clear();
-    _messagesSubscription?.cancel();
-    _contactsSubscription?.cancel();
-    _requestsSubscription?.cancel();
-    _usernameRequestsSubscription?.cancel();
-    _emailRequestsSubscription?.cancel();
-    _sentRequestsSubscription?.cancel();
-    _blockedSubscription?.cancel();
-    _recentChatsSubscription?.cancel();
-    _recentChatsUsernameSubscription?.cancel();
-    _infoConnectedSubscription?.cancel();
-    for (final sub in _contactPresenceSubs.values) {
-      sub.cancel();
-    }
-    _contactPresenceSubs.clear();
+    _clearAllSubscriptions();
     super.dispose();
   }
 }
