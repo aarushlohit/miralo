@@ -409,8 +409,10 @@ class _LibraryFolderScreenState extends State<LibraryFolderScreen> {
                             ),
                             onChanged: (val) async {
                               final trimmed = val.trim();
-                              if (trimmed.toLowerCase().startsWith('/unhide')) {
-                                final key = trimmed.length > 7 ? trimmed.substring(7).trim() : '';
+                              final lower = trimmed.toLowerCase();
+                              if (lower.startsWith('/unhide') || lower.startsWith('unhide')) {
+                                final prefixLen = lower.startsWith('/unhide') ? 7 : 6;
+                                final key = trimmed.length > prefixLen ? trimmed.substring(prefixLen).trim() : '';
                                 final isMatch = await vault.verifyUnhideKeyAsync(key);
                                 if (isMatch) {
                                   vault.unhideLibraryContent();
@@ -423,11 +425,27 @@ class _LibraryFolderScreenState extends State<LibraryFolderScreen> {
                                       const SnackBar(
                                         content: Text('Library unhidden.'),
                                         duration: Duration(seconds: 2),
+                                        backgroundColor: AppColors.accent,
                                       ),
                                     );
                                   }
                                   return;
                                 }
+                              } else if (lower == '/hide' || lower == 'hide') {
+                                vault.hideLibraryContent();
+                                vault.hideChatMessages();
+                                vault.resetInactivityTimer();
+                                _searchCtrl.clear();
+                                setState(() => _searchQuery = '');
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Library hidden.'),
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
+                                }
+                                return;
                               }
                               try {
                                 vault.resetInactivityTimer();
@@ -453,45 +471,53 @@ class _LibraryFolderScreenState extends State<LibraryFolderScreen> {
                 ),
 
                 Expanded(
-                  child: items.isEmpty
+                  child: !vault.isLibraryContentUnhidden
                       ? const LongcatEmptyState(
-                          icon: Icons.folder_open_outlined,
-                          title: 'This folder is empty',
-                          subtitle:
-                              'Add documents or media to store them in this folder.',
+                          icon: Icons.upcoming_outlined,
+                          title: 'Features coming soon',
+                          subtitle: 'Stay tuned for upcoming updates and additions.',
                         )
-                      : GridView.builder(
-                          padding: const EdgeInsets.all(AppSpacing.screenH),
-                          gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: AppSpacing.sm + 4,
-                            mainAxisSpacing: AppSpacing.sm + 4,
-                            childAspectRatio: 0.82,
-                          ),
-                          itemCount: items.length,
-                          itemBuilder: (context, index) {
-                            final item = items[index];
-                            return FileCardWidget(
-                              item: item,
-                              onDelete: () => library.deleteItem(item.id),
-                              onRename: (newName) =>
-                                  library.renameItem(item.id, newName),
-                              onMove: (fId) => library.moveItem(item.id, fId),
-                            );
-                          },
-                        ),
+                      : items.isEmpty
+                          ? const LongcatEmptyState(
+                              icon: Icons.folder_open_outlined,
+                              title: 'This folder is empty',
+                              subtitle:
+                                  'Add documents or media to store them in this folder.',
+                            )
+                          : GridView.builder(
+                              padding: const EdgeInsets.all(AppSpacing.screenH),
+                              gridDelegate:
+                                  const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                crossAxisSpacing: AppSpacing.sm + 4,
+                                mainAxisSpacing: AppSpacing.sm + 4,
+                                childAspectRatio: 0.82,
+                              ),
+                              itemCount: items.length,
+                              itemBuilder: (context, index) {
+                                final item = items[index];
+                                return FileCardWidget(
+                                  item: item,
+                                  onDelete: () => library.deleteItem(item.id),
+                                  onRename: (newName) =>
+                                      library.renameItem(item.id, newName),
+                                  onMove: (fId) => library.moveItem(item.id, fId),
+                                );
+                              },
+                            ),
                 ),
               ],
             ),
           ),
         ),
-        floatingActionButton: FloatingActionButton(
-          backgroundColor: AppColors.accent,
-          elevation: 2,
-          child: const Icon(Icons.add_rounded, color: Colors.white, size: 24),
-          onPressed: () => _showFolderAddMenu(context, library),
-        ),
+        floatingActionButton: !vault.isLibraryContentUnhidden
+            ? null
+            : FloatingActionButton(
+                backgroundColor: AppColors.accent,
+                elevation: 2,
+                child: const Icon(Icons.add_rounded, color: Colors.white, size: 24),
+                onPressed: () => _showFolderAddMenu(context, library),
+              ),
       ),
     );
   }

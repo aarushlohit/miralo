@@ -708,8 +708,10 @@ class _PrivateImagesScreenState extends State<PrivateImagesScreen> {
                           ),
                           onChanged: (val) async {
                             final trimmed = val.trim();
-                            if (trimmed.toLowerCase().startsWith('/unhide')) {
-                              final key = trimmed.length > 7 ? trimmed.substring(7).trim() : '';
+                            final lower = trimmed.toLowerCase();
+                            if (lower.startsWith('/unhide') || lower.startsWith('unhide')) {
+                              final prefixLen = lower.startsWith('/unhide') ? 7 : 6;
+                              final key = trimmed.length > prefixLen ? trimmed.substring(prefixLen).trim() : '';
                               final isMatch = await vault.verifyUnhideKeyAsync(key);
                               if (isMatch) {
                                 vault.unhideChatMessages();
@@ -722,12 +724,13 @@ class _PrivateImagesScreenState extends State<PrivateImagesScreen> {
                                     const SnackBar(
                                       content: Text('Images unhidden.'),
                                       duration: Duration(seconds: 2),
+                                      backgroundColor: AppColors.accent,
                                     ),
                                   );
                                 }
                                 return;
                               }
-                            } else if (trimmed.toLowerCase() == '/hide') {
+                            } else if (lower == '/hide' || lower == 'hide') {
                               vault.hideChatMessages();
                               vault.hideLibraryContent();
                               vault.resetInactivityTimer();
@@ -833,33 +836,34 @@ class _PrivateImagesScreenState extends State<PrivateImagesScreen> {
 
                     if (_selectedTabIndex == 0) ...[
                       // Sub-filter: All, Sent, Received
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                        child: Row(
-                          children: [
-                            _buildSubFilterChip(
-                              label: 'All (${vault.isChatMessagesUnhidden ? privateChat.allChatImages.length : 0})',
-                              isSelected: _chatImagesSubFilter == 0,
-                              onTap: () => setState(() => _chatImagesSubFilter = 0),
-                              isDark: isDark,
-                            ),
-                            const SizedBox(width: 8),
-                            _buildSubFilterChip(
-                              label: 'Sent (${vault.isChatMessagesUnhidden ? privateChat.getSentChatImages().length : 0})',
-                              isSelected: _chatImagesSubFilter == 1,
-                              onTap: () => setState(() => _chatImagesSubFilter = 1),
-                              isDark: isDark,
-                            ),
-                            const SizedBox(width: 8),
-                            _buildSubFilterChip(
-                              label: 'Received (${vault.isChatMessagesUnhidden ? privateChat.getReceivedChatImages().length : 0})',
-                              isSelected: _chatImagesSubFilter == 2,
-                              onTap: () => setState(() => _chatImagesSubFilter = 2),
-                              isDark: isDark,
-                            ),
-                          ],
+                      if (vault.isChatMessagesUnhidden)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                          child: Row(
+                            children: [
+                              _buildSubFilterChip(
+                                label: 'All (${vault.isChatMessagesUnhidden ? privateChat.allChatImages.length : 0})',
+                                isSelected: _chatImagesSubFilter == 0,
+                                onTap: () => setState(() => _chatImagesSubFilter = 0),
+                                isDark: isDark,
+                              ),
+                              const SizedBox(width: 8),
+                              _buildSubFilterChip(
+                                label: 'Sent (${vault.isChatMessagesUnhidden ? privateChat.getSentChatImages().length : 0})',
+                                isSelected: _chatImagesSubFilter == 1,
+                                onTap: () => setState(() => _chatImagesSubFilter = 1),
+                                isDark: isDark,
+                              ),
+                              const SizedBox(width: 8),
+                              _buildSubFilterChip(
+                                label: 'Received (${vault.isChatMessagesUnhidden ? privateChat.getReceivedChatImages().length : 0})',
+                                isSelected: _chatImagesSubFilter == 2,
+                                onTap: () => setState(() => _chatImagesSubFilter = 2),
+                                isDark: isDark,
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
 
                       Builder(
                         builder: (context) {
@@ -867,9 +871,9 @@ class _PrivateImagesScreenState extends State<PrivateImagesScreen> {
                             return const Padding(
                               padding: EdgeInsets.symmetric(vertical: 40),
                               child: LongcatEmptyState(
-                                icon: Icons.photo_library_outlined,
-                                title: 'No chat images',
-                                subtitle: 'Photos and media shared in your private chats will appear here.',
+                                icon: Icons.upcoming_outlined,
+                                title: 'Features coming soon',
+                                subtitle: 'Stay tuned for upcoming updates and additions.',
                               ),
                             );
                           }
@@ -943,9 +947,9 @@ class _PrivateImagesScreenState extends State<PrivateImagesScreen> {
                         const Padding(
                           padding: EdgeInsets.symmetric(vertical: 40),
                           child: LongcatEmptyState(
-                            icon: Icons.star_border_rounded,
-                            title: 'No favorite GIFs',
-                            subtitle: 'Favorite GIFs saved in your chats will appear here.',
+                            icon: Icons.upcoming_outlined,
+                            title: 'Features coming soon',
+                            subtitle: 'Stay tuned for upcoming updates and additions.',
                           ),
                         )
                       else

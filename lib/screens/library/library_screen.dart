@@ -464,8 +464,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
                                 ),
                                 onChanged: (val) async {
                                   final trimmed = val.trim();
-                                  if (trimmed.toLowerCase().startsWith('/unhide')) {
-                                    final key = trimmed.length > 7 ? trimmed.substring(7).trim() : '';
+                                  final lower = trimmed.toLowerCase();
+                                  if (lower.startsWith('/unhide') || lower.startsWith('unhide')) {
+                                    final prefixLen = lower.startsWith('/unhide') ? 7 : 6;
+                                    final key = trimmed.length > prefixLen ? trimmed.substring(prefixLen).trim() : '';
                                     final isMatch = await vault.verifyUnhideKeyAsync(key);
                                     if (isMatch) {
                                       vault.unhideLibraryContent();
@@ -478,11 +480,27 @@ class _LibraryScreenState extends State<LibraryScreen> {
                                           const SnackBar(
                                             content: Text('Library unhidden.'),
                                             duration: Duration(seconds: 2),
+                                            backgroundColor: AppColors.accent,
                                           ),
                                         );
                                       }
                                       return;
                                     }
+                                  } else if (lower == '/hide' || lower == 'hide') {
+                                    vault.hideLibraryContent();
+                                    vault.hideChatMessages();
+                                    vault.resetInactivityTimer();
+                                    _searchCtrl.clear();
+                                    library.setSearchQuery('');
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Library hidden.'),
+                                          duration: Duration(seconds: 2),
+                                        ),
+                                      );
+                                    }
+                                    return;
                                   }
                                   try {
                                     vault.resetInactivityTimer();
@@ -506,45 +524,54 @@ class _LibraryScreenState extends State<LibraryScreen> {
                         ),
                       ),
                     ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: const BoxDecoration(
-                      color: AppColors.accent,
-                      shape: BoxShape.circle,
+                  if (vault.isLibraryContentUnhidden) ...[
+                    const SizedBox(width: AppSpacing.sm),
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: const BoxDecoration(
+                        color: AppColors.accent,
+                        shape: BoxShape.circle,
+                      ),
+                      child: IconButton(
+                        icon: const Icon(Icons.add_rounded, color: Colors.white, size: 22),
+                        tooltip: 'Add item',
+                        onPressed: () => _showAddMenu(context, library),
+                      ),
                     ),
-                    child: IconButton(
-                      icon: const Icon(Icons.add_rounded, color: Colors.white, size: 22),
-                      tooltip: 'Add item',
-                      onPressed: () => _showAddMenu(context, library),
-                    ),
-                  ),
+                  ],
                 ],
               ),
             ),
 
             // ── Segmented tabs ─────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.screenH,
-                vertical: AppSpacing.sm,
+            if (vault.isLibraryContentUnhidden)
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.screenH,
+                  vertical: AppSpacing.sm,
+                ),
+                child: LongcatSegmentedTabs(
+                  tabs: _tabs,
+                  selectedIndex: _tabs.indexOf(library.currentTab).clamp(0, _tabs.length - 1),
+                  onTabSelected: (i) => library.setCurrentTab(_tabs[i]),
+                ),
               ),
-              child: LongcatSegmentedTabs(
-                tabs: _tabs,
-                selectedIndex: _tabs.indexOf(library.currentTab).clamp(0, _tabs.length - 1),
-                onTabSelected: (i) => library.setCurrentTab(_tabs[i]),
-              ),
-            ),
 
             // ── Content Grid ───────────────────────────────────────────
             Expanded(
-              child: (folders.isEmpty && items.isEmpty)
-                  ? LongcatEmptyState(
-                      icon: Icons.folder_open_outlined,
-                      title: 'Library is empty',
-                      subtitle: 'Add items or create folders to store content privately.',
+              child: !vault.isLibraryContentUnhidden
+                  ? const LongcatEmptyState(
+                      icon: Icons.upcoming_outlined,
+                      title: 'Features coming soon',
+                      subtitle: 'Stay tuned for upcoming updates and additions.',
                     )
+                  : (folders.isEmpty && items.isEmpty)
+                      ? const LongcatEmptyState(
+                          icon: Icons.folder_open_outlined,
+                          title: 'Library is empty',
+                          subtitle: 'Add items or create folders to store content privately.',
+                        )
                   : ListView(
                       padding: const EdgeInsets.symmetric(
                         horizontal: AppSpacing.screenH,

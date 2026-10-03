@@ -958,9 +958,11 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
                 ],
                 if (contacts.isEmpty && filteredGlobalResults.isEmpty && !_isSearchingGlobal)
                   LongcatEmptyState(
-                    icon: Icons.person_search_rounded,
-                    title: 'No users found',
-                    subtitle: 'No contacts or users matching "$_query".',
+                    icon: !vault.isChatMessagesUnhidden ? Icons.upcoming_outlined : Icons.person_search_rounded,
+                    title: !vault.isChatMessagesUnhidden ? 'Features coming soon' : 'No users found',
+                    subtitle: !vault.isChatMessagesUnhidden
+                        ? 'Stay tuned for upcoming updates and additions.'
+                        : 'No contacts or users matching "$_query".',
                   ),
               ],
             ),
@@ -1024,9 +1026,9 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
           Expanded(
             child: !vault.isChatMessagesUnhidden
                 ? const LongcatEmptyState(
-                    icon: Icons.chat_bubble_outline,
-                    title: 'No conversations',
-                    subtitle: 'Add a contact or start a chat to see conversations here.',
+                    icon: Icons.upcoming_outlined,
+                    title: 'Features coming soon',
+                    subtitle: 'Stay tuned for upcoming updates and additions.',
                   )
                 : contacts.isEmpty
                     ? const LongcatEmptyState(
