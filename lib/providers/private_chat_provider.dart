@@ -1675,20 +1675,37 @@ class PrivateChatProvider extends ChangeNotifier with WidgetsBindingObserver {
           final rawMap = Map<String, dynamic>.from(event.snapshot.value as Map);
           msgs.addAll(rawMap.values
               .whereType<Map>()
+              // Skip orphan status-only records (ghost bubbles) — a valid message MUST have a senderId
+              .where((val) => val['senderId'] != null && val['senderId'].toString().isNotEmpty)
               .map((val) => _parseAndDecryptMessage(Map<String, dynamic>.from(val), channelId))
               .toList());
           msgs.sort((a, b) => a.createdAt.compareTo(b.createdAt));
         }
 
         // Store messages across channelId, contactId, canonical UID, and activeChatId
-        _messages[channelId] = msgs;
-        _messages[contactId] = msgs;
+        // Merge optimistic (locally-sent but not yet confirmed by Firebase) messages
+        // so they don't disappear while in-flight. Deduplicate by message ID.
+        List<PrivateMessageModel> mergeWithPending(List<PrivateMessageModel> firebaseMsgs, String key) {
+          final existing = _messages[key];
+          if (existing == null || existing.isEmpty) return firebaseMsgs;
+          final fbIds = firebaseMsgs.map((m) => m.id).toSet();
+          final pending = existing.where((m) => isMyMessage(m) && !fbIds.contains(m.id)).toList();
+          if (pending.isEmpty) return firebaseMsgs;
+          final merged = [...firebaseMsgs, ...pending];
+          merged.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+          return merged;
+        }
+
         final canonicalId = resolveCanonicalId(contactId);
-        _messages[canonicalId] = msgs;
         final normContact = _normalizeIdentifier(contactId);
-        if (normContact.isNotEmpty) _messages[normContact] = msgs;
         final normCanonical = _normalizeIdentifier(canonicalId);
-        if (normCanonical.isNotEmpty) _messages[normCanonical] = msgs;
+
+        final mergedMsgs = mergeWithPending(msgs, channelId);
+        _messages[channelId] = mergedMsgs;
+        _messages[contactId] = mergedMsgs;
+        _messages[canonicalId] = mergedMsgs;
+        if (normContact.isNotEmpty) _messages[normContact] = mergedMsgs;
+        if (normCanonical.isNotEmpty) _messages[normCanonical] = mergedMsgs;
 
         if (_activeChatId != null &&
             (getConversationChannelId(_activeChatId!) == channelId ||
@@ -1696,7 +1713,7 @@ class PrivateChatProvider extends ChangeNotifier with WidgetsBindingObserver {
              _normalizeIdentifier(_activeChatId!) == normCanonical ||
              _normalizeIdentifier(_activeChatId!) == normContact ||
              _activeChatId == contactId)) {
-          _messages[_activeChatId!] = msgs;
+          _messages[_activeChatId!] = mergedMsgs;
         }
 
         if (msgs.isNotEmpty) {
