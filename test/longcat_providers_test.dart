@@ -698,5 +698,35 @@ void main() {
       expect(channelFromA, equals(channelFromBLower));
       expect(channelFromA, equals('chat_brsvk5pezwpicyhaf4pnbl3cmcd2_rftqyoepdtnuy0au2iqqg4pndzz2'));
     });
+
+    test('PrivateChatProvider incoming pending friend request un-tombstones deleted conversation and appears in pendingFriendRequests', () async {
+      final chat = PrivateChatProvider();
+      chat.initUserSession('rfTQYOEpDTNUy0aU2IqqG4pNdZZ2', username: 'aarushlohit');
+
+      // 1. Aarush previously deleted conversation with shashi
+      await chat.deleteConversation('RouqD7kNfOeXwqfeHJ2oXqpUMY83');
+      await chat.deleteConversation('shashi');
+
+      // 2. Shashi sends a new friend request to Aarush
+      final req = FriendRequestModel(
+        id: 'req_rouqd7knfoexwqfehj2oxqpumy83_rftqyoepdtnuy0au2iqqg4pndzz2',
+        senderId: 'RouqD7kNfOeXwqfeHJ2oXqpUMY83',
+        senderName: 'Ashlin Mirsha R K',
+        senderUsername: 'shashi',
+        receiverId: 'rfTQYOEpDTNUy0aU2IqqG4pNdZZ2',
+        receiverUsername: 'aarushlohit',
+        status: 'pending',
+        createdAt: DateTime.now(),
+      );
+
+      chat.pendingFriendRequestsInternal.add(req);
+
+      // Must appear in pendingFriendRequests
+      expect(chat.pendingFriendRequests.any((r) => r.senderUsername == 'shashi'), isTrue);
+      expect(chat.pendingFriendRequests.any((r) => r.senderId == 'RouqD7kNfOeXwqfeHJ2oXqpUMY83'), isTrue);
+
+      // Must appear in allConversations
+      expect(chat.allConversations.any((c) => c.username == 'shashi' || c.id == 'RouqD7kNfOeXwqfeHJ2oXqpUMY83'), isTrue);
+    });
   });
 }

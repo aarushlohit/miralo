@@ -37,7 +37,9 @@ class PrivateChatProvider extends ChangeNotifier {
   StreamSubscription<DatabaseEvent>? _messagesSubscription;
   StreamSubscription<DatabaseEvent>? _contactsSubscription;
   StreamSubscription<DatabaseEvent>? _requestsSubscription;
+  StreamSubscription<DatabaseEvent>? _requestsLowerSubscription;
   StreamSubscription<DatabaseEvent>? _usernameRequestsSubscription;
+  StreamSubscription<DatabaseEvent>? _usernameLowerRequestsSubscription;
   StreamSubscription<DatabaseEvent>? _emailRequestsSubscription;
   StreamSubscription<DatabaseEvent>? _sentRequestsSubscription;
   StreamSubscription<DatabaseEvent>? _blockedSubscription;
@@ -253,11 +255,6 @@ class PrivateChatProvider extends ChangeNotifier {
         continue;
       }
 
-      if (_deletedConversationIds.contains(senderId.toLowerCase().trim()) ||
-          (normSender.isNotEmpty && _deletedConversationIds.contains(normSender))) {
-        continue;
-      }
-
       String existingKey = '';
       for (final entry in canonicalMap.entries) {
         if (entry.key == senderId || _normalizeIdentifier(entry.value.username) == normSender) {
@@ -466,13 +463,6 @@ class PrivateChatProvider extends ChangeNotifier {
       if (req.senderId.startsWith('chat_') ||
           req.senderUsername.startsWith('chat_') ||
           req.id.startsWith('chat_')) {
-        continue;
-      }
-
-      final cleanSender = req.senderId.toLowerCase().trim();
-      final normSender = _normalizeIdentifier(req.senderUsername);
-      if (_deletedConversationIds.contains(cleanSender) ||
-          (normSender.isNotEmpty && _deletedConversationIds.contains(normSender))) {
         continue;
       }
 
@@ -1271,8 +1261,12 @@ class PrivateChatProvider extends ChangeNotifier {
     _contactsLowerSubscription = null;
     _requestsSubscription?.cancel();
     _requestsSubscription = null;
+    _requestsLowerSubscription?.cancel();
+    _requestsLowerSubscription = null;
     _usernameRequestsSubscription?.cancel();
     _usernameRequestsSubscription = null;
+    _usernameLowerRequestsSubscription?.cancel();
+    _usernameLowerRequestsSubscription = null;
     _emailRequestsSubscription?.cancel();
     _emailRequestsSubscription = null;
     _sentRequestsSubscription?.cancel();
@@ -1628,10 +1622,13 @@ class PrivateChatProvider extends ChangeNotifier {
 
   void _listenToFirebaseFriendRequests(String userId, {String? username, String? email}) {
     _requestsSubscription?.cancel();
+    _requestsLowerSubscription?.cancel();
     _usernameRequestsSubscription?.cancel();
+    _usernameLowerRequestsSubscription?.cancel();
     _emailRequestsSubscription?.cancel();
 
     final safeUserId = sanitizeDbKey(userId);
+    final lowerSafeUserId = safeUserId.toLowerCase().trim();
     try {
       final ref = FirebaseDatabase.instance.ref('friend_requests/$safeUserId');
       _requestsSubscription = ref.onValue.listen((event) {
@@ -1640,11 +1637,25 @@ class PrivateChatProvider extends ChangeNotifier {
         debugPrint('Firebase RTDB friend requests error: $e');
       });
 
+      if (lowerSafeUserId != safeUserId) {
+        final lowerRef = FirebaseDatabase.instance.ref('friend_requests/$lowerSafeUserId');
+        _requestsLowerSubscription = lowerRef.onValue.listen((event) {
+          _handleFriendRequestsSnapshot(event.snapshot);
+        }, onError: (_) {});
+      }
+
       if (username != null && username.isNotEmpty) {
         final safeUname = sanitizeDbKey(username);
-        if (safeUname != safeUserId) {
+        final lowerSafeUname = safeUname.toLowerCase().trim();
+        if (safeUname != safeUserId && safeUname != lowerSafeUserId) {
           final uRef = FirebaseDatabase.instance.ref('friend_requests/$safeUname');
           _usernameRequestsSubscription = uRef.onValue.listen((event) {
+            _handleFriendRequestsSnapshot(event.snapshot);
+          }, onError: (_) {});
+        }
+        if (lowerSafeUname != safeUname && lowerSafeUname != safeUserId && lowerSafeUname != lowerSafeUserId) {
+          final uLowerRef = FirebaseDatabase.instance.ref('friend_requests/$lowerSafeUname');
+          _usernameLowerRequestsSubscription = uLowerRef.onValue.listen((event) {
             _handleFriendRequestsSnapshot(event.snapshot);
           }, onError: (_) {});
         }
@@ -1652,7 +1663,7 @@ class PrivateChatProvider extends ChangeNotifier {
 
       if (email != null && email.isNotEmpty) {
         final safeEmail = sanitizeDbKey(email);
-        if (safeEmail != safeUserId) {
+        if (safeEmail != safeUserId && safeEmail != lowerSafeUserId) {
           final eRef = FirebaseDatabase.instance.ref('friend_requests/$safeEmail');
           _emailRequestsSubscription = eRef.onValue.listen((event) {
             _handleFriendRequestsSnapshot(event.snapshot);
@@ -1687,9 +1698,21 @@ class PrivateChatProvider extends ChangeNotifier {
 
           final cleanSenderId = req.senderId.toLowerCase().trim();
           final normReqUname = _normalizeIdentifier(req.senderUsername);
-          if (_deletedConversationIds.contains(cleanSenderId) ||
-              (normReqUname.isNotEmpty && _deletedConversationIds.contains(normReqUname))) {
-            continue;
+
+          if (req.status == 'pending') {
+            // Incoming pending friend request: un-tombstone sender so it is never suppressed
+            _unDeleteConversation(cleanSenderId);
+            if (normReqUname.isNotEmpty) {
+              _unDeleteConversation(normReqUname);
+            }
+            if (req.senderId.isNotEmpty) {
+              _unDeleteConversation(req.senderId);
+            }
+          } else {
+            if (_deletedConversationIds.contains(cleanSenderId) ||
+                (normReqUname.isNotEmpty && _deletedConversationIds.contains(normReqUname))) {
+              continue;
+            }
           }
 
           bool matchesSender(FriendRequestModel r) {
@@ -2821,7 +2844,10 @@ class PrivateChatProvider extends ChangeNotifier {
     final safeSenderId = sanitizeDbKey(senderId);
     final safeTargetId = sanitizeDbKey(targetId);
     final safeTargetUsername = sanitizeDbKey(targetUsername);
+    final lowerTargetId = safeTargetId.toLowerCase().trim();
+    final lowerTargetUsername = safeTargetUsername.toLowerCase().trim();
     final requestId = 'req_${safeSenderId}_$safeTargetId';
+    final lowerRequestId = 'req_${safeSenderId.toLowerCase().trim()}_$lowerTargetId';
 
     final request = FriendRequestModel(
       id: requestId,
@@ -2834,36 +2860,68 @@ class PrivateChatProvider extends ChangeNotifier {
       createdAt: DateTime.now(),
     );
 
-    // Write to Firebase Realtime Database under target user's real ID AND username
+    // Write to Firebase Realtime Database under target user's real ID AND username (multi-case support)
     try {
+      final reqJson = request.toJson();
       await FirebaseDatabase.instance
           .ref('friend_requests/$safeTargetId/$requestId')
-          .set(request.toJson());
-      if (safeTargetUsername != safeTargetId) {
+          .set(reqJson);
+      if (lowerTargetId != safeTargetId) {
+        await FirebaseDatabase.instance
+            .ref('friend_requests/$lowerTargetId/$requestId')
+            .set(reqJson);
+      }
+      if (lowerRequestId != requestId) {
+        await FirebaseDatabase.instance
+            .ref('friend_requests/$safeTargetId/$lowerRequestId')
+            .set(reqJson);
+        if (lowerTargetId != safeTargetId) {
+          await FirebaseDatabase.instance
+              .ref('friend_requests/$lowerTargetId/$lowerRequestId')
+              .set(reqJson);
+        }
+      }
+      if (safeTargetUsername != safeTargetId && safeTargetUsername != lowerTargetId) {
         await FirebaseDatabase.instance
             .ref('friend_requests/$safeTargetUsername/$requestId')
-            .set(request.toJson());
+            .set(reqJson);
+      }
+      if (lowerTargetUsername != safeTargetUsername &&
+          lowerTargetUsername != safeTargetId &&
+          lowerTargetUsername != lowerTargetId) {
+        await FirebaseDatabase.instance
+            .ref('friend_requests/$lowerTargetUsername/$requestId')
+            .set(reqJson);
       }
       if (clean.contains('@')) {
         final safeCleanEmail = sanitizeDbKey(clean);
-        if (safeCleanEmail != safeTargetId && safeCleanEmail != safeTargetUsername) {
+        if (safeCleanEmail != safeTargetId &&
+            safeCleanEmail != safeTargetUsername &&
+            safeCleanEmail != lowerTargetId) {
           await FirebaseDatabase.instance
               .ref('friend_requests/$safeCleanEmail/$requestId')
-              .set(request.toJson());
+              .set(reqJson);
         }
       }
       // Also write to sender's sent_requests node so status persists on reopen
       if (_currentUserId != null) {
-        await FirebaseDatabase.instance
-            .ref('sent_requests/$_currentUserId/$requestId')
-            .set({
+        final sentData = {
           'requestId': requestId,
           'targetId': targetId,
           'targetUsername': targetUsername,
           'targetDisplayName': targetDisplayName,
           'status': 'pending',
           'createdAt': DateTime.now().toIso8601String(),
-        });
+        };
+        await FirebaseDatabase.instance
+            .ref('sent_requests/$_currentUserId/$requestId')
+            .set(sentData);
+        final lowerCurrentUserId = _currentUserId!.toLowerCase().trim();
+        if (lowerCurrentUserId != _currentUserId) {
+          await FirebaseDatabase.instance
+              .ref('sent_requests/$lowerCurrentUserId/$requestId')
+              .set(sentData);
+        }
       }
     } catch (e) {
       debugPrint('Firebase friend request error: $e');
@@ -2881,38 +2939,45 @@ class PrivateChatProvider extends ChangeNotifier {
   Future<void> respondToFriendRequest(FriendRequestModel req, bool accept) async {
     final status = accept ? 'accepted' : 'rejected';
     final safeReceiverId = sanitizeDbKey(req.receiverId);
+    final lowerReceiverId = safeReceiverId.toLowerCase().trim();
     final safeReceiverUsername = sanitizeDbKey(req.receiverUsername);
+    final lowerReceiverUsername = safeReceiverUsername.toLowerCase().trim();
     final safeSenderId = sanitizeDbKey(req.senderId);
+    final lowerSenderId = safeSenderId.toLowerCase().trim();
     final deterministicId = 'req_${safeSenderId}_$safeReceiverId';
+    final lowerDeterministicId = 'req_${lowerSenderId}_$lowerReceiverId';
 
     try {
-      // Remove friend request node from receiver so it disappears permanently
-      await FirebaseDatabase.instance
-          .ref('friend_requests/$safeReceiverId/${req.id}')
-          .remove();
-      if (safeReceiverUsername != safeReceiverId) {
-        await FirebaseDatabase.instance
-            .ref('friend_requests/$safeReceiverUsername/${req.id}')
-            .remove();
+      // Remove friend request node from receiver across all case variants
+      final pathsToRemove = <String>{
+        'friend_requests/$safeReceiverId/${req.id}',
+        'friend_requests/$lowerReceiverId/${req.id}',
+        'friend_requests/$safeReceiverUsername/${req.id}',
+        'friend_requests/$lowerReceiverUsername/${req.id}',
+        'friend_requests/$safeReceiverId/$deterministicId',
+        'friend_requests/$lowerReceiverId/$deterministicId',
+        'friend_requests/$safeReceiverUsername/$deterministicId',
+        'friend_requests/$lowerReceiverUsername/$deterministicId',
+        'friend_requests/$safeReceiverId/$lowerDeterministicId',
+        'friend_requests/$lowerReceiverId/$lowerDeterministicId',
+        'friend_requests/$safeReceiverUsername/$lowerDeterministicId',
+        'friend_requests/$lowerReceiverUsername/$lowerDeterministicId',
+      };
+      for (final p in pathsToRemove) {
+        await FirebaseDatabase.instance.ref(p).remove();
       }
-      if (deterministicId != req.id) {
-        await FirebaseDatabase.instance
-            .ref('friend_requests/$safeReceiverId/$deterministicId')
-            .remove();
-        if (safeReceiverUsername != safeReceiverId) {
-          await FirebaseDatabase.instance
-              .ref('friend_requests/$safeReceiverUsername/$deterministicId')
-              .remove();
-        }
-      }
+
       // Update status in the SENDER's sent_requests node so their UI updates in real-time
-      await FirebaseDatabase.instance
-          .ref('sent_requests/$safeSenderId/${req.id}')
-          .update({'status': status});
-      if (deterministicId != req.id) {
-        await FirebaseDatabase.instance
-            .ref('sent_requests/$safeSenderId/$deterministicId')
-            .update({'status': status});
+      final sentPathsToUpdate = <String>{
+        'sent_requests/$safeSenderId/${req.id}',
+        'sent_requests/$lowerSenderId/${req.id}',
+        'sent_requests/$safeSenderId/$deterministicId',
+        'sent_requests/$lowerSenderId/$deterministicId',
+        'sent_requests/$safeSenderId/$lowerDeterministicId',
+        'sent_requests/$lowerSenderId/$lowerDeterministicId',
+      };
+      for (final p in sentPathsToUpdate) {
+        await FirebaseDatabase.instance.ref(p).update({'status': status});
       }
     } catch (e) {
       debugPrint('Firebase respond to request error: $e');
