@@ -869,7 +869,7 @@ class _PrivateImagesScreenState extends State<PrivateImagesScreen> {
                               child: LongcatEmptyState(
                                 icon: Icons.photo_library_outlined,
                                 title: 'No chat images',
-                                subtitle: 'Type /unhide <secretkey> in search to view images.',
+                                subtitle: 'Photos and media shared in your private chats will appear here.',
                               ),
                             );
                           }
@@ -945,7 +945,7 @@ class _PrivateImagesScreenState extends State<PrivateImagesScreen> {
                           child: LongcatEmptyState(
                             icon: Icons.star_border_rounded,
                             title: 'No favorite GIFs',
-                            subtitle: 'Type /unhide <secretkey> in search to view GIFs.',
+                            subtitle: 'Favorite GIFs saved in your chats will appear here.',
                           ),
                         )
                       else
