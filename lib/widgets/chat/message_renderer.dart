@@ -318,12 +318,31 @@ class MessageRenderer extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             if (isEdited) ...[
-                              Text(
-                                'edited ',
-                                style: LongcatTypography.bodySmall(color: textMuted).copyWith(
-                                  fontStyle: FontStyle.italic,
-                                  fontSize: 11,
-                                ),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.edit_outlined,
+                                    size: 11,
+                                    color: textMuted,
+                                  ),
+                                  const SizedBox(width: 2),
+                                  Text(
+                                    'Edited',
+                                    style: LongcatTypography.bodySmall(color: textMuted).copyWith(
+                                      fontStyle: FontStyle.italic,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '•',
+                                    style: LongcatTypography.bodySmall(color: textMuted).copyWith(
+                                      fontSize: 10,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                ],
                               ),
                             ],
                             Text(

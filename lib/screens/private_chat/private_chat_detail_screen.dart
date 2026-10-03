@@ -1012,7 +1012,7 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
       },
       onEdit: (chat.isMyMessage(msg) &&
               (msg.type == 'text' || msg.type == 'urgent' || msg.type == 'redacted') &&
-              DateTime.now().difference(msg.createdAt).inMinutes < 5)
+              DateTime.now().difference(msg.createdAt).inMinutes < 15)
           ? () => _showEditMessageDialog(context, msg, chat)
           : null,
       onDownload: (msg.mediaUrl != null || msg.imageBase64 != null)
@@ -1406,6 +1406,7 @@ class _PrivateChatDetailScreenState extends State<PrivateChatDetailScreen> {
                   isMe: isMe,
                   isPinned: msg.isPinned,
                   isStarred: msg.isStarred,
+                  isEdited: msg.isEdited,
                   dateHeader: _getDateHeader(index, messages),
                   isHighlighted: _highlightedMessageId == msg.id,
                   senderName: isMe ? null : (msg.senderName ?? displayName),

@@ -716,5 +716,61 @@ void main() {
       expect(find.text('/pinned'), findsOneWidget);
       expect(find.text('View pinned messages (max 6) 📌'), findsOneWidget);
     });
+
+    testWidgets('MessageRenderer displays Edited indicator when isEdited is true', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: MessageRenderer(
+              id: 'test_msg_1',
+              text: 'This message was modified',
+              isMe: true,
+              isEdited: true,
+              createdAt: DateTime(2026, 10, 3, 10, 30),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Edited'), findsOneWidget);
+      expect(find.byIcon(Icons.edit_outlined), findsOneWidget);
+      expect(find.text('This message was modified'), findsOneWidget);
+    });
+
+    test('PrivateMessageModel serializes and deserializes isEdited accurately', () {
+      final msg = PrivateMessageModel(
+        id: 'msg_edit_test',
+        chatId: 'chat_123',
+        senderId: 'me',
+        text: 'Updated content',
+        createdAt: DateTime.now(),
+        isEdited: true,
+      );
+
+      final json = msg.toJson();
+      expect(json['isEdited'], isTrue);
+
+      final restored = PrivateMessageModel.fromJson(json);
+      expect(restored.isEdited, isTrue);
+      expect(restored.text, 'Updated content');
+    });
+
+    test('PrivateChatProvider editTextMessage sets isEdited to true', () {
+      final chat = PrivateChatProvider();
+      final original = PrivateMessageModel(
+        id: 'msg_to_edit',
+        chatId: 'user_a',
+        senderId: 'me',
+        text: 'Original message',
+        createdAt: DateTime.now(),
+      );
+
+      chat.injectMessageForTest('user_a', original);
+      chat.editTextMessage('msg_to_edit', 'Newly edited text');
+
+      final updated = chat.messagesMap['user_a']!.firstWhere((m) => m.id == 'msg_to_edit');
+      expect(updated.text, 'Newly edited text');
+      expect(updated.isEdited, isTrue);
+    });
   });
 }

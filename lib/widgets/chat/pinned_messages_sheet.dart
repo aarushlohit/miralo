@@ -260,6 +260,16 @@ class PinnedMessagesSheet extends StatelessWidget {
                                             style: LongcatTypography.bodySmall(color: textMuted)
                                                 .copyWith(fontSize: 11),
                                           ),
+                                          if (msg.isEdited) ...[
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              '• Edited',
+                                              style: LongcatTypography.bodySmall(color: textMuted).copyWith(
+                                                fontSize: 11,
+                                                fontStyle: FontStyle.italic,
+                                              ),
+                                            ),
+                                          ],
                                         ],
                                       ),
                                       const SizedBox(height: 2),

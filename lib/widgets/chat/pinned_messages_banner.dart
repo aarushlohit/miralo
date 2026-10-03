@@ -188,6 +188,15 @@ class _PinnedMessagesBannerState extends State<PinnedMessagesBanner> {
                                   color: textMuted,
                                 ).copyWith(fontSize: 11),
                               ),
+                              if (activeMsg.isEdited) ...[
+                                const SizedBox(width: 4),
+                                Text(
+                                  '• Edited',
+                                  style: LongcatTypography.bodySmall(
+                                    color: textMuted,
+                                  ).copyWith(fontSize: 11, fontStyle: FontStyle.italic),
+                                ),
+                              ],
                             ],
                           ),
                           const SizedBox(height: 1),

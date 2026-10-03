@@ -2457,20 +2457,33 @@ class PrivateChatProvider extends ChangeNotifier with WidgetsBindingObserver {
 
   void editTextMessage(String messageId, String newText) {
     if (newText.trim().isEmpty) return;
+    bool updatedAny = false;
+    PrivateMessageModel? updatedMsg;
+    String? channelId;
+
     for (final list in _messages.values) {
       final idx = list.indexWhere((m) => m.id == messageId);
       if (idx != -1) {
         final msg = list[idx];
         if (msg.type != 'text' && msg.type != 'urgent' && msg.type != 'redacted') return;
-        if (DateTime.now().difference(msg.createdAt).inMinutes >= 5) return;
+        if (DateTime.now().difference(msg.createdAt).inMinutes >= 15) return;
         final updated = msg.copyWith(
           text: newText.trim(),
           isEdited: true,
         );
         list[idx] = updated;
-        notifyListeners();
-        _syncMessageToFirebase(updated, getConversationChannelId(msg.chatId));
-        return;
+        updatedAny = true;
+        updatedMsg = updated;
+        if (channelId == null || channelId.isEmpty) {
+          channelId = getConversationChannelId(msg.chatId.isNotEmpty ? msg.chatId : (_activeChatId ?? ''));
+        }
+      }
+    }
+
+    if (updatedAny && updatedMsg != null) {
+      notifyListeners();
+      if (channelId != null && channelId.isNotEmpty) {
+        _syncMessageToFirebase(updatedMsg, channelId);
       }
     }
   }
@@ -2532,20 +2545,7 @@ class PrivateChatProvider extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   void editMessage(String messageId, String newText) {
-    if (_activeChatId == null || newText.trim().isEmpty) return;
-    final msgs = _messages[_activeChatId!];
-    if (msgs == null) return;
-    final idx = msgs.indexWhere((m) => m.id == messageId);
-    if (idx != -1) {
-      final updated = msgs[idx].copyWith(
-        text: newText.trim(),
-        isEdited: true,
-      );
-      msgs[idx] = updated;
-      notifyListeners();
-      final channelId = getConversationChannelId(_activeChatId!);
-      _syncMessageToFirebase(updated, channelId);
-    }
+    editTextMessage(messageId, newText);
   }
 
   void toggleReaction(String messageId, String emoji) {
