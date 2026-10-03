@@ -1361,6 +1361,13 @@ class PrivateChatProvider extends ChangeNotifier with WidgetsBindingObserver {
     } catch (_) {}
   }
 
+  /// Public subscription to a user's real-time presence (e.g. for search results)
+  void subscribeToUserPresence(String idOrUsername) {
+    if (idOrUsername.isEmpty) return;
+    final canonicalId = resolveCanonicalId(idOrUsername);
+    _subscribeToContactPresence(canonicalId);
+  }
+
   /// Called on logout — cancels all Firebase subscriptions and clears all state.
   void clearSession() {
     _setMyPresenceOffline();
@@ -2908,6 +2915,8 @@ class PrivateChatProvider extends ChangeNotifier with WidgetsBindingObserver {
     final clean = query.trim().toLowerCase();
     if (clean.isEmpty) return [];
 
+    final cleanWithoutAt = clean.startsWith('@') ? clean.substring(1).trim() : clean;
+
     final results = <Map<String, String>>[];
     try {
       final snap = await FirebaseDatabase.instance.ref('users').get();
@@ -2920,6 +2929,7 @@ class PrivateChatProvider extends ChangeNotifier with WidgetsBindingObserver {
             final email = (u['email'] ?? '').toString().toLowerCase();
             final name = (u['displayName'] ?? '').toString();
             final id = (u['id'] ?? entry.key).toString();
+            final avatarUrl = (u['avatarUrl'] ?? u['photoUrl'] ?? '').toString();
 
             // Exclude current user from search results to prevent self-friend requests
             if (id == _currentUserId ||
@@ -2928,12 +2938,19 @@ class PrivateChatProvider extends ChangeNotifier with WidgetsBindingObserver {
               continue;
             }
 
-            if (uname.contains(clean) || email.contains(clean) || name.toLowerCase().contains(clean)) {
+            final idLower = id.toLowerCase();
+            final matchesUname = uname.contains(clean) || (cleanWithoutAt.isNotEmpty && uname.contains(cleanWithoutAt));
+            final matchesEmail = email.contains(clean);
+            final matchesName = name.toLowerCase().contains(clean) || (cleanWithoutAt.isNotEmpty && name.toLowerCase().contains(cleanWithoutAt));
+            final matchesId = idLower.contains(clean) || (cleanWithoutAt.isNotEmpty && idLower.contains(cleanWithoutAt));
+
+            if (matchesUname || matchesEmail || matchesName || matchesId) {
               results.add({
                 'id': id,
                 'name': name.isEmpty ? uname : name,
                 'username': uname,
                 'email': email,
+                'avatarUrl': avatarUrl,
               });
             }
           }

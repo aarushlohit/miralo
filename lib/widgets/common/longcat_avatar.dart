@@ -89,7 +89,7 @@ class LongcatAvatar extends StatelessWidget {
           ),
         if (hasNote)
           Positioned(
-            top: -20,
+            top: -16,
             left: -16,
             right: -16,
             child: Center(
