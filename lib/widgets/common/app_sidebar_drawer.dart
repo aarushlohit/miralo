@@ -297,12 +297,14 @@ class _AppSidebarDrawerState extends State<AppSidebarDrawer> {
                         child: const Text('Cancel'),
                       ),
                       TextButton(
-                        onPressed: () {
+                        onPressed: () async {
                           Navigator.pop(dCtx);
-                          privateChat.deleteConversation(contact.id);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Deleted chat with ${contact.displayName}')),
-                          );
+                          await privateChat.deleteConversation(contact.id);
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Deleted chat with ${contact.displayName}')),
+                            );
+                          }
                         },
                         child: const Text('Delete', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
                       ),
@@ -1152,27 +1154,6 @@ class _ContactItem extends StatelessWidget {
                 ],
               ),
             ),
-            if (unread > 0) ...[
-              Container(
-                constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF0A84FF),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Center(
-                  child: Text(
-                    unread > 99 ? '99+' : unread.toString(),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 4),
-            ],
             if (onOptionsTap != null)
               IconButton(
                 icon: const Icon(Icons.more_horiz_rounded, size: 16),

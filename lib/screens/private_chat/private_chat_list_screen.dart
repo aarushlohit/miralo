@@ -12,6 +12,7 @@ import '../../widgets/common/longcat_avatar.dart';
 import '../../widgets/common/longcat_empty_state.dart';
 import '../../widgets/common/longcat_logo.dart';
 import '../../widgets/private_chat/add_friend_sheet.dart';
+import '../../models/private_contact_model.dart';
 import 'group_profile_screen.dart';
 
 /// Private Chat List Screen.
@@ -45,11 +46,111 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
         username: auth.currentUser?.username,
         email: auth.currentUser?.email,
       );
+      chat.refreshFriendRequests();
     }
   }
 
   void _showAddFriend(BuildContext context, PrivateChatProvider chat, AuthProvider auth, {int initialTab = 0}) {
     AddFriendSheet.show(context, initialTab: initialTab);
+  }
+
+  void _showContactOptions(BuildContext context, PrivateChatProvider chat, PrivateContactModel contact) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? AppColors.darkSurfacePrimary : AppColors.lightSurfacePrimary;
+    final textPrimary = isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
+    final border = isDark ? AppColors.darkBorder : AppColors.lightBorder;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: bg,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenH, vertical: 4),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  contact.displayName,
+                  style: AppTypography.heading3(color: textPrimary),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            ListTile(
+              leading: const Icon(Icons.cleaning_services_outlined, color: AppColors.accent, size: 20),
+              title: Text('Clear messages', style: AppTypography.bodyMedium(color: textPrimary)),
+              dense: true,
+              onTap: () {
+                Navigator.pop(ctx);
+                chat.clearConversationMessages(contact.id);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Cleared messages with ${contact.displayName}')),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline_rounded, color: Colors.red, size: 20),
+              title: Text(
+                'Delete Chat',
+                style: AppTypography.bodyMedium(color: Colors.red),
+              ),
+              dense: true,
+              onTap: () {
+                Navigator.pop(ctx);
+                showDialog(
+                  context: context,
+                  builder: (dCtx) => AlertDialog(
+                    backgroundColor: bg,
+                    title: Text('Delete Chat?', style: AppTypography.heading3(color: textPrimary)),
+                    content: Text(
+                      'Are you sure you want to delete this chat with ${contact.displayName}? All message history will be removed.',
+                      style: AppTypography.body(color: textPrimary),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(dCtx),
+                        child: const Text('Cancel'),
+                      ),
+                      TextButton(
+                        onPressed: () async {
+                          Navigator.pop(dCtx);
+                          await chat.deleteConversation(contact.id);
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Deleted chat with ${contact.displayName}')),
+                            );
+                          }
+                        },
+                        child: const Text('Delete', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: AppSpacing.md),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -486,7 +587,12 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
                       ? 'Add a contact to start chatting privately.'
                       : 'No contacts matching "$_query".',
                 )
-              : ListView.separated(
+              : RefreshIndicator(
+                  color: AppColors.accent,
+                  onRefresh: () async {
+                    await chat.refreshFriendRequests();
+                  },
+                  child: ListView.separated(
                   padding: const EdgeInsets.only(top: 4, bottom: AppSpacing.xl),
                   itemCount: contacts.length,
                   separatorBuilder: (context, index) => Divider(color: borderColor, height: 1, indent: 76),
@@ -520,6 +626,7 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
                         chat.setActiveChat(contact.id);
                         Navigator.pushNamed(context, AppRoutes.privateChat);
                       },
+                      onLongPress: () => _showContactOptions(context, chat, contact),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
                         child: Row(
@@ -624,31 +731,12 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
                                         child: Text(
                                           lastMsg,
                                           style: AppTypography.bodySmall(
-                                            color: contact.unreadCount > 0 ? textPrimary : textSecondary,
-                                          ).copyWith(
-                                            fontWeight: contact.unreadCount > 0 ? FontWeight.w500 : FontWeight.w400,
+                                            color: textSecondary,
                                           ),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
-                                      if (contact.unreadCount > 0)
-                                        Container(
-                                          margin: const EdgeInsets.only(left: 6),
-                                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: AppColors.accent,
-                                            borderRadius: BorderRadius.circular(10),
-                                          ),
-                                          child: Text(
-                                            '${contact.unreadCount}',
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                          ),
-                                        ),
                                     ],
                                   ),
                                 ],
@@ -660,6 +748,7 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
                     );
                   },
                 ),
+              ),
         ),
       ],
     );

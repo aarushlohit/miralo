@@ -269,7 +269,7 @@ class PrivateChatProvider extends ChangeNotifier {
           displayName: req.senderName,
           username: senderUsername,
           isOnline: true,
-          unreadCount: 1,
+          unreadCount: 0,
           isPendingInvitation: true,
         );
       } else {
@@ -1549,6 +1549,17 @@ class PrivateChatProvider extends ChangeNotifier {
         }
 
         if (msgs.isNotEmpty) {
+          final hasIncoming = msgs.any((m) => !isMyMessage(m));
+          if (hasIncoming) {
+            // Deleting a chat is not blocking: un-tombstone so incoming messages appear
+            _unDeleteConversation(contactId);
+            _unDeleteConversation(canonicalId);
+            final normC = _normalizeIdentifier(contactId);
+            if (normC.isNotEmpty) _unDeleteConversation(normC);
+            final normCan = _normalizeIdentifier(canonicalId);
+            if (normCan.isNotEmpty) _unDeleteConversation(normCan);
+          }
+
           final isAppResumed = WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
           final isUserViewingActiveChat = (_activeChatId == contactId ||
                   _activeChatId == canonicalId ||
@@ -1673,6 +1684,36 @@ class PrivateChatProvider extends ChangeNotifier {
     } catch (e) {
       debugPrint('Firebase RTDB not initialized or offline: $e');
     }
+  }
+
+  /// Proactively refresh latest friend requests so UI is always updated instantly without app restart
+  Future<void> refreshFriendRequests() async {
+    final uid = _currentUserId;
+    if (uid == null || uid.isEmpty) return;
+    final safeUid = sanitizeDbKey(uid);
+    final lowerSafeUid = safeUid.toLowerCase().trim();
+    final uname = _currentUsername;
+    final safeUname = (uname != null && uname.isNotEmpty) ? sanitizeDbKey(uname) : '';
+    final lowerSafeUname = safeUname.toLowerCase().trim();
+
+    final pathsToFetch = <String>{
+      'friend_requests/$safeUid',
+      if (lowerSafeUid != safeUid) 'friend_requests/$lowerSafeUid',
+      if (safeUname.isNotEmpty && safeUname != safeUid && safeUname != lowerSafeUid) 'friend_requests/$safeUname',
+      if (lowerSafeUname.isNotEmpty && lowerSafeUname != safeUname && lowerSafeUname != safeUid && lowerSafeUname != lowerSafeUid) 'friend_requests/$lowerSafeUname',
+    };
+
+    try {
+      for (final p in pathsToFetch) {
+        final snap = await FirebaseDatabase.instance.ref(p).get();
+        if (snap.exists) {
+          _handleFriendRequestsSnapshot(snap);
+        }
+      }
+    } catch (e) {
+      debugPrint('Error refreshing friend requests: $e');
+    }
+    notifyListeners();
   }
 
   void _handleFriendRequestsSnapshot(DataSnapshot snapshot) {
@@ -3146,6 +3187,15 @@ class PrivateChatProvider extends ChangeNotifier {
         allKeysToRemove.contains(c.username.toLowerCase()) ||
         allKeysToRemove.contains(_normalizeIdentifier(c.username)));
 
+    // Also remove from pending friend requests if any
+    _pendingFriendRequests.removeWhere((r) =>
+        allKeysToRemove.contains(r.senderId) ||
+        allKeysToRemove.contains(r.senderId.toLowerCase()) ||
+        allKeysToRemove.contains(r.senderUsername) ||
+        allKeysToRemove.contains(r.senderUsername.toLowerCase()) ||
+        allKeysToRemove.contains(_normalizeIdentifier(r.senderUsername)) ||
+        allKeysToRemove.contains(r.id));
+
     // Cancel active stream subscription for this channel
     final sub = _channelSubscriptions.remove(channelId);
     sub?.cancel();
@@ -3159,19 +3209,46 @@ class PrivateChatProvider extends ChangeNotifier {
     // 2. Persist to local storage so it stays deleted on app reopen
     await _persistDeletedConversations();
 
-    // 3. Remove from Firebase Realtime Database
+    // 3. Remove from Firebase Realtime Database across ALL casing variants
     if (_currentUserId != null) {
       final curUid = sanitizeDbKey(_currentUserId!);
+      final lowerCurUid = curUid.toLowerCase().trim();
       final curUname = _currentUsername != null ? sanitizeDbKey(_currentUsername!) : '';
+      final lowerCurUname = curUname.toLowerCase().trim();
+
+      final userNodesToClean = <String>{
+        curUid,
+        if (lowerCurUid != curUid) lowerCurUid,
+        if (curUname.isNotEmpty) curUname,
+        if (lowerCurUname.isNotEmpty && lowerCurUname != curUname) lowerCurUname,
+      };
 
       try {
-        for (final k in allKeysToRemove) {
-          final safeK = sanitizeDbKey(k);
-          await FirebaseDatabase.instance.ref('users/$curUid/recent_chats/$safeK').remove();
-          await FirebaseDatabase.instance.ref('users/$curUid/contacts/$safeK').remove();
-          if (curUname.isNotEmpty && curUname != curUid) {
-            await FirebaseDatabase.instance.ref('users/$curUname/recent_chats/$safeK').remove();
-            await FirebaseDatabase.instance.ref('users/$curUname/contacts/$safeK').remove();
+        for (final uKey in userNodesToClean) {
+          for (final k in allKeysToRemove) {
+            final safeK = sanitizeDbKey(k);
+            await FirebaseDatabase.instance.ref('users/$uKey/recent_chats/$safeK').remove();
+            await FirebaseDatabase.instance.ref('users/$uKey/contacts/$safeK').remove();
+          }
+          // Remove from friend_requests for this user
+          final fReqSnap = await FirebaseDatabase.instance.ref('friend_requests/$uKey').get();
+          if (fReqSnap.exists && fReqSnap.value is Map) {
+            final raw = Map<String, dynamic>.from(fReqSnap.value as Map);
+            for (final entry in raw.entries) {
+              if (entry.value is Map) {
+                final rData = Map<String, dynamic>.from(entry.value as Map);
+                final sId = (rData['senderId'] ?? '').toString();
+                final sUname = (rData['senderUsername'] ?? '').toString();
+                if (allKeysToRemove.contains(sId) ||
+                    allKeysToRemove.contains(sId.toLowerCase()) ||
+                    allKeysToRemove.contains(sUname) ||
+                    allKeysToRemove.contains(sUname.toLowerCase()) ||
+                    allKeysToRemove.contains(_normalizeIdentifier(sUname)) ||
+                    allKeysToRemove.contains(entry.key)) {
+                  await FirebaseDatabase.instance.ref('friend_requests/$uKey/${entry.key}').remove();
+                }
+              }
+            }
           }
         }
       } catch (e) {
