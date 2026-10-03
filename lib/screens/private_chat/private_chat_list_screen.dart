@@ -349,39 +349,32 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
       child: Container(
         height: 44,
         decoration: BoxDecoration(
-          color: isDark ? AppColors.darkSurfacePrimary : AppColors.lightSurfaceSecondary,
+          color: iconBg,
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(
-            color: _query.isNotEmpty ? AppColors.accent : borderColor.withValues(alpha: 0.7),
-            width: _query.isNotEmpty ? 1.2 : 0.8,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
-              blurRadius: 4,
-              offset: const Offset(0, 1.5),
-            ),
-          ],
+          border: Border.all(color: borderColor.withValues(alpha: 0.6), width: 0.6),
         ),
+        padding: const EdgeInsets.symmetric(horizontal: 14),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const SizedBox(width: 14),
             Icon(
-              Icons.search_rounded,
-              size: 20,
-              color: _query.isNotEmpty ? AppColors.accent : textMuted,
+              Icons.search,
+              size: 18,
+              color: textMuted,
             ),
             const SizedBox(width: 10),
             Expanded(
               child: TextField(
                 controller: _searchCtrl,
-                style: AppTypography.body(color: textPrimary).copyWith(fontSize: 14),
+                style: AppTypography.bodySmall(color: textPrimary),
                 decoration: InputDecoration(
                   hintText: 'Search contacts, @username, or User ID...',
-                  hintStyle: AppTypography.body(color: textMuted).copyWith(fontSize: 13),
+                  hintStyle: AppTypography.bodySmall(color: textMuted),
                   border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
                   isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 11),
                 ),
                 onChanged: (v) => _handleSearchChanged(v, vault, chat),
                 onSubmitted: (v) => _handleSearchSubmitted(v, vault, chat),
@@ -397,12 +390,8 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
                 ),
               )
             else if (_query.isNotEmpty)
-              IconButton(
-                icon: Icon(Icons.close_rounded, size: 18, color: textMuted),
-                splashRadius: 18,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                onPressed: () {
+              GestureDetector(
+                onTap: () {
                   _searchCtrl.clear();
                   setState(() {
                     _query = '';
@@ -410,9 +399,10 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
                     _isSearchingGlobal = false;
                   });
                 },
+                child: Icon(Icons.close_rounded, size: 18, color: textMuted),
               )
             else
-              const SizedBox(width: 12),
+              const SizedBox(width: 4),
           ],
         ),
       ),
