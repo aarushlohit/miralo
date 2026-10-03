@@ -539,10 +539,21 @@ class PrivateChatProvider extends ChangeNotifier with WidgetsBindingObserver {
   bool isContact(String targetId, String targetUsername) {
     final cleanId = targetId.toLowerCase().trim();
     final cleanUsername = targetUsername.toLowerCase().trim();
-    return _contacts.any((c) =>
-        c.id.toLowerCase().trim() == cleanId ||
-        c.username.toLowerCase().trim() == cleanUsername ||
-        c.id.toLowerCase().trim() == cleanUsername);
+    final normId = _normalizeIdentifier(targetId);
+    final normUname = _normalizeIdentifier(targetUsername);
+
+    return _contacts.any((c) {
+      final cId = c.id.toLowerCase().trim();
+      final cUname = c.username.toLowerCase().trim();
+      final normCId = _normalizeIdentifier(c.id);
+      final normCUname = _normalizeIdentifier(c.username);
+      return cId == cleanId ||
+             cUname == cleanUsername ||
+             cId == cleanUsername ||
+             cUname == cleanId ||
+             (normId.isNotEmpty && (normCId == normId || normCUname == normId)) ||
+             (normUname.isNotEmpty && (normCId == normUname || normCUname == normUname));
+    });
   }
 
   bool isBlocked(String userId) => _blockedUserIds.contains(userId);
@@ -2030,17 +2041,22 @@ class PrivateChatProvider extends ChangeNotifier with WidgetsBindingObserver {
     if (contactId.startsWith('group_')) {
       return contactId;
     }
-    if (contactId.startsWith('chat_')) {
-      final parts = contactId.substring(5).split('_');
-      if (parts.length == 2) {
+    String cleanId = contactId;
+    while (cleanId.startsWith('chat_')) {
+      cleanId = cleanId.substring(5);
+    }
+    cleanId = _normalizeIdentifier(cleanId);
+
+    if (cleanId.contains('_')) {
+      final parts = cleanId.split('_');
+      if (parts.length >= 2) {
         final u1 = _normalizeIdentifier(resolveCanonicalId(parts[0]));
         final u2 = _normalizeIdentifier(resolveCanonicalId(parts[1]));
         final sorted = [u1, u2]..sort();
         return 'chat_${sorted[0]}_${sorted[1]}';
       }
-      return contactId;
     }
-    if (_currentUserId == null || _currentUserId!.isEmpty) return contactId;
+    if (_currentUserId == null || _currentUserId!.isEmpty) return 'chat_$cleanId';
 
     final canonicalTarget = resolveCanonicalId(contactId);
     final normCurrent = _normalizeIdentifier(_currentUserId!);
@@ -2595,7 +2611,6 @@ class PrivateChatProvider extends ChangeNotifier with WidgetsBindingObserver {
       if (entry.value.any((m) => m.id == msg.id)) {
         foundChatId = entry.key;
         entry.value.removeWhere((m) => m.id == msg.id);
-        break;
       }
     }
     if (foundChatId != null) {
@@ -3450,7 +3465,7 @@ class PrivateChatProvider extends ChangeNotifier with WidgetsBindingObserver {
 
   void moveMessageToPrivateVault(PrivateMessageModel msg, LibraryProvider library) {
     saveMessageToLibrary(msg, library);
-    deleteMessage(msg.id);
+    deleteImageMessage(msg);
   }
 
   void updateContactDisplayName(String contactId, String newName) {

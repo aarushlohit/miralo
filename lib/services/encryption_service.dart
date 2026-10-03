@@ -72,6 +72,36 @@ class EncryptionService {
       return cipherPayload;
     }
 
+    final channelVariants = <String>{
+      channelId,
+      channelId.toLowerCase().trim(),
+    };
+    if (channelId.startsWith('chat_')) {
+      var stripped = channelId.substring(5);
+      while (stripped.startsWith('chat_')) {
+        stripped = stripped.substring(5);
+      }
+      channelVariants.add('chat_${stripped.toLowerCase()}');
+      final parts = stripped.split('_');
+      if (parts.length == 2) {
+        channelVariants.add('chat_${parts[0].toLowerCase()}_${parts[1].toLowerCase()}');
+        channelVariants.add('chat_${parts[1].toLowerCase()}_${parts[0].toLowerCase()}');
+        channelVariants.add('chat_${parts[0]}_${parts[1]}');
+        channelVariants.add('chat_${parts[1]}_${parts[0]}');
+      }
+    }
+
+    for (final variant in channelVariants) {
+      final decrypted = _tryDecryptWithChannel(cipherPayload, variant, userSecret: userSecret);
+      if (!decrypted.startsWith('🔒')) {
+        return decrypted;
+      }
+    }
+
+    return '🔒 [Encrypted message - Signature invalid]';
+  }
+
+  static String _tryDecryptWithChannel(String cipherPayload, String channelId, {String? userSecret}) {
     try {
       final raw = cipherPayload.substring(_prefix.length);
       final parts = raw.split(':');
