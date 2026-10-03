@@ -237,9 +237,19 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
       return;
     }
 
+    // Without unlocking /unhide <secretkey>, user search is disabled
+    if (!vault.isChatMessagesUnhidden) {
+      _searchDebounce?.cancel();
+      setState(() {
+        _globalResults = [];
+        _isSearchingGlobal = false;
+      });
+      return;
+    }
+
     _searchDebounce?.cancel();
     _searchDebounce = Timer(const Duration(milliseconds: 300), () {
-      _executeGlobalSearch(trimmed, chat);
+      _executeGlobalSearch(trimmed, chat, vault);
     });
   }
 
@@ -284,10 +294,21 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
       return;
     }
 
-    _executeGlobalSearch(trimmed, chat);
+    // Without unlocking /unhide <secretkey>, user search is disabled
+    if (!vault.isChatMessagesUnhidden) {
+      _searchDebounce?.cancel();
+      setState(() {
+        _globalResults = [];
+        _isSearchingGlobal = false;
+      });
+      return;
+    }
+
+    _executeGlobalSearch(trimmed, chat, vault);
   }
 
-  Future<void> _executeGlobalSearch(String query, PrivateChatProvider chat) async {
+  Future<void> _executeGlobalSearch(String query, PrivateChatProvider chat, VaultProvider vault) async {
+    if (!vault.isChatMessagesUnhidden) return;
     final clean = query.trim();
     if (clean.isEmpty) return;
     setState(() => _isSearchingGlobal = true);
@@ -449,7 +470,7 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
                                 color: textPrimary)),
                         const SizedBox(height: AppSpacing.sm),
                         Text(
-                          'Type your secret phrase into the AI composer to access your private conversations.',
+                          'Access to private conversations is restricted.',
                           style: AppTypography.body(color: textSecondary),
                           textAlign: TextAlign.center,
                         ),
@@ -498,13 +519,15 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
     // ── Unlocked state ────────────────────────────────────────────
     final cleanQuery = _query.toLowerCase().trim();
     final cleanQueryNoAt = cleanQuery.startsWith('@') ? cleanQuery.substring(1) : cleanQuery;
-    final contacts = chat.allConversations.where((c) {
-      if (cleanQuery.isEmpty) return true;
-      return c.displayName.toLowerCase().contains(cleanQuery) ||
-          c.username.toLowerCase().contains(cleanQuery) ||
-          (cleanQueryNoAt.isNotEmpty && c.username.toLowerCase().contains(cleanQueryNoAt)) ||
-          c.id.toLowerCase().contains(cleanQuery);
-    }).toList();
+    final contacts = !vault.isChatMessagesUnhidden
+        ? <PrivateContactModel>[]
+        : chat.allConversations.where((c) {
+            if (cleanQuery.isEmpty) return true;
+            return c.displayName.toLowerCase().contains(cleanQuery) ||
+                c.username.toLowerCase().contains(cleanQuery) ||
+                (cleanQueryNoAt.isNotEmpty && c.username.toLowerCase().contains(cleanQueryNoAt)) ||
+                c.id.toLowerCase().contains(cleanQuery);
+          }).toList();
 
     return PopScope(
       canPop: true,
@@ -944,7 +967,7 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
           )
         else ...[
           // Pending friend requests banner
-          if (chat.pendingFriendRequests.isNotEmpty)
+          if (vault.isChatMessagesUnhidden && chat.pendingFriendRequests.isNotEmpty)
             Padding(
               padding: const EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, AppSpacing.sm),
               child: InkWell(
@@ -994,17 +1017,24 @@ class _PrivateChatListScreenState extends State<PrivateChatListScreen> {
             ),
 
           // Notes Tray
-          _buildNotesTray(context, chat, auth, isDark, textPrimary, textMuted, surface, borderColor),
+          if (vault.isChatMessagesUnhidden)
+            _buildNotesTray(context, chat, auth, isDark, textPrimary, textMuted, surface, borderColor),
 
           // Contact list
           Expanded(
-            child: contacts.isEmpty
-                ? LongcatEmptyState(
+            child: !vault.isChatMessagesUnhidden
+                ? const LongcatEmptyState(
                     icon: Icons.chat_bubble_outline,
-                    title: 'No contacts',
-                    subtitle: 'Add a contact or search anytime to start chatting privately.',
+                    title: 'No conversations',
+                    subtitle: 'Add a contact or start a chat to see conversations here.',
                   )
-                : RefreshIndicator(
+                : contacts.isEmpty
+                    ? const LongcatEmptyState(
+                        icon: Icons.chat_bubble_outline,
+                        title: 'No contacts',
+                        subtitle: 'Add a contact or search anytime to start chatting privately.',
+                      )
+                    : RefreshIndicator(
                     color: AppColors.accent,
                     onRefresh: () async {
                       await chat.refreshFriendRequests();
